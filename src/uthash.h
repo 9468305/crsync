@@ -113,6 +113,8 @@ do {                                                                            
   }                                                                              \
 } while (0)
 
+#define HASH_BLOOM 20
+
 #ifdef HASH_BLOOM
 #define HASH_BLOOM_BITLEN (1ULL << HASH_BLOOM)
 #define HASH_BLOOM_BYTELEN (HASH_BLOOM_BITLEN/8) + ((HASH_BLOOM_BITLEN%8) ? 1:0)

@@ -249,7 +249,7 @@ int got = 0;
 
             rsum_weak_rolling(rec.text, i++, meta.block_sz, &weak);
         }
-printf("got %d\n", got);
+printf("got %d of total %d\n", got, blocks);
 /*
         int got = 0;
 
@@ -272,7 +272,7 @@ printf("got %d\n", got);
         }*/
         tpl_unmap_file(&rec);
     }
-/*
+/* TODO:
     struct sumTable *current_user, *tmp;
 
     HASH_ITER(hh, sumT, current_user, tmp) {
