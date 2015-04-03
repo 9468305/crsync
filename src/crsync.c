@@ -30,6 +30,7 @@ SOFTWARE.
 #define Default_BLOCK_SIZE 2048 /*default block size to 2K*/
 
 #define HATCH_TPLMAP_FORMAT "uuc#BA(uc#)"
+#define MATCH_TPLMAP_FORMAT "uuc#BA(uc#ui)"
 
 typedef struct rsum_meta_t {
     uint32_t    file_sz;                    /*file length*/
@@ -121,50 +122,6 @@ void crsync_hatch(const char *newFilename, const char *sigFilename) {
 
         tpl_dump(tn, TPL_FILE, sigFilename);
         tpl_free(tn);
-/*
-        for(i = 0; i < blocks; i++)
-        {
-            sumItem = malloc(sizeof(struct rsum_t));
-            sumItem->weak = weak_calc_block(rec.text, i*meta.block_sz, meta.block_sz);
-            strong_calc_block(rec.text, i*meta.block_sz, meta.block_sz, sumItem->strong);
-            sumItem->seq = i;
-            sumItem->offset = -1;
-            sumItem->sub = NULL;
-
-            HASH_FIND_INT(sumTable, &sumItem->weak, sumFind);
-            if(sumFind)
-            {
-                HASH_ADD_INT(sumFind->sub, seq, sumItem);
-            }
-            else
-            {
-                HASH_ADD_INT( sumTable, weak, sumItem );
-            }
-        }
-
-        uint32_t seq;
-        uint32_t weak;
-        uint32_t *strong;
-        rsum_t *sum1, *sum2, *sumTemp1, *sumTemp2;
-        tpl_node *tn;
-        tn = tpl_map("uuc#A(uuc#)", &meta.file_sz, &meta.block_sz, meta.file_sum, STRONG_SUM_SIZE, &seq, &weak, &strong, STRONG_SUM_SIZE);
-        tpl_pack(tn, 0);
-        HASH_ITER(hh, sumTable, sum1, sumTemp1) {
-            seq = sum1->seq;
-            weak = sum1->weak;
-            strong = sum1->strong;
-            tpl_pack(tn, 1);
-            HASH_ITER(hh, sum1->sub, sum2, sumTemp2) {
-                seq = sum2->seq;
-                weak = sum2->weak;
-                strong = sum2->strong;
-                tpl_pack(tn, 1);
-                HASH_DEL(sum1->sub, sum2);
-            }
-            HASH_DEL(sumTable, sum1);
-        }
-        tpl_dump(tn, TPL_FILE, sigFilename);
-        tpl_free(tn);*/
 
         tpl_unmap_file(&rec);
     }
@@ -179,7 +136,8 @@ void crsync_match(const char *oldFilename, const char *sigFilename, const char *
     tpl_node        *tn = NULL;
     int             result=0;
     rsum_t          *sumTable = NULL, *sumItem = NULL, *sumIter = NULL, *sumTemp = NULL;
-    //load sig from file to hashtable
+
+    /* load sig from file to hashtable */
     tn = tpl_map(HATCH_TPLMAP_FORMAT,
                  &meta.file_sz,
                  &meta.block_sz,
@@ -214,31 +172,32 @@ void crsync_match(const char *oldFilename, const char *sigFilename, const char *
     }
 
     tpl_free(tn);
-//mmap old file
+
+#if 0
+    size_t size = HASH_OVERHEAD(hh, sumTable);
+    printf("hashtable memory size=%ld\n", size);
+#endif
+
+    /* load old file and match with hashtable */
     result = tpl_mmap_file(oldFilename, &rec);
-    if (!result)
-    {
-        //TODO: check oldfile exist and size
+    if (!result) {
+        /* TODO: check oldfile exist and size*/
         i = 0;
         rsum_weak_block(rec.text, i=0, meta.block_sz, &weak);
-int got = 0;
+
         while (1) {
-            //search match in table
+            /*search match in table */
             HASH_FIND_INT( sumTable, &weak, sumItem );
             if(sumItem)
             {
-                //TODO: compare strong sum
+                /* TODO: compare strong sum */
                 rsum_strong_block(rec.text, i, meta.block_sz, strong);
                 if (0 == memcmp(strong, sumItem->strong, STRONG_SUM_SIZE)) {
                     sumItem->offset = i;
-                    //printf("match %d offset %d\n", sumItem->seq, i);
-                    got++;
                 }
                 HASH_ITER(hh, sumItem->sub, sumIter, sumTemp) {
                     if (0 == memcmp(strong, sumIter->strong, STRONG_SUM_SIZE)) {
                         sumIter->offset = i;
-                        //printf("match %d offset %d\n", sumIter->seq, i);
-                        got++;
                     }
                 }
             }
@@ -249,44 +208,152 @@ int got = 0;
 
             rsum_weak_rolling(rec.text, i++, meta.block_sz, &weak);
         }
-printf("got %d of total %d\n", got, blocks);
-/*
-        int got = 0;
-
-        struct sum s;
-        int start = 0;
-        int end = rec.text_sz - sHead.block_sz;
-        rsum_calc_block(rec.text, start, sHead.block_sz, &s);
-        while(start < end)
-        {
-            rsum_calc_rolling(rec.text, start, sHead.block_sz, &s);
-            int weak = ((s.a & 0xff) | (s.b << 16));
-            struct sumTable *si = NULL;
-            HASH_FIND_INT( sumT, &weak, si );
-            if(si)
-            {
-                si->offset =start;
-                got++;
-            }
-            start++;
-        }*/
         tpl_unmap_file(&rec);
     }
-/* TODO:
-    struct sumTable *current_user, *tmp;
 
-    HASH_ITER(hh, sumT, current_user, tmp) {
-        HASH_DEL(sumT,current_user);
-        free(current_user);
-      }
-*/
+    /* save hashtable to delta file */
+    uint32_t seq;
+    int32_t offset;
+    tn = tpl_map(MATCH_TPLMAP_FORMAT,
+                 &meta.file_sz,
+                 &meta.block_sz,
+                 meta.file_sum,
+                 STRONG_SUM_SIZE,
+                 &meta.rest_tb,
+                 &weak,
+                 &strong,
+                 STRONG_SUM_SIZE,
+                 &seq,
+                 &offset);
+    tpl_pack(tn, 0);
 
+    rsum_t *sumTemp2 = NULL;
+    HASH_ITER(hh, sumTable, sumItem, sumTemp) {
+        weak = sumItem->weak;
+        memcpy(strong, sumItem->strong, STRONG_SUM_SIZE);
+        seq = sumItem->seq;
+        offset = sumItem->offset;
+        tpl_pack(tn, 1);
+        HASH_ITER(hh, sumItem->sub, sumIter, sumTemp2 ) {
+            weak = sumIter->weak;
+            memcpy(strong, sumIter->strong, STRONG_SUM_SIZE);
+            seq = sumIter->seq;
+            offset = sumIter->offset;
+            tpl_pack(tn, 1);
+        }
+    }
 
-    //match and build delta
-    //save delta to file
+    tpl_dump(tn, TPL_FILE, deltaFilename);
+    tpl_free(tn);
+
+    HASH_ITER(hh, sumTable, sumItem, sumTemp) {
+        HASH_ITER(hh, sumItem->sub, sumIter, sumTemp2 ) {
+            HASH_DEL(sumItem->sub, sumIter);
+            free(sumIter);
+        }
+        HASH_DEL(sumTable, sumItem);
+        free(sumItem);
+    }
+
     tpl_bin_free(&meta.rest_tb);
 }
 
 void crsync_patch(const char *oldFilename, const char *deltaFilename, const char *newFilename) {
+    /*load old file*/
+    /*load new file*/
+    /*load delta file*/
+    /*patch to new file part */
 
+    tpl_mmap_rec    recOld = {-1, NULL, 0};
+    tpl_mmap_rec    recNew = {-1, NULL, 0};
+    tpl_mmap_rec    recNewPart = {-1, NULL, 0};
+    rsum_meta_t     meta = {0, 0, "", {NULL, 0}};
+    uint32_t        weak = 0, blocks=0, i=0, seq=0;
+    uint8_t         strong[STRONG_SUM_SIZE] = {""};
+    tpl_node        *tn = NULL;
+    int             result=0, offset = -1;
+    rsum_t          *sumTable = NULL, *sumItem = NULL, *sumIter = NULL, *sumTemp = NULL;
+
+    tpl_mmap_file(oldFilename, &recOld);
+    tpl_mmap_file(newFilename, &recNew);
+
+    tn = tpl_map(MATCH_TPLMAP_FORMAT,
+                 &meta.file_sz,
+                 &meta.block_sz,
+                 meta.file_sum,
+                 STRONG_SUM_SIZE,
+                 &meta.rest_tb,
+                 &weak,
+                 &strong,
+                 STRONG_SUM_SIZE,
+                 &seq,
+                 &offset);
+
+    tpl_load(tn, TPL_FILE, deltaFilename);
+    tpl_unpack(tn, 0);
+
+    blocks = meta.file_sz / meta.block_sz;
+
+    for (i = 0; i < blocks; i++) {
+        tpl_unpack(tn, 1);
+
+        sumItem = malloc(sizeof(struct rsum_t));
+        sumItem->weak = weak;
+        sumItem->seq = seq;
+        memcpy(sumItem->strong, strong, STRONG_SUM_SIZE);
+        sumItem->offset = offset;
+        sumItem->sub = NULL;
+
+        HASH_FIND_INT(sumTable, &weak, sumTemp);
+        if (sumTemp == NULL) {
+            HASH_ADD_INT( sumTable, weak, sumItem );
+        } else {
+            HASH_ADD_INT( sumTemp->sub, seq, sumItem );
+        }
+    }
+
+    tpl_free(tn);
+
+    recNewPart.text_sz = meta.file_sz;
+    tpl_mmap_file_output("new.part", &recNewPart);
+
+    rsum_t *sumTemp2 = NULL;
+    HASH_ITER(hh, sumTable, sumItem, sumTemp) {
+        seq = sumItem->seq;
+        offset = sumItem->offset;
+        if(offset == -1) {
+            memcpy(recNewPart.text + seq*meta.block_sz, recNew.text + seq*meta.block_sz, meta.block_sz);
+        } else {
+            memcpy(recNewPart.text + seq*meta.block_sz, recOld.text + offset, meta.block_sz);
+        }
+        HASH_ITER(hh, sumItem->sub, sumIter, sumTemp2 ) {
+            seq = sumIter->seq;
+            offset = sumIter->offset;
+            if(offset == -1) {
+                memcpy(recNewPart.text + seq*meta.block_sz, recNew.text + seq*meta.block_sz, meta.block_sz);
+            } else {
+                memcpy(recNewPart.text + seq*meta.block_sz, recOld.text + offset, meta.block_sz);
+            }
+        }
+    }
+
+    if(meta.rest_tb.sz > 0) {
+        memcpy(recNewPart.text + blocks * meta.block_sz, meta.rest_tb.addr, meta.rest_tb.sz);
+    }
+
+    tpl_unmap_file(&recNewPart);
+
+    HASH_ITER(hh, sumTable, sumItem, sumTemp) {
+        HASH_ITER(hh, sumItem->sub, sumIter, sumTemp2 ) {
+            HASH_DEL(sumItem->sub, sumIter);
+            free(sumIter);
+        }
+        HASH_DEL(sumTable, sumItem);
+        free(sumItem);
+    }
+
+    tpl_bin_free(&meta.rest_tb);
+
+    tpl_unmap_file(&recNew);
+    tpl_unmap_file(&recOld);
 }
