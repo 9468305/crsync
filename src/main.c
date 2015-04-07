@@ -79,9 +79,8 @@ void testcurl() {
         curl_easy_setopt(curlhandle, CURLOPT_FOLLOWLOCATION, 1); /* allow follow location */
         curl_easy_setopt(curlhandle, CURLOPT_MAXREDIRS, 5); /* allow redir 5 times */
         curl_easy_setopt(curlhandle, CURLOPT_CONNECTTIMEOUT, 20); /* connection timeout 20s */
-        curl_easy_setopt(curlhandle, CURLOPT_TIMEOUT, 20); /* transfer timeout 15s */
-        curl_easy_setopt(curlhandle, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
-        curl_easy_setopt(curlhandle, CURLOPT_WRITEDATA, (void *)&chunk);
+        curl_easy_setopt(curlhandle, CURLOPT_WRITEFUNCTION, WriteMemoryCallback); /* receive data callback */
+        curl_easy_setopt(curlhandle, CURLOPT_WRITEDATA, (void *)&chunk); /* receive data status */
 
         res = curl_easy_perform(curlhandle);
 
