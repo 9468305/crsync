@@ -25,17 +25,94 @@ SOFTWARE.
 #include <time.h>
 
 #include "crsync.h"
+#include "curl/curl.h"
 
 #if defined __cplusplus
 extern "C" {
 #endif
 
+#define LOGI(...)  printf(__VA_ARGS__)
+
+struct MemoryStruct {
+  char *memory;
+  size_t size;
+};
+
+static size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp) {
+    size_t realsize = size * nmemb;
+    struct MemoryStruct *mem = (struct MemoryStruct *)userp;
+
+    mem->memory = realloc(mem->memory, mem->size + realsize + 1);
+
+    memcpy(&(mem->memory[mem->size]), contents, realsize);
+    mem->size += realsize;
+    mem->memory[mem->size] = 0;
+
+    return realsize;
+}
+
+void testcurl() {
+    const char *url = "http://www.qq.com/";
+    CURL *curlhandle;
+    CURLcode res;
+    char error_buf[CURL_ERROR_SIZE];
+    long retcode;
+    char *contenttype;
+    double contentlength;
+    double downloadsize;
+    struct MemoryStruct chunk;
+    chunk.memory = malloc(1);  /* will be grown as needed by the realloc above */
+    chunk.size = 0;    /* no data at this point */
+
+    curl_global_init(CURL_GLOBAL_ALL);
+
+    curlhandle = curl_easy_init();
+
+    if (curlhandle) {
+
+        curl_easy_setopt(curlhandle, CURLOPT_PROTOCOLS, CURLPROTO_HTTP); /* http protocol only */
+        curl_easy_setopt(curlhandle, CURLOPT_URL, url); /* url */
+        curl_easy_setopt(curlhandle, CURLOPT_HTTPGET, 1); /* http get */
+        curl_easy_setopt(curlhandle, CURLOPT_FAILONERROR, 1); /* request failure on HTTP response >= 400 */
+        curl_easy_setopt(curlhandle, CURLOPT_ERRORBUFFER, error_buf); /* error buffer */
+        curl_easy_setopt(curlhandle, CURLOPT_AUTOREFERER, 1); /* allow auto referer */
+        curl_easy_setopt(curlhandle, CURLOPT_FOLLOWLOCATION, 1); /* allow follow location */
+        curl_easy_setopt(curlhandle, CURLOPT_MAXREDIRS, 5); /* allow redir 5 times */
+        curl_easy_setopt(curlhandle, CURLOPT_CONNECTTIMEOUT, 20); /* connection timeout 20s */
+        curl_easy_setopt(curlhandle, CURLOPT_TIMEOUT, 20); /* transfer timeout 15s */
+        curl_easy_setopt(curlhandle, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
+        curl_easy_setopt(curlhandle, CURLOPT_WRITEDATA, (void *)&chunk);
+
+        res = curl_easy_perform(curlhandle);
+
+        curl_easy_getinfo(curlhandle, CURLINFO_RESPONSE_CODE , &retcode);
+        curl_easy_getinfo(curlhandle, CURLINFO_CONTENT_TYPE , &contenttype);
+        curl_easy_getinfo(curlhandle, CURLINFO_CONTENT_LENGTH_DOWNLOAD , &contentlength);
+        curl_easy_getinfo(curlhandle, CURLINFO_SIZE_DOWNLOAD , &downloadsize);
+
+
+        LOGI("cur perform result %d\n", res);
+        LOGI("curl response code %ld\n", retcode);
+        LOGI("curl content type %s\n", contenttype);
+        LOGI("curl content length %lf\n", contentlength);
+        LOGI("curl download size %lf\n", downloadsize);
+        LOGI("%s\n", chunk.memory);
+
+        curl_easy_cleanup(curlhandle);
+    }
+    free(chunk.memory);
+    curl_global_cleanup();
+}
+
 int main(void)
 {
-    const char* newFilename = "base14012.obb";
-    const char* sigFilename = "base14012.obb.sig";
-    const char* oldFilename = "base14009.obb";
-    const char* deltaFilename = "base14009.obb.delta";
+    testcurl();
+
+    /*
+    const char* newFilename = "mthd.apk";
+    const char* sigFilename = "mthd.apk.sig";
+    const char* oldFilename = "mtsd.apk";
+    const char* deltaFilename = "mtsd.apk.delta";
 
     clock_t t;
 
@@ -56,7 +133,7 @@ int main(void)
     crsync_patch(oldFilename, deltaFilename, newFilename);
     t -= clock();
     printf("crsync_patch end %ld\n", -t);
-
+*/
     return 0;
 }
 

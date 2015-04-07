@@ -20,3 +20,11 @@ HEADERS += \
     blake2.h \
     blake2-impl.h
 
+#LIBS += -L$${_PRO_FILE_PWD_}/../libcurl/lib -lcurldll
+DEFINES += CURL_STATICLIB
+LIBS += -L$${_PRO_FILE_PWD_}/../libcurl/lib -lcurl
+win32:LIBS += -lws2_32
+
+INCLUDEPATH += ../libcurl/include
+
+QMAKE_LFLAGS += -static -static-libgcc
