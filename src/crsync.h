@@ -24,15 +24,50 @@ SOFTWARE.
 #ifndef CRSYNC_H
 #define CRSYNC_H
 
+#include "curl/curl.h"
+
 #if defined __cplusplus
 extern "C" {
 #endif
 
-void crsync_hatch(const char *newFilename, const char *sigFilename);
+typedef struct rsum_meta_t rsum_meta_t;
+typedef struct rsum_t rsum_t;
 
-void crsync_match(const char *oldFilename, const char *sigFilename, const char *deltaFilename);
+/* base on new file, generate rsums to file */
+void crsync_rsums_generate(const char *filename, const char *rsumsFilename);
 
-void crsync_patch(const char *oldFilename, const char *deltaFilename, const char *newFilename);
+/* download rsums file from url */
+CURLcode crsync_rsums_curl(const char *url, const char *rsumsFilename);
+
+/* load rums meta data and default match rsums from rsums file  */
+BOOL crsync_rsums_load(const char *rsumsFilename, rsum_meta_t *meta, rsum_t **msums);
+
+/* base on old file, with rsums meta data and default match rsums, generate matched rsums */
+void crsync_msums_generate(const char *oldFilename, rsum_meta_t *meta, rsum_t **msums);
+
+/* load matched rsums from file */
+BOOL crsync_msums_load(const char *msumsFilename, rsum_meta_t *meta, rsum_t **msums);
+
+/* save matched rsums to file */
+BOOL crsync_msums_save(const char *msumsFilename, rsum_meta_t *meta, rsum_t **msums);
+
+/* base on old file, with matched rsums and new file URL, generate new file */
+CURLcode crsync_msums_patch(const char *oldFilename, const char *newFilename, const char* newFileURL, rsum_meta_t *meta, rsum_t **msums);
+
+
+/* server side:
+ * generate rsums file for filename to outputDir;
+ * copy filename to outpuDir;
+ * rename filename to hashname at outputDir
+*/
+void crsync_server(const char *filename, const char *outputDir);
+
+/* client side:
+ * update filename to new filename;
+ * use rsumsURL to run rsync rolling match
+ * use newFileURL to download delta data
+*/
+void crsync_client(const char *oldFilename, const char *newFilename, const char *rsumsURL, const char *newFileURL);
 
 
 #if defined __cplusplus

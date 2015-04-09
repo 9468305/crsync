@@ -105,34 +105,28 @@ void testcurl() {
 
 int main(void)
 {
-    testcurl();
+    const char *newFilename = "mthd.apk";
+    const char *oldFilename = "mtsd.apk";
+    const char *rsumsURL = "http://image.ib.qq.com/a/test/mthd.apk.rsums";
+    const char *newFileURL = "http://image.ib.qq.com/a/test/mthd.apk";
 
+    printf("crsync main begin\n");
+    //crsync_server("mthd.apk", "./");
+    crsync_client(oldFilename, newFilename, rsumsURL, newFileURL);
+
+    //crsync_hatch("mthd.apk", "mtonline.apk.hatcher");
+    //crsync_fetch_hatcher("http://image.ib.qq.com/a/test/mtonline.apk.hatcher", "mtonline.apk.hatcher");
+    //crsync_match("mtsd.apk", "mtonline.apk.hatcher", "mtonline.apk.matcher");
     /*
-    const char* newFilename = "mthd.apk";
-    const char* sigFilename = "mthd.apk.sig";
-    const char* oldFilename = "mtsd.apk";
-    const char* deltaFilename = "mtsd.apk.delta";
+    crsync_curl_patcher("http://update.locojoy.com/Client/Android/MT-A/SDK/IamMT_200100100_locojoy_ac_hd_4.3.2.0_4320.apk",
+                        "mtonline.apk.matcher",
+                        "mtonline.apk.patcher");*/
+    //crsync_fetch_hatcher("http://update.locojoy.com/Client/Android/MT-A/SDK/IamMT_200100100_locojoy_ac_hd_4.3.2.0_4320.apk", "mthd.apk");
+    //crsync_fetch_hatcher("http://update.locojoy.com/Client/Android/MT-A/SDK/IamMT_200100100_locojoy_standard_ac_4.3.2.0_4320.apk", "mtsd.apk");
+    //testcurl();
 
-    clock_t t;
-
-    printf("crsync_hatch begin\n");
-    t = clock();
-    crsync_hatch(newFilename, sigFilename);
-    t -= clock();
-    printf("crsync_hatch end %ld\n", -t);
-
-    printf("crsync_match begin\n");
-    t = clock();
-    crsync_match(oldFilename, sigFilename, deltaFilename);
-    t -= clock();
-    printf("crsync_match end %ld\n", -t);
-
-    printf("crsync_patch begin\n");
-    t = clock();
-    crsync_patch(oldFilename, deltaFilename, newFilename);
-    t -= clock();
-    printf("crsync_patch end %ld\n", -t);
-*/
+    //crsync_server("", "");
+    printf("crsync main end\n");
     return 0;
 }
 
