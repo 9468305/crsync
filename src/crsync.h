@@ -32,6 +32,19 @@ extern "C" {
 
 typedef struct rsum_meta_t rsum_meta_t;
 typedef struct rsum_t rsum_t;
+typedef struct crsync_handle crsync_handle;
+
+void crsync_global_init();
+
+crsync_handle* crsync_easy_init();
+
+void crsync_easy_setopt(crsync_handle *handle);
+
+void crsync_easy_perform(crsync_handle *handle);
+
+void crsync_easy_cleanup(crsync_handle *handle);
+
+void crsync_global_cleanup();
 
 /* base on new file, generate rsums to file */
 void crsync_rsums_generate(const char *filename, const char *rsumsFilename);

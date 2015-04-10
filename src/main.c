@@ -33,76 +33,6 @@ extern "C" {
 
 #define LOGI(...)  printf(__VA_ARGS__)
 
-struct MemoryStruct {
-  char *memory;
-  size_t size;
-};
-
-static size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp) {
-    size_t realsize = size * nmemb;
-    struct MemoryStruct *mem = (struct MemoryStruct *)userp;
-
-    mem->memory = realloc(mem->memory, mem->size + realsize + 1);
-
-    memcpy(&(mem->memory[mem->size]), contents, realsize);
-    mem->size += realsize;
-    mem->memory[mem->size] = 0;
-
-    return realsize;
-}
-
-void testcurl() {
-    const char *url = "http://www.qq.com/";
-    CURL *curlhandle;
-    CURLcode res;
-    char error_buf[CURL_ERROR_SIZE];
-    long retcode;
-    char *contenttype;
-    double contentlength;
-    double downloadsize;
-    struct MemoryStruct chunk;
-    chunk.memory = malloc(1);  /* will be grown as needed by the realloc above */
-    chunk.size = 0;    /* no data at this point */
-
-    curl_global_init(CURL_GLOBAL_ALL);
-
-    curlhandle = curl_easy_init();
-
-    if (curlhandle) {
-
-        curl_easy_setopt(curlhandle, CURLOPT_PROTOCOLS, CURLPROTO_HTTP); /* http protocol only */
-        curl_easy_setopt(curlhandle, CURLOPT_URL, url); /* url */
-        curl_easy_setopt(curlhandle, CURLOPT_HTTPGET, 1); /* http get */
-        curl_easy_setopt(curlhandle, CURLOPT_FAILONERROR, 1); /* request failure on HTTP response >= 400 */
-        curl_easy_setopt(curlhandle, CURLOPT_ERRORBUFFER, error_buf); /* error buffer */
-        curl_easy_setopt(curlhandle, CURLOPT_AUTOREFERER, 1); /* allow auto referer */
-        curl_easy_setopt(curlhandle, CURLOPT_FOLLOWLOCATION, 1); /* allow follow location */
-        curl_easy_setopt(curlhandle, CURLOPT_MAXREDIRS, 5); /* allow redir 5 times */
-        curl_easy_setopt(curlhandle, CURLOPT_CONNECTTIMEOUT, 20); /* connection timeout 20s */
-        curl_easy_setopt(curlhandle, CURLOPT_WRITEFUNCTION, WriteMemoryCallback); /* receive data callback */
-        curl_easy_setopt(curlhandle, CURLOPT_WRITEDATA, (void *)&chunk); /* receive data status */
-
-        res = curl_easy_perform(curlhandle);
-
-        curl_easy_getinfo(curlhandle, CURLINFO_RESPONSE_CODE , &retcode);
-        curl_easy_getinfo(curlhandle, CURLINFO_CONTENT_TYPE , &contenttype);
-        curl_easy_getinfo(curlhandle, CURLINFO_CONTENT_LENGTH_DOWNLOAD , &contentlength);
-        curl_easy_getinfo(curlhandle, CURLINFO_SIZE_DOWNLOAD , &downloadsize);
-
-
-        LOGI("cur perform result %d\n", res);
-        LOGI("curl response code %ld\n", retcode);
-        LOGI("curl content type %s\n", contenttype);
-        LOGI("curl content length %lf\n", contentlength);
-        LOGI("curl download size %lf\n", downloadsize);
-        LOGI("%s\n", chunk.memory);
-
-        curl_easy_cleanup(curlhandle);
-    }
-    free(chunk.memory);
-    curl_global_cleanup();
-}
-
 int main(void)
 {
     const char *newFilename = "mthd.apk";
@@ -114,18 +44,6 @@ int main(void)
     //crsync_server("mthd.apk", "./");
     crsync_client(oldFilename, newFilename, rsumsURL, newFileURL);
 
-    //crsync_hatch("mthd.apk", "mtonline.apk.hatcher");
-    //crsync_fetch_hatcher("http://image.ib.qq.com/a/test/mtonline.apk.hatcher", "mtonline.apk.hatcher");
-    //crsync_match("mtsd.apk", "mtonline.apk.hatcher", "mtonline.apk.matcher");
-    /*
-    crsync_curl_patcher("http://update.locojoy.com/Client/Android/MT-A/SDK/IamMT_200100100_locojoy_ac_hd_4.3.2.0_4320.apk",
-                        "mtonline.apk.matcher",
-                        "mtonline.apk.patcher");*/
-    //crsync_fetch_hatcher("http://update.locojoy.com/Client/Android/MT-A/SDK/IamMT_200100100_locojoy_ac_hd_4.3.2.0_4320.apk", "mthd.apk");
-    //crsync_fetch_hatcher("http://update.locojoy.com/Client/Android/MT-A/SDK/IamMT_200100100_locojoy_standard_ac_4.3.2.0_4320.apk", "mtsd.apk");
-    //testcurl();
-
-    //crsync_server("", "");
     printf("crsync main end\n");
     return 0;
 }

@@ -2512,6 +2512,8 @@ TPL_API void tpl_bin_malloc(tpl_bin *bin, size_t len) {
 }
 
 TPL_API void tpl_bin_free(tpl_bin *bin) {
-    free(bin->addr);
-    bin->sz = 0;
+    if(bin) {
+        free(bin->addr);
+        bin->sz = 0;
+    }
 }
