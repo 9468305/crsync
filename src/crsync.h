@@ -34,13 +34,37 @@ typedef struct rsum_meta_t rsum_meta_t;
 typedef struct rsum_t rsum_t;
 typedef struct crsync_handle crsync_handle;
 
-void crsync_global_init();
+typedef enum {
+    CRSYNCACTION_SERVER = 1,    /* generate rsums file from new file */
+    CRSYNCACTION_CLIENT,        /* update local file from server */
+} CRSYNCaction;
 
+typedef enum {
+    CRSYNCOPT_ACTION = 1,   /* CRSYNCaction */
+    CRSYNCOPT_ROOT,         /* local root dir */
+    CRSYNCOPT_FILE,         /* local file name */
+    CRSYNCOPT_URL,          /* remote file's url */
+    CRSYNCOPT_SUMURL,       /* remote file's rsums url */
+} CRSYNCoption;
+
+typedef enum {
+    CRSYNCE_OK = 0,
+    CRSYNCE_FAILED_INIT = -1,
+    CRSYNCE_UNSUPPORTED_ACTION = -2,
+    CRSYNCE_INVALID_OPT = -3,
+} CRSYNCcode;
+
+/* return: only CRSYNCE_OK or CRSYNC_FAILED_INIT */
+CRSYNCcode crsync_global_init();
+
+/* return: NULL for fail */
 crsync_handle* crsync_easy_init();
 
-void crsync_easy_setopt(crsync_handle *handle);
+/* return: only CRSYNCE_OK or CRSYNC_INVALID_OPT */
+CRSYNCcode crsync_easy_setopt(crsync_handle *handle, CRSYNCoption opt, ...);
 
-void crsync_easy_perform(crsync_handle *handle);
+/* return CRSYNCcode (<=0) or CURLcode (>=0) */
+int crsync_easy_perform(crsync_handle *handle);
 
 void crsync_easy_cleanup(crsync_handle *handle);
 

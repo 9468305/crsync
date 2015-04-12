@@ -52,13 +52,16 @@ typedef struct rsum_t {
 } rsum_t;
 
 typedef struct crsync_handle {
-    rsum_meta_t meta;               /* file meta info */
-    rsum_t      *sums;              /* rsum hash table */
-    char        *file_url;          /* remote file's url */
-    char        *sums_url;          /* remote file's rsums url */
-    CURL        *curl_handle;       /* curl handle */
-    tpl_bin     curl_buffer;        /* curl write callback data */
-    uint32_t    curl_buffer_offset; /* curl write callback data offset */
+    int             action;
+    rsum_meta_t     meta;               /* file meta info */
+    rsum_t          *sums;              /* rsum hash table */
+    char            *root;              /* local root dir */
+    char            *file;              /* local file name */
+    char            *url;               /* remote file's url */
+    char            *sums_url;          /* remote file's rsums url */
+    CURL            *curl_handle;       /* curl handle */
+    tpl_bin         curl_buffer;        /* curl write callback data */
+    uint32_t        curl_buffer_offset; /* curl write callback data offset */
 } crsync_handle;
 
 static void rsum_weak_block(const uint8_t *data, uint32_t start, uint32_t block_sz, uint32_t *weak)
@@ -96,8 +99,12 @@ static void rsum_strong_block(const uint8_t *p, uint32_t start, uint32_t block_s
     blake2b_final(&ctx, (uint8_t *)strong, STRONG_SUM_SIZE);
 }
 
-void crsync_global_init() {
-    curl_global_init(CURL_GLOBAL_DEFAULT);
+CRSYNCcode crsync_global_init() {
+    if(CURLE_OK == curl_global_init(CURL_GLOBAL_DEFAULT)) {
+        return CRSYNCE_OK;
+    } else {
+        return CRSYNCE_FAILED_INIT;
+    }
 }
 
 crsync_handle* crsync_easy_init() {
@@ -126,12 +133,97 @@ crsync_handle* crsync_easy_init() {
     return NULL;
 }
 
-void crsync_easy_setopt(crsync_handle *handle) {
+CRSYNCcode crsync_easy_setopt(crsync_handle *handle, CRSYNCoption opt, ...) {
+    if(!handle) {
+        return CRSYNCE_INVALID_OPT;
+    }
 
+    CRSYNCcode code = CRSYNCE_OK;
+    va_list arg;
+    va_start(arg, opt);
+
+    switch (opt) {
+    case CRSYNCOPT_ACTION:
+        handle->action = va_arg(arg, CRSYNCaction);
+        break;
+    case CRSYNCOPT_ROOT:
+        if(handle->root) {
+            free(handle->root);
+        }
+        handle->root = strdup( va_arg(arg, const char*) );
+        break;
+    case CRSYNCOPT_FILE:
+        if(handle->file) {
+            free(handle->file);
+        }
+        handle->file = strdup( va_arg(arg, const char*) );
+        break;
+    case CRSYNCOPT_URL:
+        if(handle->url) {
+            free(handle->url);
+        }
+        handle->url = strdup( va_arg(arg, const char*) );
+        break;
+    case CRSYNCOPT_SUMURL:
+        if(handle->sums_url) {
+            free(handle->sums_url);
+        }
+        handle->sums_url = strdup( va_arg(arg, const char*) );
+        break;
+    default:
+        code = CRSYNCE_INVALID_OPT;
+    }
+    va_end(arg);
+    return code;
 }
 
-void crsync_easy_perform(crsync_handle *handle) {
+static BOOL crsync_checkopt(crsync_handle *handle) {
+    if( !handle ) {
+        return FALSE;
+    }
+    switch(handle->action) {
+    case CRSYNCACTION_SERVER:
+        if( handle->file ) {
+            return TRUE;
+        }
+        break;
+    case CRSYNCACTION_CLIENT:
+        if( handle->file &&
+            handle->url &&
+            handle->sums_url) {
+            return TRUE;
+        }
+        break;
+    default:
+        return FALSE;
+    }
+    return FALSE;
+}
+/*
+    crsync_rsums_curl(rsumsURL, rsumsFilename);
+    crsync_rsums_load(rsumsFilename, &meta, &msums);
+    crsync_msums_generate(oldFilename, &meta, &msums);
+    crsync_msums_save(msumsFilename, &meta, &msums);
+    crsync_rsums_free(&meta, &msums);
 
+    crsync_msums_load(msumsFilename, &meta, &msums);
+    crsync_msums_patch(oldFilename, newFilename, newFileURL, &meta, &msums);
+
+    crsync_rsums_free(&meta, &msums);
+
+*/
+CRSYNCcode crsync_easy_perform(crsync_handle *handle) {
+    CRSYNCcode code = CRSYNCE_OK;
+    do {
+        if(!crsync_checkopt(handle)) {
+            code = CRSYNCE_INVALID_OPT;
+            break;
+        }
+        //TODO...
+
+    } while (0);
+
+    return code;
 }
 
 void crsync_easy_cleanup(crsync_handle *handle) {
@@ -642,7 +734,7 @@ void crsync_client(const char *oldFilename, const char *newFilename, const char 
     crsync_global_init();
     crsync_handle* handle = crsync_easy_init();
     if(handle) {
-        crsync_easy_setopt(handle);
+        crsync_easy_setopt(handle, CRSYNCOPT_ACTION, CRSYNCACTION_CLIENT);
 
         crsync_easy_perform(handle);
 
