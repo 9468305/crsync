@@ -35,14 +35,13 @@ extern "C" {
 
 int main(void)
 {
-    const char *newFilename = "mthd.apk";
-    const char *oldFilename = "mtsd.apk";
+    const char *filename = "mtsd.apk";
     const char *rsumsURL = "http://image.ib.qq.com/a/test/mthd.apk.rsums";
     const char *newFileURL = "http://image.ib.qq.com/a/test/mthd.apk";
 
     printf("crsync main begin\n");
     //crsync_server("mthd.apk", "./");
-    crsync_client(oldFilename, newFilename, rsumsURL, newFileURL);
+    crsync_client(filename, rsumsURL, newFileURL);
 
     printf("crsync main end\n");
     return 0;

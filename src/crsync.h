@@ -35,13 +35,16 @@ typedef struct rsum_t rsum_t;
 typedef struct crsync_handle crsync_handle;
 
 typedef enum {
-    CRSYNCACTION_SERVER = 1,    /* generate rsums file from new file */
-    CRSYNCACTION_CLIENT,        /* update local file from server */
+    CRSYNCACTION_INIT = 1,
+    CRSYNCACTION_HATCH,
+    CRSYNCACTION_MATCH,
+    CRSYNCACTION_PATCH,
+    /* ... */
+    CRSYNCACTION_CLEANUP,
 } CRSYNCaction;
 
 typedef enum {
-    CRSYNCOPT_ACTION = 1,   /* CRSYNCaction */
-    CRSYNCOPT_ROOT,         /* local root dir */
+    CRSYNCOPT_ROOT = 1,     /* local root dir */
     CRSYNCOPT_FILE,         /* local file name */
     CRSYNCOPT_URL,          /* remote file's url */
     CRSYNCOPT_SUMURL,       /* remote file's rsums url */
@@ -50,8 +53,7 @@ typedef enum {
 typedef enum {
     CRSYNCE_OK = 0,
     CRSYNCE_FAILED_INIT = -1,
-    CRSYNCE_UNSUPPORTED_ACTION = -2,
-    CRSYNCE_INVALID_OPT = -3,
+    CRSYNCE_INVALID_OPT = -2,
 } CRSYNCcode;
 
 /* return: only CRSYNCE_OK or CRSYNC_FAILED_INIT */
@@ -64,7 +66,7 @@ crsync_handle* crsync_easy_init();
 CRSYNCcode crsync_easy_setopt(crsync_handle *handle, CRSYNCoption opt, ...);
 
 /* return CRSYNCcode (<=0) or CURLcode (>=0) */
-int crsync_easy_perform(crsync_handle *handle);
+CRSYNCcode crsync_easy_perform(crsync_handle *handle);
 
 void crsync_easy_cleanup(crsync_handle *handle);
 
@@ -72,25 +74,6 @@ void crsync_global_cleanup();
 
 /* base on new file, generate rsums to file */
 void crsync_rsums_generate(const char *filename, const char *rsumsFilename);
-
-/* download rsums file from url */
-CURLcode crsync_rsums_curl(const char *url, const char *rsumsFilename);
-
-/* load rums meta data and default match rsums from rsums file  */
-BOOL crsync_rsums_load(const char *rsumsFilename, rsum_meta_t *meta, rsum_t **msums);
-
-/* base on old file, with rsums meta data and default match rsums, generate matched rsums */
-void crsync_msums_generate(const char *oldFilename, rsum_meta_t *meta, rsum_t **msums);
-
-/* load matched rsums from file */
-BOOL crsync_msums_load(const char *msumsFilename, rsum_meta_t *meta, rsum_t **msums);
-
-/* save matched rsums to file */
-BOOL crsync_msums_save(const char *msumsFilename, rsum_meta_t *meta, rsum_t **msums);
-
-/* base on old file, with matched rsums and new file URL, generate new file */
-CURLcode crsync_msums_patch(const char *oldFilename, const char *newFilename, const char* newFileURL, rsum_meta_t *meta, rsum_t **msums);
-
 
 /* server side:
  * generate rsums file for filename to outputDir;
@@ -100,11 +83,11 @@ CURLcode crsync_msums_patch(const char *oldFilename, const char *newFilename, co
 void crsync_server(const char *filename, const char *outputDir);
 
 /* client side:
- * update filename to new filename;
+ * update filename to new version;
  * use rsumsURL to run rsync rolling match
  * use newFileURL to download delta data
 */
-void crsync_client(const char *oldFilename, const char *newFilename, const char *rsumsURL, const char *newFileURL);
+void crsync_client(const char *filename, const char *rsumsURL, const char *newFileURL);
 
 
 #if defined __cplusplus
