@@ -301,7 +301,7 @@ char *calc_field_addr(tpl_node *parent, int type,char *struct_addr, int ordinal)
     return struct_addr + offset;
 }
 
-TPL_API tpl_node *tpl_map(char *fmt,...) {
+TPL_API tpl_node *tpl_map(const char *fmt,...) {
   va_list ap;
   tpl_node *tn;
 
@@ -311,7 +311,7 @@ TPL_API tpl_node *tpl_map(char *fmt,...) {
   return tn;
 }
 
-TPL_API tpl_node *tpl_map_va(char *fmt, va_list ap) {
+TPL_API tpl_node *tpl_map_va(const char *fmt, va_list ap) {
     int lparen_level=0,expect_lparen=0,t=0,in_structure=0,ordinal=0;
     int in_nested_structure=0;
     char *c, *peek, *struct_addr=NULL, *struct_next;
@@ -338,7 +338,7 @@ TPL_API tpl_node *tpl_map_va(char *fmt, va_list ap) {
 
     parent=root;
 
-    c=fmt;
+    c=(char*)fmt;
     while (*c != '\0') {
         switch (*c) {
             case 'c':
@@ -2514,6 +2514,7 @@ TPL_API void tpl_bin_malloc(tpl_bin *bin, size_t len) {
 TPL_API void tpl_bin_free(tpl_bin *bin) {
     if(bin) {
         free(bin->addr);
+        bin->addr = NULL;
         bin->sz = 0;
     }
 }

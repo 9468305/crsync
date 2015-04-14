@@ -118,7 +118,7 @@ typedef struct tpl_gather_t {
 typedef int (tpl_gather_cb)(void *img, size_t sz, void *data);
 
 /* Prototypes */
-TPL_API tpl_node *tpl_map(char *fmt,...);       /* define tpl using format */
+TPL_API tpl_node *tpl_map(const char *fmt,...);       /* define tpl using format */
 TPL_API void tpl_free(tpl_node *r);             /* free a tpl map */
 TPL_API int tpl_pack(tpl_node *r, int i);       /* pack the n'th packable */
 TPL_API int tpl_unpack(tpl_node *r, int i);     /* unpack the n'th packable */
@@ -129,7 +129,7 @@ TPL_API char* tpl_peek(int mode, ...);         /* sneak peek at format string */
 TPL_API int tpl_gather( int mode, ...);        /* non-blocking image gather */
 TPL_API int tpl_jot(int mode, ...);            /* quick write a simple tpl */
 
-TPL_API tpl_node *tpl_map_va(char *fmt, va_list ap);
+TPL_API tpl_node *tpl_map_va(const char *fmt, va_list ap);
 
 /* mmap record */
 typedef struct tpl_mmap_rec {

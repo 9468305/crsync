@@ -30,13 +30,10 @@ SOFTWARE.
 extern "C" {
 #endif
 
-typedef struct rsum_meta_t rsum_meta_t;
-typedef struct rsum_t rsum_t;
-typedef struct crsync_handle crsync_handle;
+typedef struct crsync_handle_t crsync_handle_t;
 
 typedef enum {
     CRSYNCACTION_INIT = 1,
-    CRSYNCACTION_HATCH,
     CRSYNCACTION_MATCH,
     CRSYNCACTION_PATCH,
     /* ... */
@@ -54,21 +51,22 @@ typedef enum {
     CRSYNCE_OK = 0,
     CRSYNCE_FAILED_INIT = -1,
     CRSYNCE_INVALID_OPT = -2,
+    CRSYNCE_FILE_ERROR = -3,
+    CRSYNCE_CURL_ERROR = -4,
 } CRSYNCcode;
 
-/* return: only CRSYNCE_OK or CRSYNC_FAILED_INIT */
-CRSYNCcode crsync_global_init();
+BOOL crsync_global_init();
 
 /* return: NULL for fail */
-crsync_handle* crsync_easy_init();
+crsync_handle_t* crsync_easy_init();
 
 /* return: only CRSYNCE_OK or CRSYNC_INVALID_OPT */
-CRSYNCcode crsync_easy_setopt(crsync_handle *handle, CRSYNCoption opt, ...);
+BOOL crsync_easy_setopt(crsync_handle_t *handle, CRSYNCoption opt, ...);
 
 /* return CRSYNCcode (<=0) or CURLcode (>=0) */
-CRSYNCcode crsync_easy_perform(crsync_handle *handle);
+CRSYNCcode crsync_easy_perform(crsync_handle_t *handle);
 
-void crsync_easy_cleanup(crsync_handle *handle);
+void crsync_easy_cleanup(crsync_handle_t *handle);
 
 void crsync_global_cleanup();
 
