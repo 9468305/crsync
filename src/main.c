@@ -33,6 +33,48 @@ extern "C" {
 
 #define LOGI(...)  printf(__VA_ARGS__)
 
+/* server side:
+ * generate rsums file for filename to outputDir;
+ * copy filename to outpuDir;
+ * rename filename to hashname at outputDir
+*/
+void crsync_server(const char *filename, const char *outputDir) {
+
+    //TODO: complete all logic
+    crsync_rsums_generate(filename, "mthd.apk.rsums");
+}
+
+void client_xfer(int percent) {
+    printf("%d", percent);
+}
+/* client side:
+ * update filename to new version;
+ * use rsumsURL to run rsync rolling match
+ * use newFileURL to download delta data
+*/
+void crsync_client(const char *filename, const char *rsumsURL, const char *newFileURL) {
+
+    crsync_global_init();
+    crsync_handle_t* handle = crsync_easy_init();
+    if(handle) {
+        crsync_easy_setopt(handle, CRSYNCOPT_ROOT, "./");
+        crsync_easy_setopt(handle, CRSYNCOPT_FILE, filename);
+        crsync_easy_setopt(handle, CRSYNCOPT_URL, newFileURL);
+        crsync_easy_setopt(handle, CRSYNCOPT_SUMURL, rsumsURL);
+        crsync_easy_setopt(handle, CRSYNCOPT_XFER, client_xfer);
+
+        printf("0 start\n");
+        crsync_easy_perform(handle);
+        printf("1\n");
+        crsync_easy_perform(handle);
+        printf("2\n");
+
+        crsync_easy_cleanup(handle);
+    }
+    crsync_global_cleanup();
+}
+
+
 int main(void)
 {
     const char *filename = "mtsd.apk";

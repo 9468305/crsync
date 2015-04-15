@@ -707,40 +707,23 @@ void crsync_global_cleanup() {
     curl_global_cleanup();
 }
 
-static void crsync_rsums_free(rsum_meta_t *meta, rsum_t **rsums) {
-    rsum_t *sumItem=NULL, *sumTemp=NULL, *sumIter=NULL, *sumTemp2=NULL;
-
-    HASH_ITER(hh, *rsums, sumItem, sumTemp) {
-        HASH_ITER(hh, sumItem->sub, sumIter, sumTemp2 ) {
-            HASH_DEL(sumItem->sub, sumIter);
-            free(sumIter);
-        }
-        HASH_DEL(*rsums, sumItem);
-        free(sumItem);
-    }
-
-    tpl_bin_free(&meta->rest_tb);
-}
-
 void crsync_rsums_generate(const char *filename, const char *rsumsFilename) {
     tpl_mmap_rec    rec = {-1, NULL, 0};
     rsum_meta_t     meta = {0, 0, "", {NULL, 0}};
-    uint32_t        weak = 0, blocks=0, i=0;
-    uint8_t         strong[STRONG_SUM_SIZE] = {""};
-    tpl_node        *tn = NULL;
 
     if (0 == tpl_mmap_file(filename, &rec)) {
         meta.file_sz = rec.text_sz;
         meta.block_sz = Default_BLOCK_SIZE;
         rsum_strong_block(rec.text, 0, rec.text_sz, meta.file_sum);
-        blocks = meta.file_sz / meta.block_sz;
-        i = meta.file_sz - blocks * meta.block_sz;
+        uint32_t blocks = meta.file_sz / meta.block_sz;
+        uint32_t i = meta.file_sz - blocks * meta.block_sz;
         if (i > 0) {
             tpl_bin_malloc(&meta.rest_tb, i);
             memcpy(meta.rest_tb.addr, rec.text + rec.text_sz - i, i);
         }
-
-        tn = tpl_map(RSUMS_TPLMAP_FORMAT,
+        uint32_t        weak = 0;
+        uint8_t         strong[STRONG_SUM_SIZE] = {""};
+        tpl_node *tn = tpl_map(RSUMS_TPLMAP_FORMAT,
                      &meta.file_sz,
                      &meta.block_sz,
                      meta.file_sum,
@@ -763,38 +746,5 @@ void crsync_rsums_generate(const char *filename, const char *rsumsFilename) {
         tpl_unmap_file(&rec);
     }
 
-    rsum_t *rsums = NULL;
-    crsync_rsums_free(&meta, &rsums);
-}
-
-void crsync_server(const char *filename, const char *outputDir) {
-
-    //TODO: complete all logic
-    crsync_rsums_generate(filename, "mthd.apk.rsums");
-}
-
-void client_xfer(int percent) {
-    printf("%d", percent);
-}
-
-void crsync_client(const char *filename, const char *rsumsURL, const char *newFileURL) {
-
-    crsync_global_init();
-    crsync_handle_t* handle = crsync_easy_init();
-    if(handle) {
-        crsync_easy_setopt(handle, CRSYNCOPT_ROOT, "./");
-        crsync_easy_setopt(handle, CRSYNCOPT_FILE, filename);
-        crsync_easy_setopt(handle, CRSYNCOPT_URL, newFileURL);
-        crsync_easy_setopt(handle, CRSYNCOPT_SUMURL, rsumsURL);
-        crsync_easy_setopt(handle, CRSYNCOPT_XFER, client_xfer);
-
-        printf("0 start\n");
-        crsync_easy_perform(handle);
-        printf("1\n");
-        crsync_easy_perform(handle);
-        printf("2\n");
-
-        crsync_easy_cleanup(handle);
-    }
-    crsync_global_cleanup();
+    tpl_bin_free(&meta.rest_tb);
 }

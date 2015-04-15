@@ -77,20 +77,6 @@ void crsync_global_cleanup();
 /* base on new file, generate rsums to file */
 void crsync_rsums_generate(const char *filename, const char *rsumsFilename);
 
-/* server side:
- * generate rsums file for filename to outputDir;
- * copy filename to outpuDir;
- * rename filename to hashname at outputDir
-*/
-void crsync_server(const char *filename, const char *outputDir);
-
-/* client side:
- * update filename to new version;
- * use rsumsURL to run rsync rolling match
- * use newFileURL to download delta data
-*/
-void crsync_client(const char *filename, const char *rsumsURL, const char *newFileURL);
-
 
 #if defined __cplusplus
     }
