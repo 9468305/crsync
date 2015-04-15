@@ -122,6 +122,9 @@ static UT_string* get_full_filename(crsync_handle_t *handle, const char *suffix)
 }
 
 static void crsync_curl_setopt(CURL *curlhandle) {
+#if CRSYNC_DEBUG
+    curl_easy_setopt(curlhandle, CURLOPT_VERBOSE, 1);
+#endif
     curl_easy_setopt(curlhandle, CURLOPT_PROTOCOLS, CURLPROTO_HTTP); /* http protocol only */
     curl_easy_setopt(curlhandle, CURLOPT_FAILONERROR, 1); /* request failure on HTTP response >= 400 */
     curl_easy_setopt(curlhandle, CURLOPT_AUTOREFERER, 1); /* allow auto referer */
@@ -275,7 +278,7 @@ static CRSYNCcode crsync_msums_generate(crsync_handle_t *handle) {
     if ( 0 == tpl_mmap_file(utstring_body(oldFilename), &rec) ) {
         rsum_weak_block(rec.text, 0, handle->meta->block_sz, &weak);
 
-        while (TRUE) {
+        while (true) {
             HASH_FIND_INT( handle->sums, &weak, sumItem );
             if(sumItem)
             {
@@ -609,12 +612,12 @@ crsync_handle_t* crsync_easy_init() {
     return NULL;
 }
 
-BOOL crsync_easy_setopt(crsync_handle_t *handle, CRSYNCoption opt, ...) {
+CRSYNCcode crsync_easy_setopt(crsync_handle_t *handle, CRSYNCoption opt, ...) {
     if(!handle) {
-        return FALSE;
+        return CRSYNCE_INVALID_OPT;
     }
 
-    BOOL result = TRUE;
+    CRSYNCcode code = CRSYNCE_OK;
     va_list arg;
     va_start(arg, opt);
 
@@ -647,11 +650,11 @@ BOOL crsync_easy_setopt(crsync_handle_t *handle, CRSYNCoption opt, ...) {
         handle->xfer = va_arg(arg, crsync_xfer_fcn*);
         break;
     default:
-        result = FALSE;
+        code = CRSYNCE_INVALID_OPT;
         break;
     }
     va_end(arg);
-    return result;
+    return code;
 }
 
 static CRSYNCcode crsync_checkopt(crsync_handle_t *handle) {

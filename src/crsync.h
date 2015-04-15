@@ -24,11 +24,15 @@ SOFTWARE.
 #ifndef CRSYNC_H
 #define CRSYNC_H
 
+#include <stdbool.h>
+
 #include "curl/curl.h"
 
 #if defined __cplusplus
 extern "C" {
 #endif
+
+#define CRSYNC_DEBUG 0
 
 typedef struct crsync_handle_t crsync_handle_t;
 typedef void (crsync_xfer_fcn)(int percent);
@@ -59,13 +63,13 @@ typedef enum {
     CRSYNCE_BUG
 } CRSYNCcode;
 
-BOOL crsync_global_init();
+CRSYNCcode crsync_global_init();
 
 /* return: NULL for fail */
 crsync_handle_t* crsync_easy_init();
 
 /* return: only CRSYNCE_OK or CRSYNC_INVALID_OPT */
-BOOL crsync_easy_setopt(crsync_handle_t *handle, CRSYNCoption opt, ...);
+CRSYNCcode crsync_easy_setopt(crsync_handle_t *handle, CRSYNCoption opt, ...);
 
 /* return CRSYNCcode (<=0) or CURLcode (>=0) */
 CRSYNCcode crsync_easy_perform(crsync_handle_t *handle);
