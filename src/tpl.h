@@ -138,7 +138,7 @@ typedef struct tpl_mmap_rec {
     size_t text_sz;
 } tpl_mmap_rec;
 
-TPL_API int tpl_mmap_file_output(const char *filename, tpl_mmap_rec *mr);
+TPL_API int tpl_mmap_output_file(const char *filename, size_t sz, void **text_out);
 TPL_API int tpl_mmap_file(const char *filename, tpl_mmap_rec *map_rec);
 TPL_API int tpl_unmap_file(tpl_mmap_rec *mr);
 TPL_API void tpl_bin_malloc(tpl_bin *bin, size_t len);

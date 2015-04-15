@@ -31,6 +31,7 @@ extern "C" {
 #endif
 
 typedef struct crsync_handle_t crsync_handle_t;
+typedef void (crsync_xfer_fcn)(int percent);
 
 typedef enum {
     CRSYNCACTION_INIT = 1,
@@ -45,6 +46,7 @@ typedef enum {
     CRSYNCOPT_FILE,         /* local file name */
     CRSYNCOPT_URL,          /* remote file's url */
     CRSYNCOPT_SUMURL,       /* remote file's rsums url */
+    CRSYNCOPT_XFER,         /* progress callback hook */
 } CRSYNCoption;
 
 typedef enum {
@@ -53,6 +55,8 @@ typedef enum {
     CRSYNCE_INVALID_OPT = -2,
     CRSYNCE_FILE_ERROR = -3,
     CRSYNCE_CURL_ERROR = -4,
+    /* ... */
+    CRSYNCE_BUG
 } CRSYNCcode;
 
 BOOL crsync_global_init();

@@ -68,7 +68,12 @@ typedef struct crsync_handle_t {
     CURL            *curl_handle;       /* curl handle */
     uint8_t         *curl_buffer;       /* curl write callback data */
     uint32_t        curl_buffer_offset; /* curl write callback data offset */
+    crsync_xfer_fcn *xfer;              /* progress callback hook */
 } crsync_handle_t;
+
+static void xfer_fcn(int percent) {
+    (void)percent;
+}
 
 static void rsum_weak_block(const uint8_t *data, uint32_t start, uint32_t block_sz, uint32_t *weak)
 {
@@ -117,7 +122,6 @@ static UT_string* get_full_filename(crsync_handle_t *handle, const char *suffix)
 }
 
 static void crsync_curl_setopt(CURL *curlhandle) {
-    curl_easy_setopt(curlhandle, CURLOPT_VERBOSE, 1);
     curl_easy_setopt(curlhandle, CURLOPT_PROTOCOLS, CURLPROTO_HTTP); /* http protocol only */
     curl_easy_setopt(curlhandle, CURLOPT_FAILONERROR, 1); /* request failure on HTTP response >= 400 */
     curl_easy_setopt(curlhandle, CURLOPT_AUTOREFERER, 1); /* allow auto referer */
@@ -165,6 +169,15 @@ static void crsync_sums_free(crsync_handle_t *handle) {
     }
 }
 
+static int crsync_curl_progress(void *clientp, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow) {
+    (void)ultotal;
+    (void)ulnow;
+    crsync_handle_t *handle = (crsync_handle_t *)clientp;
+    int progress = (dltotal == 0) ? 0 : (dlnow * 100 / dltotal);
+    handle->xfer(progress);
+    return 0;
+}
+
 static CRSYNCcode crsync_rsums_curl(crsync_handle_t *handle) {
     CRSYNCcode  code = CRSYNCE_CURL_ERROR;
     UT_string   *rsumsFilename = get_full_filename(handle, RSUMS_SUFFIX);
@@ -177,6 +190,9 @@ static CRSYNCcode crsync_rsums_curl(crsync_handle_t *handle) {
             curl_easy_setopt(handle->curl_handle, CURLOPT_HTTPGET, 1);
             curl_easy_setopt(handle->curl_handle, CURLOPT_WRITEFUNCTION, NULL);
             curl_easy_setopt(handle->curl_handle, CURLOPT_WRITEDATA, (void *)rsumsFile);
+            curl_easy_setopt(handle->curl_handle, CURLOPT_NOPROGRESS, 0);
+            curl_easy_setopt(handle->curl_handle, CURLOPT_XFERINFOFUNCTION, (void *)crsync_curl_progress);
+            curl_easy_setopt(handle->curl_handle, CURLOPT_XFERINFODATA, (void *)handle);
 
             CURLcode curlcode = curl_easy_perform(handle->curl_handle);
             fclose(rsumsFile);
@@ -256,7 +272,7 @@ static CRSYNCcode crsync_msums_generate(crsync_handle_t *handle) {
     uint8_t         strong[STRONG_SUM_SIZE] = {""};
     rsum_t          *sumItem = NULL, *sumIter = NULL, *sumTemp = NULL;
 
-    if ( !tpl_mmap_file(utstring_body(oldFilename), &rec) ) {
+    if ( 0 == tpl_mmap_file(utstring_body(oldFilename), &rec) ) {
         rsum_weak_block(rec.text, 0, handle->meta->block_sz, &weak);
 
         while (TRUE) {
@@ -358,7 +374,7 @@ static CRSYNCcode crsync_msums_load(crsync_handle_t *handle) {
                  &seq,
                  &offset);
 
-    if(!tpl_load(tn, TPL_FILE, msumsFilename)) {
+    if(!tpl_load(tn, TPL_FILE, utstring_body(msumsFilename))) {
         tpl_unpack(tn, 0);
 
         uint32_t blocks = handle->meta->file_sz / handle->meta->block_sz;
@@ -416,6 +432,9 @@ static CURLcode crsync_msums_curl(crsync_handle_t *handle, rsum_t *sumItem, tpl_
         curl_easy_setopt(handle->curl_handle, CURLOPT_WRITEDATA, (void *)handle);
         curl_easy_setopt(handle->curl_handle, CURLOPT_RANGE, utstring_body(range));
         curl_easy_setopt(handle->curl_handle, CURLOPT_TIMEOUT, 10);
+        curl_easy_setopt(handle->curl_handle, CURLOPT_NOPROGRESS, 1);
+        curl_easy_setopt(handle->curl_handle, CURLOPT_XFERINFOFUNCTION, NULL);
+        curl_easy_setopt(handle->curl_handle, CURLOPT_XFERINFODATA, NULL);
         handle->curl_buffer_offset = 0;
 
         code = curl_easy_perform(handle->curl_handle);
@@ -432,6 +451,19 @@ static CURLcode crsync_msums_curl(crsync_handle_t *handle, rsum_t *sumItem, tpl_
     } while(retry-- > 0);
 
     utstring_free(range);
+    return code;
+}
+
+static CRSYNCcode crsync_msums_patch(crsync_handle_t *handle, rsum_t *sumItem, tpl_mmap_rec *recOld, tpl_mmap_rec *recNew, uint8_t *strong) {
+    CRSYNCcode code = CRSYNCE_OK;
+    rsum_strong_block(recNew->text, sumItem->seq * handle->meta->block_sz, handle->meta->block_sz, strong);
+    if(0 != memcmp(strong, sumItem->strong, STRONG_SUM_SIZE)) {
+        if( (sumItem->offset != -1) && (recOld->fd != -1) ) {
+            memcpy(recNew->text + sumItem->seq * handle->meta->block_sz, recOld->text + sumItem->offset, handle->meta->block_sz);
+        } else {
+            code = crsync_msums_curl(handle, sumItem, recNew);
+        }
+    }
     return code;
 }
 
@@ -471,39 +503,66 @@ static CRSYNCcode crsync_patch(crsync_handle_t *handle) {
 
     tpl_mmap_rec    recOld = {-1, NULL, 0};
     tpl_mmap_rec    recNew = {-1, NULL, 0};
-    rsum_t          *sumItem=NULL, *sumTemp=NULL, *sumIter=NULL, *sumTemp2=NULL;
 
-    tpl_mmap_file(utstring_body(oldFilename), &recOld);
-
-    recNew.text_sz = handle->meta->file_sz;
-    tpl_mmap_file_output(utstring_body(newFilename), &recNew);
-
-    HASH_ITER(hh, handle->sums, sumItem, sumTemp) {
-        if(sumItem->offset == -1) {
-            crsync_msums_curl(handle, sumItem, &recNew);
-        } else {
-            memcpy(recNew.text + sumItem->seq * handle->meta->block_sz, recOld.text + sumItem->offset, handle->meta->block_sz);
+    do {
+        //old file exist or not is OK
+        tpl_mmap_file(utstring_body(oldFilename), &recOld);
+        //new file must be ready
+        recNew.fd = tpl_mmap_output_file(utstring_body(newFilename), handle->meta->file_sz, &recNew.text);
+        if( -1 == recNew.fd ) {
+            code = CRSYNCE_FILE_ERROR;
+            break;
         }
-        HASH_ITER(hh, sumItem->sub, sumIter, sumTemp2 ) {
-            if(sumIter->offset == -1) {
-                crsync_msums_curl(handle, sumIter, &recNew);
-            } else {
-                memcpy(recNew.text + sumIter->seq * handle->meta->block_sz, recOld.text + sumIter->offset, handle->meta->block_sz);
+        recNew.text_sz = handle->meta->file_sz;
+        uint32_t blocks = handle->meta->file_sz / handle->meta->block_sz;
+
+        uint32_t count = 0;
+        uint8_t strong[STRONG_SUM_SIZE];
+        rsum_t *sumItem=NULL, *sumTemp=NULL, *sumIter=NULL, *sumTemp2=NULL;
+        HASH_ITER(hh, handle->sums, sumItem, sumTemp) {
+            code = crsync_msums_patch(handle, sumItem, &recOld, &recNew, strong);
+            handle->xfer( count++ * 100 / blocks );
+            if(CRSYNCE_OK != code) {
+                break;
+            }
+            HASH_ITER(hh, sumItem->sub, sumIter, sumTemp2 ) {
+                code = crsync_msums_patch(handle, sumIter, &recOld, &recNew, strong);
+                handle->xfer( count++ * 100 / blocks );
+                if(CRSYNCE_OK != code) {
+                    break;
+                }
+            }
+            if(CRSYNCE_OK != code) {
+                break;
             }
         }
-    }
-    if(handle->meta->rest_tb.sz > 0) {
-        memcpy(recNew.text + handle->meta->file_sz - handle->meta->rest_tb.sz, handle->meta->rest_tb.addr, handle->meta->rest_tb.sz);
-    }
+        if(CRSYNCE_OK == code) {
+            if(handle->meta->rest_tb.sz > 0) {
+                memcpy(recNew.text + handle->meta->file_sz - handle->meta->rest_tb.sz, handle->meta->rest_tb.addr, handle->meta->rest_tb.sz);
+            }
+            rsum_strong_block(recNew.text, 0, recNew.text_sz, strong);
+            if(0 != memcmp(strong, handle->meta->file_sum, STRONG_SUM_SIZE)) {
+                code = CRSYNCE_BUG;
+            }
+        }
+
+    } while (0);
 
     tpl_unmap_file(&recNew);
     tpl_unmap_file(&recOld);
 
-    remove(utstring_body(oldFilename));
-    rename(utstring_body(newFilename), utstring_body(oldFilename));
+    if(CRSYNCE_OK == code) {
+        remove(utstring_body(oldFilename));
+        rename(utstring_body(newFilename), utstring_body(oldFilename));
 
-    //TODO: remove rsums file
-    //TODO: remove msums file
+        UT_string *rsumsFilename = get_full_filename(handle, RSUMS_SUFFIX);
+        UT_string *msumsFilename = get_full_filename(handle, MSUMS_SUFFIX);
+        remove(utstring_body(rsumsFilename));
+        remove(utstring_body(msumsFilename));
+        utstring_free(rsumsFilename);
+        utstring_free(msumsFilename);
+    }
+
     utstring_free(oldFilename);
     utstring_free(newFilename);
 
@@ -534,6 +593,7 @@ crsync_handle_t* crsync_easy_init() {
             break;
         }
         handle->action = CRSYNCACTION_INIT;
+        handle->xfer = xfer_fcn;
         return handle;
     } while (0);
 
@@ -582,6 +642,9 @@ BOOL crsync_easy_setopt(crsync_handle_t *handle, CRSYNCoption opt, ...) {
             free(handle->sums_url);
         }
         handle->sums_url = strdup( va_arg(arg, const char*) );
+        break;
+    case CRSYNCOPT_XFER:
+        handle->xfer = va_arg(arg, crsync_xfer_fcn*);
         break;
     default:
         result = FALSE;
@@ -665,10 +728,8 @@ void crsync_rsums_generate(const char *filename, const char *rsumsFilename) {
     uint32_t        weak = 0, blocks=0, i=0;
     uint8_t         strong[STRONG_SUM_SIZE] = {""};
     tpl_node        *tn = NULL;
-    int             result=0;
 
-    result = tpl_mmap_file(filename, &rec);
-    if (!result) {
+    if (0 == tpl_mmap_file(filename, &rec)) {
         meta.file_sz = rec.text_sz;
         meta.block_sz = Default_BLOCK_SIZE;
         rsum_strong_block(rec.text, 0, rec.text_sz, meta.file_sum);
@@ -712,6 +773,10 @@ void crsync_server(const char *filename, const char *outputDir) {
     crsync_rsums_generate(filename, "mthd.apk.rsums");
 }
 
+void client_xfer(int percent) {
+    printf("%d", percent);
+}
+
 void crsync_client(const char *filename, const char *rsumsURL, const char *newFileURL) {
 
     crsync_global_init();
@@ -721,7 +786,9 @@ void crsync_client(const char *filename, const char *rsumsURL, const char *newFi
         crsync_easy_setopt(handle, CRSYNCOPT_FILE, filename);
         crsync_easy_setopt(handle, CRSYNCOPT_URL, newFileURL);
         crsync_easy_setopt(handle, CRSYNCOPT_SUMURL, rsumsURL);
+        crsync_easy_setopt(handle, CRSYNCOPT_XFER, client_xfer);
 
+        printf("0 start\n");
         crsync_easy_perform(handle);
         printf("1\n");
         crsync_easy_perform(handle);

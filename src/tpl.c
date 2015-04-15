@@ -176,7 +176,6 @@ static void *tpl_dump_atyp(tpl_node *n, tpl_atyp* at, void *dv);
 static size_t tpl_ser_osz(tpl_node *n);
 static void tpl_free_atyp(tpl_node *n,tpl_atyp *atyp);
 static int tpl_dump_to_mem(tpl_node *r, void *addr, size_t sz);
-static int tpl_mmap_output_file(char *filename, size_t sz, void **text_out);
 static int tpl_cpu_bigendian(void);
 static int tpl_needs_endian_swap(void *);
 static void tpl_byteswap(void *word, int len);
@@ -564,6 +563,9 @@ fail:
 }
 
 TPL_API int tpl_unmap_file( tpl_mmap_rec *mr) {
+    if( -1 == mr->fd ) {
+        return 0;
+    }
 
     if ( munmap( mr->text, mr->text_sz ) == -1 ) {
         tpl_hook.oops("Failed to munmap: %s\n", strerror(errno));
@@ -1711,21 +1713,36 @@ static int tpl_serlen(tpl_node *r, tpl_node *n, void *dv, size_t *serlen) {
     return 0;
 }
 
-static int tpl_mmap_output_file(char *filename, size_t sz, void **text_out) {
+TPL_API int tpl_mmap_output_file(const char *filename, size_t sz, void **text_out) {
+    struct stat stat_buf;
     void *text;
     int fd,perms;
 
 #ifndef _WIN32
     perms = S_IRUSR|S_IWUSR|S_IWGRP|S_IRGRP|S_IROTH;  /* ug+w o+r */
-    fd=open(filename,O_CREAT|O_TRUNC|O_RDWR,perms);
+    fd=open(filename,O_CREAT|O_RDWR,perms);
 #else
-	perms = _S_IWRITE;
-    fd=_open(filename,_O_CREAT|_O_TRUNC|_O_RDWR,perms);
+    perms = _S_IWRITE;
+    fd=_open(filename,_O_CREAT|_O_RDWR,perms);
 #endif
 
     if ( fd == -1 ) {
         tpl_hook.oops("Couldn't open file %s: %s\n", filename, strerror(errno));
         return -1;
+    }
+
+    if ( fstat(fd, &stat_buf) == -1) {
+        close(fd);
+        tpl_hook.oops("Couldn't stat file %s: %s\n", filename, strerror(errno));
+        return -1;
+    }
+
+    if( sz != (size_t)stat_buf.st_size ) {
+        if (ftruncate(fd,sz) == -1) {
+            close(fd);
+            tpl_hook.oops("ftruncate failed: %s\n", strerror(errno));
+            return -1;
+        }
     }
 
     text = mmap(0, sz, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
@@ -1734,45 +1751,8 @@ static int tpl_mmap_output_file(char *filename, size_t sz, void **text_out) {
         close(fd);
         return -1;
     }
-    if (ftruncate(fd,sz) == -1) {
-        tpl_hook.oops("ftruncate failed: %s\n", strerror(errno));
-        munmap( text, sz );
-        close(fd);
-        return -1;
-    }
     *text_out = text;
     return fd;
-}
-
-TPL_API int tpl_mmap_file_output(const char *filename, tpl_mmap_rec *mr) {
-    int perms;
-
-#ifndef _WIN32
-    perms = S_IRUSR|S_IWUSR|S_IWGRP|S_IRGRP|S_IROTH;  /* ug+w o+r */
-    mr->fd=open(filename,O_CREAT|O_TRUNC|O_RDWR,perms);
-#else
-    perms = _S_IWRITE;
-    mr->fd=_open(filename,_O_CREAT|_O_TRUNC|_O_RDWR,perms);
-#endif
-
-    if ( mr->fd == -1 ) {
-        tpl_hook.oops("Couldn't open file %s: %s\n", filename, strerror(errno));
-        return -1;
-    }
-
-    mr->text = mmap(0, mr->text_sz, PROT_READ|PROT_WRITE, MAP_SHARED, mr->fd, 0);
-    if (mr->text == MAP_FAILED) {
-        tpl_hook.oops("Failed to mmap %s: %s\n", filename, strerror(errno));
-        close(mr->fd);
-        return -1;
-    }
-    if (ftruncate(mr->fd,mr->text_sz) == -1) {
-        tpl_hook.oops("ftruncate failed: %s\n", strerror(errno));
-        munmap( mr->text, mr->text_sz );
-        close(mr->fd);
-        return -1;
-    }
-    return mr->fd;
 }
 
 TPL_API int tpl_mmap_file(const char *filename, tpl_mmap_rec *mr) {
