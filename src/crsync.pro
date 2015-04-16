@@ -19,7 +19,8 @@ HEADERS += \
     crsync.h \
     blake2.h \
     blake2-impl.h \
-    utstring.h
+    utstring.h \
+    log.h
 
 DEFINES += CURL_STATICLIB
 LIBS += -L$${_PRO_FILE_PWD_}/../libcurl/lib/m32 -lcurl -lws2_32

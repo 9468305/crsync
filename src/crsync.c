@@ -28,6 +28,7 @@ SOFTWARE.
 #include "tpl.h"
 #include "blake2.h"
 #include "utstring.h"
+#include "log.h"
 
 #define STRONG_SUM_SIZE 32  /*strong checksum size*/
 #define Default_BLOCK_SIZE 2048 /*default block size to 2K*/
@@ -72,7 +73,11 @@ typedef struct crsync_handle_t {
 } crsync_handle_t;
 
 static void xfer_fcn(int percent) {
+#if CRSYNC_DEBUG
+    LOGD("default xfer percent: %d\n", percent);
+#else
     (void)percent;
+#endif
 }
 
 static void rsum_weak_block(const uint8_t *data, uint32_t start, uint32_t block_sz, uint32_t *weak)

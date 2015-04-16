@@ -32,8 +32,6 @@ SOFTWARE.
 extern "C" {
 #endif
 
-#define CRSYNC_DEBUG 0
-
 typedef struct crsync_handle_t crsync_handle_t;
 typedef void (crsync_xfer_fcn)(int percent);
 

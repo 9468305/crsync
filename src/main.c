@@ -25,13 +25,11 @@ SOFTWARE.
 #include <time.h>
 
 #include "crsync.h"
-#include "curl/curl.h"
+#include "log.h"
 
 #if defined __cplusplus
 extern "C" {
 #endif
-
-#define LOGI(...)  printf(__VA_ARGS__)
 
 /* server side:
  * generate rsums file for filename to outputDir;
@@ -45,7 +43,7 @@ void crsync_server(const char *filename, const char *outputDir) {
 }
 
 void client_xfer(int percent) {
-    printf("%d", percent);
+    LOGI("%d", percent);
 }
 /* client side:
  * update filename to new version;
