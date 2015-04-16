@@ -21,11 +21,10 @@ HEADERS += \
     blake2-impl.h \
     utstring.h
 
-#LIBS += -L$${_PRO_FILE_PWD_}/../libcurl/lib -lcurldll
 DEFINES += CURL_STATICLIB
-LIBS += -L$${_PRO_FILE_PWD_}/../libcurl/lib -lcurl -lws2_32
+LIBS += -L$${_PRO_FILE_PWD_}/../libcurl/lib/m32 -lcurl -lws2_32
 
-INCLUDEPATH += ../libcurl/include
+INCLUDEPATH += $${_PRO_FILE_PWD_}/../libcurl/include
 
 QMAKE_CFLAGS += -std=c99
 QMAKE_LFLAGS += -static -static-libgcc
