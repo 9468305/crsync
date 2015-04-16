@@ -5,9 +5,9 @@ CONFIG -= qt
 
 SOURCES += main.c \
     tpl.c \
-    win/mmap.c \
     crsync.c \
-    blake2b-ref.c
+    blake2b-ref.c \
+    win/mman.c
 
 include(deployment.pri)
 qtcAddDeployment()
