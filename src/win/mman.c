@@ -11,6 +11,7 @@
 
 static int __map_mman_error(const DWORD err, const int deferr)
 {
+    (void)deferr;
     if (err == 0)
         return 0;
     //TODO: implement
@@ -57,6 +58,7 @@ static DWORD __map_mmap_prot_file(const int prot)
 
 void* mmap(void *addr, size_t len, int prot, int flags, int fildes, off_t off)
 {
+    (void)addr;
     HANDLE fm, h;
     
     void * map = MAP_FAILED;
@@ -128,6 +130,7 @@ void* mmap(void *addr, size_t len, int prot, int flags, int fildes, off_t off)
 
 int munmap(void *addr, size_t len)
 {
+    (void)len;
     if (UnmapViewOfFile(addr))
         return 0;
         
@@ -151,6 +154,7 @@ int mprotect(void *addr, size_t len, int prot)
 
 int msync(void *addr, size_t len, int flags)
 {
+    (void)flags;
     if (FlushViewOfFile(addr, len))
         return 0;
     
