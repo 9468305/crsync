@@ -1,55 +1,52 @@
-/*
- * sys/mman.h
- * mman-win32
- */
+#ifndef _MMAN_H_
+#define _MMAN_H_
 
-#ifndef _SYS_MMAN_H_
-#define _SYS_MMAN_H_
+/* Protections */
+#define PROT_NONE       0x00    /* no permissions */
+#define PROT_READ       0x01    /* pages can be read */
+#define PROT_WRITE      0x02    /* pages can be written */
+#define PROT_EXEC       0x04    /* pages can be executed */
 
-#ifndef _WIN32_WINNT		// Allow use of features specific to Windows XP or later.                   
-#define _WIN32_WINNT 0x0501	// Change this to the appropriate value to target other versions of Windows.
-#endif						
+/* Sharing type and options */
+#define MAP_SHARED      0x0001          /* share changes */
+#define MAP_PRIVATE     0x0002          /* changes are private */
+#define MAP_COPY        MAP_PRIVATE     /* Obsolete */
+#define MAP_FIXED        0x0010 /* map addr must be exactly as requested */
+#define MAP_RENAME       0x0020 /* Sun: rename private pages to file */
+#define MAP_NORESERVE    0x0040 /* Sun: don't reserve needed swap area */
+#define MAP_INHERIT      0x0080 /* region is retained after exec */
+#define MAP_NOEXTEND     0x0100 /* for MAP_FILE, don't change file size */
+#define MAP_HASSEMAPHORE 0x0200 /* region may contain semaphores */
+#define MAP_STACK        0x0400 /* region grows down, like a stack */
 
-/* All the headers include this file. */
-#ifndef _MSC_VER
-#include <_mingw.h>
-#endif
-
-#include <sys/types.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#define PROT_NONE       0
-#define PROT_READ       1
-#define PROT_WRITE      2
-#define PROT_EXEC       4
-
-#define MAP_FILE        0
-#define MAP_SHARED      1
-#define MAP_PRIVATE     2
-#define MAP_TYPE        0xf
-#define MAP_FIXED       0x10
-#define MAP_ANONYMOUS   0x20
-#define MAP_ANON        MAP_ANONYMOUS
-
+/* Error returned from mmap() */
 #define MAP_FAILED      ((void *)-1)
 
-/* Flags for msync. */
-#define MS_ASYNC        1
-#define MS_SYNC         2
-#define MS_INVALIDATE   4
+/* Flags to msync */
+#define MS_ASYNC        0x01    /* perform asynchronous writes */
+#define MS_SYNC         0x02    /* perform synchronous writes */
+#define MS_INVALIDATE   0x04    /* invalidate cached data */
 
-void*   mmap(void *addr, size_t len, int prot, int flags, int fildes, off_t off);
-int     munmap(void *addr, size_t len);
-int     mprotect(void *addr, size_t len, int prot);
-int     msync(void *addr, size_t len, int flags);
-int     mlock(const void *addr, size_t len);
-int     munlock(const void *addr, size_t len);
-
-#ifdef __cplusplus
-};
+/* File modes for 'open' not defined in MinGW32  (not used by mmap) */
+#ifndef S_IWGRP
+#define S_IWGRP 0
+#define S_IRGRP 0
+#define S_IROTH 0
 #endif
 
-#endif /*  _SYS_MMAN_H_ */
+/**
+ * Map a file to a memory region
+ */
+void *mmap(void *addr, unsigned int len, int prot, int flags, int fd, unsigned int offset);
+
+/**
+ * Unmap a memory region
+ */
+int munmap(void *addr, int len);
+
+/**
+ * Synchronize a mapped region
+ */
+int msync(char *addr, int len, int flags);
+
+#endif	/* _MMAN_H_ */

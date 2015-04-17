@@ -51,7 +51,7 @@ void client_xfer(int percent) {
  * use newFileURL to download delta data
 */
 void crsync_client(const char *filename, const char *rsumsURL, const char *newFileURL) {
-    printf("0\n");
+
     crsync_global_init();
     crsync_handle_t* handle = crsync_easy_init();
     if(handle) {
@@ -61,10 +61,11 @@ void crsync_client(const char *filename, const char *rsumsURL, const char *newFi
         crsync_easy_setopt(handle, CRSYNCOPT_SUMURL, rsumsURL);
         crsync_easy_setopt(handle, CRSYNCOPT_XFER, client_xfer);
 
+        LOGI("0 start\n");
         crsync_easy_perform(handle);
-        printf("1\n");
+        LOGI("1\n");
         crsync_easy_perform(handle);
-        printf("2\n");
+        LOGI("2\n");
 
         crsync_easy_cleanup(handle);
     }
@@ -78,10 +79,10 @@ int main(void)
     const char *rsumsURL = "http://image.ib.qq.com/a/test/mthd.apk.rsums";
     const char *newFileURL = "http://image.ib.qq.com/a/test/mthd.apk";
 
-    printf("crsync main begin\n");
+    LOGI("crsync main begin\n");
     crsync_client(filename, rsumsURL, newFileURL);
 
-    printf("crsync main end\n");
+    LOGI("crsync main end\n");
     return 0;
 }
 
