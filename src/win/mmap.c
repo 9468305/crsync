@@ -24,6 +24,9 @@ static const char id[]="$Id: tpl.c 107 2007-04-20 17:11:29Z thanson $";
  */
 void *mmap(void *addr, unsigned int len, int prot, int flags, int fd, unsigned int offset)
 {
+    (void)addr;
+    (void)flags;
+    (void)offset;
 	DWORD wprot;
 	DWORD waccess;
 	HANDLE h;
@@ -126,6 +129,7 @@ void *mmap(void *addr, unsigned int len, int prot, int flags, int fd, unsigned i
  */
 int munmap(void *addr, int len) 
 {
+    (void)len;
 	if (UnmapViewOfFile(addr)) {
 		return 0;
 	}
@@ -148,6 +152,7 @@ int munmap(void *addr, int len)
  */
 int msync(char *addr, int len, int flags) 
 {
+    (void)flags;
 	if (FlushViewOfFile(addr, len) == 0) {
 		DWORD error = GetLastError();
 		

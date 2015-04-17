@@ -24,32 +24,32 @@ SOFTWARE.
 #include <stdio.h>
 #include <time.h>
 
-#include "crsync.h"
 #include "log.h"
+#include "crsync.h"
+#include "crsynctool.h"
 
 #if defined __cplusplus
 extern "C" {
 #endif
 
-/* server side:
- * generate rsums file for filename to outputDir;
- * copy filename to outpuDir;
- * rename filename to hashname at outputDir
-*/
-void crsync_server(const char *filename, const char *outputDir) {
+void crsync_server(const char *filename) {
 
-    //TODO: complete all logic
-    crsync_rsums_generate(filename, "mthd.apk.rsums");
+    crsynctool_handle_t* handle = crsynctool_easy_init();
+    if(handle) {
+        crsynctool_easy_setopt(handle, CRSYNCTOOLOPT_ROOT, "./");
+        crsynctool_easy_setopt(handle, CRSYNCTOOLOPT_FILE, filename);
+        crsynctool_easy_setopt(handle, CRSYNCTOOLOPT_BLOCKSIZE, 2048);
+
+        crsynctool_easy_perform(handle);
+
+        crsynctool_easy_cleanup(handle);
+    }
 }
 
 void client_xfer(int percent) {
     LOGI("%d", percent);
 }
-/* client side:
- * update filename to new version;
- * use rsumsURL to run rsync rolling match
- * use newFileURL to download delta data
-*/
+
 void crsync_client(const char *filename, const char *rsumsURL, const char *newFileURL) {
 
     crsync_global_init();
@@ -76,12 +76,13 @@ void crsync_client(const char *filename, const char *rsumsURL, const char *newFi
 int main(void)
 {
     const char *filename = "mtsd.apk";
+    const char *newFilename = "mthd.apk";
     const char *rsumsURL = "http://image.ib.qq.com/a/test/mthd.apk.rsums";
     const char *newFileURL = "http://image.ib.qq.com/a/test/mthd.apk";
 
     LOGI("crsync main begin\n");
-    crsync_client(filename, rsumsURL, newFileURL);
-
+    crsync_server(newFilename);
+//    crsync_client(filename, rsumsURL, newFileURL);
     LOGI("crsync main end\n");
     return 0;
 }

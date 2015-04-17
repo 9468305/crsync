@@ -31,7 +31,6 @@ SOFTWARE.
 #include "log.h"
 
 #define STRONG_SUM_SIZE 32  /*strong checksum size*/
-#define Default_BLOCK_SIZE 2048 /*default block size to 2K*/
 
 static const char   *RSUMS_TPLMAP_FORMAT = "uuc#BA(uc#)";
 static const char   *MSUMS_TPLMAP_FORMAT = "uuc#BA(uc#ui)";
@@ -713,46 +712,4 @@ void crsync_easy_cleanup(crsync_handle_t *handle) {
 
 void crsync_global_cleanup() {
     curl_global_cleanup();
-}
-
-void crsync_rsums_generate(const char *filename, const char *rsumsFilename) {
-    tpl_mmap_rec    rec = {-1, NULL, 0};
-    rsum_meta_t     meta = {0, 0, "", {NULL, 0}};
-
-    if (0 == tpl_mmap_file(filename, &rec)) {
-        meta.file_sz = rec.text_sz;
-        meta.block_sz = Default_BLOCK_SIZE;
-        rsum_strong_block(rec.text, 0, rec.text_sz, meta.file_sum);
-        uint32_t blocks = meta.file_sz / meta.block_sz;
-        uint32_t i = meta.file_sz - blocks * meta.block_sz;
-        if (i > 0) {
-            tpl_bin_malloc(&meta.rest_tb, i);
-            memcpy(meta.rest_tb.addr, rec.text + rec.text_sz - i, i);
-        }
-        uint32_t        weak = 0;
-        uint8_t         strong[STRONG_SUM_SIZE] = {""};
-        tpl_node *tn = tpl_map(RSUMS_TPLMAP_FORMAT,
-                     &meta.file_sz,
-                     &meta.block_sz,
-                     meta.file_sum,
-                     STRONG_SUM_SIZE,
-                     &meta.rest_tb,
-                     &weak,
-                     &strong,
-                     STRONG_SUM_SIZE);
-        tpl_pack(tn, 0);
-
-        for (i = 0; i < blocks; i++) {
-            rsum_weak_block(rec.text, i*meta.block_sz, meta.block_sz, &weak);
-            rsum_strong_block(rec.text, i*meta.block_sz, meta.block_sz, strong);
-            tpl_pack(tn, 1);
-        }
-
-        tpl_dump(tn, TPL_FILE, rsumsFilename);
-        tpl_free(tn);
-
-        tpl_unmap_file(&rec);
-    }
-
-    tpl_bin_free(&meta.rest_tb);
 }

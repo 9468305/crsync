@@ -21,63 +21,40 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-#ifndef CRSYNC_H
-#define CRSYNC_H
+#ifndef CRSYNC_TOOL_H
+#define CRSYNC_TOOL_H
 
-#include <stdbool.h>
-
-#include "curl/curl.h"
+#include "crsync.h"
 
 #if defined __cplusplus
 extern "C" {
 #endif
 
-typedef struct crsync_handle_t crsync_handle_t;
-typedef void (crsync_xfer_fcn)(int percent);
+typedef struct crsynctool_handle_t crsynctool_handle_t;
 
 typedef enum {
-    CRSYNCACTION_INIT = 1,
-    CRSYNCACTION_MATCH,
-    CRSYNCACTION_PATCH,
-    /* ... */
-    CRSYNCACTION_CLEANUP,
-} CRSYNCaction;
-
-typedef enum {
-    CRSYNCOPT_ROOT = 1,     /* local root dir */
-    CRSYNCOPT_FILE,         /* local file name */
-    CRSYNCOPT_URL,          /* remote file's url */
-    CRSYNCOPT_SUMURL,       /* remote file's rsums url */
-    CRSYNCOPT_XFER,         /* progress callback hook */
-} CRSYNCoption;
-
-typedef enum {
-    CRSYNCE_OK = 0,
-    CRSYNCE_FAILED_INIT = -1,
-    CRSYNCE_INVALID_OPT = -2,
-    CRSYNCE_FILE_ERROR = -3,
-    CRSYNCE_CURL_ERROR = -4,
-    /* ... */
-    CRSYNCE_BUG
-} CRSYNCcode;
-
-CRSYNCcode crsync_global_init();
+    CRSYNCTOOLOPT_ROOT = 1,     /* local root dir */
+    CRSYNCTOOLOPT_FILE,         /* local file name */
+    CRSYNCTOOLOPT_BLOCKSIZE,    /* block size, default 2K */
+} CRSYNCTOOLoption;
 
 /* return: NULL for fail */
-crsync_handle_t* crsync_easy_init();
+crsynctool_handle_t* crsynctool_easy_init();
 
 /* return: only CRSYNCE_OK or CRSYNC_INVALID_OPT */
-CRSYNCcode crsync_easy_setopt(crsync_handle_t *handle, CRSYNCoption opt, ...);
+CRSYNCcode crsynctool_easy_setopt(crsynctool_handle_t *handle, CRSYNCTOOLoption opt, ...);
 
 /* return CRSYNCcode (<=0) or CURLcode (>=0) */
-CRSYNCcode crsync_easy_perform(crsync_handle_t *handle);
+CRSYNCcode crsynctool_easy_perform(crsynctool_handle_t *handle);
 
-void crsync_easy_cleanup(crsync_handle_t *handle);
+void crsynctool_easy_cleanup(crsynctool_handle_t *handle);
 
-void crsync_global_cleanup();
+
+/* from filename, generate rsums file, named file.rums */
+CRSYNCcode crsync_rsums_generate(const char *filename);
 
 #if defined __cplusplus
     }
 #endif
 
-#endif // CRSYNC_H
+#endif // CRSYNC_TOOL_H
