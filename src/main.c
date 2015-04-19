@@ -61,7 +61,7 @@ void crsync_client(const char *filename, const char *rsumsURL, const char *newFi
         crsync_easy_setopt(handle, CRSYNCOPT_SUMURL, rsumsURL);
         crsync_easy_setopt(handle, CRSYNCOPT_XFER, client_xfer);
 
-        LOGI("0 start\n");
+        LOGI("0\n");
         crsync_easy_perform(handle);
         LOGI("1\n");
         crsync_easy_perform(handle);
@@ -81,8 +81,8 @@ int main(void)
     const char *newFileURL = "http://image.ib.qq.com/a/test/mthd.apk";
 
     LOGI("crsync main begin\n");
-    crsync_server(newFilename);
-//    crsync_client(filename, rsumsURL, newFileURL);
+    //crsync_server(newFilename);
+    crsync_client(filename, rsumsURL, newFileURL);
     LOGI("crsync main end\n");
     return 0;
 }

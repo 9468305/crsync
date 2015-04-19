@@ -49,10 +49,6 @@ CRSYNCcode crsynctool_easy_perform(crsynctool_handle_t *handle);
 
 void crsynctool_easy_cleanup(crsynctool_handle_t *handle);
 
-
-/* from filename, generate rsums file, named file.rums */
-CRSYNCcode crsync_rsums_generate(const char *filename);
-
 #if defined __cplusplus
     }
 #endif

@@ -24,6 +24,7 @@ SOFTWARE.
 #include <stdio.h>
 
 #include "crsync.h"
+#include "curl/curl.h"
 #include "uthash.h"
 #include "tpl.h"
 #include "blake2.h"
@@ -282,7 +283,7 @@ static CRSYNCcode crsync_msums_generate(crsync_handle_t *handle) {
     if ( 0 == tpl_mmap_file(utstring_body(oldFilename), &rec) ) {
         rsum_weak_block(rec.text, 0, handle->meta->block_sz, &weak);
 
-        while (true) {
+        while (1) {
             HASH_FIND_INT( handle->sums, &weak, sumItem );
             if(sumItem)
             {

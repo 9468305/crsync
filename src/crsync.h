@@ -24,10 +24,6 @@ SOFTWARE.
 #ifndef CRSYNC_H
 #define CRSYNC_H
 
-#include <stdbool.h>
-
-#include "curl/curl.h"
-
 #if defined __cplusplus
 extern "C" {
 #endif

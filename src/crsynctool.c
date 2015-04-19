@@ -33,7 +33,7 @@ typedef struct crsynctool_handle_t {
     uint32_t        blocksize;  /* block size */
 } crsynctool_handle_t;
 
-CRSYNCcode crsynctool_rsums_generate(crsynctool_handle_t *handle) {
+static CRSYNCcode crsynctool_rsums_generate(crsynctool_handle_t *handle) {
     CRSYNCcode code = CRSYNCE_OK;
     UT_string *rsumsFilename = NULL;
     utstring_new(rsumsFilename);
