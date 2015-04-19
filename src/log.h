@@ -28,7 +28,7 @@ SOFTWARE.
 extern "C" {
 #endif
 
-#define CRSYNC_DEBUG 0
+#define CRSYNC_DEBUG 1
 
 #if CRSYNC_DEBUG
 

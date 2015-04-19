@@ -27,11 +27,12 @@ SOFTWARE.
 #include "log.h"
 #include "crsync.h"
 #include "crsynctool.h"
+#include "utarray.h"
 
 #if defined __cplusplus
 extern "C" {
 #endif
-
+/*
 void crsync_server(const char *filename) {
 
     crsynctool_handle_t* handle = crsynctool_easy_init();
@@ -44,12 +45,12 @@ void crsync_server(const char *filename) {
 
         crsynctool_easy_cleanup(handle);
     }
-}
+}*/
 
 void client_xfer(int percent) {
     LOGI("%d", percent);
 }
-
+/*
 void crsync_client(const char *filename, const char *rsumsURL, const char *newFileURL) {
 
     crsync_global_init();
@@ -71,7 +72,7 @@ void crsync_client(const char *filename, const char *rsumsURL, const char *newFi
     }
     crsync_global_cleanup();
 }
-
+*/
 
 int main(void)
 {
@@ -81,8 +82,9 @@ int main(void)
     const char *newFileURL = "http://image.ib.qq.com/a/test/mthd.apk";
 
     LOGI("crsync main begin\n");
+    crsynctool_main();
     //crsync_server(newFilename);
-    crsync_client(filename, rsumsURL, newFileURL);
+    //crsync_client(filename, rsumsURL, newFileURL);
     LOGI("crsync main end\n");
     return 0;
 }

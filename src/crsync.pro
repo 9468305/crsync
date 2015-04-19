@@ -7,8 +7,8 @@ SOURCES += main.c \
     tpl.c \
     win/mmap.c \
     crsync.c \
-    crsynctool.c\
-    blake2b-ref.c
+    crsynctool.c \
+    blake2s-ref.c
 
 include(deployment.pri)
 qtcAddDeployment()
@@ -22,7 +22,8 @@ HEADERS += \
     blake2.h \
     blake2-impl.h \
     utstring.h \
-    log.h
+    log.h \
+    utarray.h
 
 DEFINES += CURL_STATICLIB
 LIBS += -L$${_PRO_FILE_PWD_}/../libcurl/lib/m32 -lcurl -lws2_32

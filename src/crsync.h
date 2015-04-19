@@ -24,18 +24,46 @@ SOFTWARE.
 #ifndef CRSYNC_H
 #define CRSYNC_H
 
+#include "uthash.h"
+#include "tpl.h"
+#include "curl/curl.h"
+
 #if defined __cplusplus
 extern "C" {
 #endif
 
-typedef struct crsync_handle_t crsync_handle_t;
-typedef void (crsync_xfer_fcn)(int percent);
+#define STRONG_SUM_SIZE 16  /*strong checksum size*/
+
+#define RSUM_TPLMAP_FORMAT "uuc#BA(uc#)"
+#define RSUM_SUFFIX ".rsum"
+
+#define MSUM_TPLMAP_FORMAT "uuc#BA(uc#ui)"
+#define MSUM_SUFFIX ".msum"
+
+#define MAGNET_SUFFIX ".magnet"
+#define MAGNET_TPLMAP_FORMAT "uussA(ss)A(ss)"
+
+typedef struct rsum_meta_t{
+    uint32_t    file_sz;                    /*file length*/
+    uint32_t    block_sz;                   /*block length*/
+    uint8_t     file_sum[STRONG_SUM_SIZE];  /*file strong sum*/
+    tpl_bin     rest_tb;                    /*rest data*/
+} rsum_meta_t;
+
+typedef struct rsum_t {
+    uint32_t        weak;                   /*first key*/
+    uint32_t        seq;                    /*second key*/
+    uint8_t         strong[STRONG_SUM_SIZE];/*value*/
+    int32_t         offset;                 /*value*/
+    struct rsum_t   *sub;                   /*sub HashTable*/
+    UT_hash_handle  hh;
+} rsum_t;
 
 typedef enum {
     CRSYNCACTION_INIT = 1,
     CRSYNCACTION_MATCH,
     CRSYNCACTION_PATCH,
-    /* ... */
+    //...
     CRSYNCACTION_CLEANUP,
 } CRSYNCaction;
 
@@ -43,7 +71,7 @@ typedef enum {
     CRSYNCOPT_ROOT = 1,     /* local root dir */
     CRSYNCOPT_FILE,         /* local file name */
     CRSYNCOPT_URL,          /* remote file's url */
-    CRSYNCOPT_SUMURL,       /* remote file's rsums url */
+    CRSYNCOPT_SUMURL,       /* remote file's rsum url */
     CRSYNCOPT_XFER,         /* progress callback hook */
 } CRSYNCoption;
 
@@ -56,6 +84,26 @@ typedef enum {
     /* ... */
     CRSYNCE_BUG
 } CRSYNCcode;
+
+typedef void (crsync_xfer_fcn)(int percent);
+
+typedef struct crsync_handle_t {
+    CRSYNCaction    action;
+    rsum_meta_t     *meta;              /* file meta info */
+    rsum_t          *sums;              /* rsum hash table */
+    char            *root;              /* local root dir */
+    char            *file;              /* local file name */
+    char            *url;               /* remote file's url */
+    char            *sum_url;          /* remote file's rsum url */
+    CURL            *curl_handle;       /* curl handle */
+    uint8_t         *curl_buffer;       /* curl write callback data */
+    uint32_t        curl_buffer_offset; /* curl write callback data offset */
+    crsync_xfer_fcn *xfer;              /* progress callback hook */
+} crsync_handle_t;
+
+void rsum_weak_block(const uint8_t *data, uint32_t start, uint32_t block_sz, uint32_t *weak);
+void rsum_weak_rolling(const uint8_t *data, uint32_t start, uint32_t block_sz, uint32_t *weak);
+void rsum_strong_block(const uint8_t *p, uint32_t start, uint32_t block_sz, uint8_t *strong);
 
 CRSYNCcode crsync_global_init();
 
@@ -71,6 +119,8 @@ CRSYNCcode crsync_easy_perform(crsync_handle_t *handle);
 void crsync_easy_cleanup(crsync_handle_t *handle);
 
 void crsync_global_cleanup();
+
+CRSYNCcode crsync_main();
 
 #if defined __cplusplus
     }

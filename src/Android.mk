@@ -9,7 +9,7 @@ include $(PREBUILT_STATIC_LIBRARY)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE := crsync
-LOCAL_SRC_FILES := tpl.c blake2b-ref.c crsync.c com_shaddock_libcurl_Curl.c
+LOCAL_SRC_FILES := tpl.c blake2s-ref.c crsync.c com_shaddock_libcurl_Curl.c
 LOCAL_STATIC_LIBRARIES := curl
 LOCAL_CFLAGS += -DCURL_STATICLIB -std=c99
 LOCAL_LDLIBS := -lc -lz -llog

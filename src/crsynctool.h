@@ -24,30 +24,38 @@ SOFTWARE.
 #ifndef CRSYNC_TOOL_H
 #define CRSYNC_TOOL_H
 
-#include "crsync.h"
-
 #if defined __cplusplus
 extern "C" {
 #endif
 
+#include "crsync.h"
+
 typedef struct crsynctool_handle_t crsynctool_handle_t;
 
 typedef enum {
-    CRSYNCTOOLOPT_ROOT = 1,     /* local root dir */
-    CRSYNCTOOLOPT_FILE,         /* local file name */
+    CRSYNCTOOLOPT_ID = 1,    /* current magnet info id */
+    CRSYNCTOOLOPT_NEXTID,       /* next magnet info id */
+    CRSYNCTOOLOPT_APPNAME,      /* app name */
+    CRSYNCTOOLOPT_BASENAME,     /* base resource name array */
+    CRSYNCTOOLOPT_OPTIONNAME,   /* optional resource name array */
+    CRSYNCTOOLOPT_APPDIR,       /* app directory */
+    CRSYNCTOOLOPT_RESDIR,       /* resource directory */
+    CRSYNCTOOLOPT_OUTPUT,       /* output directory */
     CRSYNCTOOLOPT_BLOCKSIZE,    /* block size, default 2K */
 } CRSYNCTOOLoption;
 
 /* return: NULL for fail */
-crsynctool_handle_t* crsynctool_easy_init();
+crsynctool_handle_t* crsynctool_init();
 
 /* return: only CRSYNCE_OK or CRSYNC_INVALID_OPT */
-CRSYNCcode crsynctool_easy_setopt(crsynctool_handle_t *handle, CRSYNCTOOLoption opt, ...);
+CRSYNCcode crsynctool_setopt(crsynctool_handle_t *handle, CRSYNCTOOLoption opt, ...);
 
 /* return CRSYNCcode (<=0) or CURLcode (>=0) */
-CRSYNCcode crsynctool_easy_perform(crsynctool_handle_t *handle);
+CRSYNCcode crsynctool_perform(crsynctool_handle_t *handle);
 
-void crsynctool_easy_cleanup(crsynctool_handle_t *handle);
+void crsynctool_cleanup(crsynctool_handle_t *handle);
+
+CRSYNCcode crsynctool_main();
 
 #if defined __cplusplus
     }
