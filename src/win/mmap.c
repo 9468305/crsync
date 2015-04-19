@@ -55,6 +55,8 @@ void *mmap(void *addr, unsigned int len, int prot, int flags, int fd, unsigned i
 	case PROT_WRITE | PROT_EXEC:
 		wprot = PAGE_EXECUTE_READWRITE;
 		break;
+    default:
+        return MAP_FAILED;
 	}
 	
 	/* Obtaing handle to map region */
@@ -88,6 +90,9 @@ void *mmap(void *addr, unsigned int len, int prot, int flags, int fd, unsigned i
 	case PAGE_READWRITE:
 		waccess = FILE_MAP_WRITE;
 		break;
+    default:
+        CloseHandle(h);
+        return MAP_FAILED;
 	}
 
 	/* Map file and return pointer */
