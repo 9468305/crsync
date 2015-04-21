@@ -298,7 +298,7 @@ CRSYNCcode crsynctool_perform(crsynctool_handle_t *handle) {
         //generate base resource rsum file
         p = NULL;
         while ( (p=(char**)utarray_next(handle->magnet.resname,p))) {
-            LOGI("perform base resource %s\n", *p);
+            LOGI("perform res %s\n", *p);
             utstring_clear(input);
             utstring_printf(input, "%s%s", handle->resdir, *p);
             code = crsynctool_rsum_generate(utstring_body(input), handle->block_sz, hash);
@@ -360,9 +360,9 @@ CRSYNCcode crsynctool_main() {
         crsynctool_setopt(handle, CRSYNCTOOLOPT_RESNAME, "chapter13.obb");
         crsynctool_setopt(handle, CRSYNCTOOLOPT_RESNAME, "chapter14.obb");
 
-        crsynctool_setopt(handle, CRSYNCTOOLOPT_APPDIR, "../apk/");
-        crsynctool_setopt(handle, CRSYNCTOOLOPT_RESDIR, "../14012/");
-        crsynctool_setopt(handle, CRSYNCTOOLOPT_OUTPUT, "../output/");
+        crsynctool_setopt(handle, CRSYNCTOOLOPT_APPDIR, "../14012/apk/");
+        crsynctool_setopt(handle, CRSYNCTOOLOPT_RESDIR, "../14012/obb_etc/");
+        crsynctool_setopt(handle, CRSYNCTOOLOPT_OUTPUT, "../14012/crsync/");
         crsynctool_setopt(handle, CRSYNCTOOLOPT_BLOCKSIZE, 2048);
 
         code = crsynctool_perform(handle);
