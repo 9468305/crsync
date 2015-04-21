@@ -30,19 +30,18 @@ extern "C" {
 
 #include "crsync.h"
 
-typedef struct crsynctool_handle_t crsynctool_handle_t;
-
 typedef enum {
-    CRSYNCTOOLOPT_ID = 1,    /* current magnet info id */
+    CRSYNCTOOLOPT_CURRID = 1,   /* current magnet info id */
     CRSYNCTOOLOPT_NEXTID,       /* next magnet info id */
     CRSYNCTOOLOPT_APPNAME,      /* app name */
-    CRSYNCTOOLOPT_BASENAME,     /* base resource name array */
-    CRSYNCTOOLOPT_OPTIONNAME,   /* optional resource name array */
+    CRSYNCTOOLOPT_RESNAME,      /* resource name array */
     CRSYNCTOOLOPT_APPDIR,       /* app directory */
     CRSYNCTOOLOPT_RESDIR,       /* resource directory */
     CRSYNCTOOLOPT_OUTPUT,       /* output directory */
     CRSYNCTOOLOPT_BLOCKSIZE,    /* block size, default 2K */
 } CRSYNCTOOLoption;
+
+typedef struct crsynctool_handle_t crsynctool_handle_t;
 
 /* return: NULL for fail */
 crsynctool_handle_t* crsynctool_init();

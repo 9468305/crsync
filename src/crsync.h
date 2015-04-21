@@ -25,6 +25,7 @@ SOFTWARE.
 #define CRSYNC_H
 
 #include "uthash.h"
+#include "utarray.h"
 #include "tpl.h"
 #include "curl/curl.h"
 
@@ -41,7 +42,9 @@ extern "C" {
 #define MSUM_SUFFIX ".msum"
 
 #define MAGNET_SUFFIX ".magnet"
-#define MAGNET_TPLMAP_FORMAT "uussA(ss)A(ss)"
+#define MAGNET_TPLMAP_FORMAT "ssssA(ss)"
+
+static const int MAX_CURL_RETRY = 5;
 
 typedef struct rsum_meta_t{
     uint32_t    file_sz;                    /*file length*/
@@ -58,6 +61,15 @@ typedef struct rsum_t {
     struct rsum_t   *sub;                   /*sub HashTable*/
     UT_hash_handle  hh;
 } rsum_t;
+
+typedef struct crsync_magnet_t {
+    char        *curr_id;   /* current magnet info id */
+    char        *next_id;   /* next magnet info id */
+    char        *appname;   /* android apk name */
+    char        *apphash;   /* android apk hash */
+    UT_array    *resname;   /* resources name */
+    UT_array    *reshash;   /* resources hash */
+} crsync_magnet_t;
 
 typedef enum {
     CRSYNCACTION_INIT = 1,
@@ -77,12 +89,13 @@ typedef enum {
 
 typedef enum {
     CRSYNCE_OK = 0,
-    CRSYNCE_FAILED_INIT = -1,
-    CRSYNCE_INVALID_OPT = -2,
-    CRSYNCE_FILE_ERROR = -3,
-    CRSYNCE_CURL_ERROR = -4,
-    /* ... */
-    CRSYNCE_BUG
+    CRSYNCE_FAILED_INIT,
+    CRSYNCE_INVALID_OPT,
+    CRSYNCE_FILE_ERROR,
+    CRSYNCE_CURL_ERROR,
+    CRSYNCE_ACTION_ERROR,
+
+    CRSYNCE_BUG = 100,
 } CRSYNCcode;
 
 typedef void (crsync_xfer_fcn)(int percent);
@@ -105,6 +118,11 @@ void rsum_weak_block(const uint8_t *data, uint32_t start, uint32_t block_sz, uin
 void rsum_weak_rolling(const uint8_t *data, uint32_t start, uint32_t block_sz, uint32_t *weak);
 void rsum_strong_block(const uint8_t *p, uint32_t start, uint32_t block_sz, uint8_t *strong);
 
+void crsync_curl_setopt(CURL *curlhandle);
+CRSYNCcode crsync_sum_check(const char *filename, const char *sumfmt);
+CRSYNCcode crsync_magnet_load(const char *magnetFilename, crsync_magnet_t *magnet);
+void crsync_magnet_free(crsync_magnet_t *magnet);
+
 CRSYNCcode crsync_global_init();
 
 /* return: NULL for fail */
@@ -119,8 +137,6 @@ CRSYNCcode crsync_easy_perform(crsync_handle_t *handle);
 void crsync_easy_cleanup(crsync_handle_t *handle);
 
 void crsync_global_cleanup();
-
-CRSYNCcode crsync_main();
 
 #if defined __cplusplus
     }
