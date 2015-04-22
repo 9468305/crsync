@@ -25,7 +25,6 @@ SOFTWARE.
 
 #include "log.h"
 #include "crsync.h"
-#include "utstring.h"
 
 #define ARRAY_COUNT(x) ((int) (sizeof(x) / sizeof((x)[0])))
 
@@ -38,23 +37,22 @@ typedef struct JNIJavaMethods {
 static jmethodID GMethod_callback = NULL;
 
 typedef enum {
-    CRSYNCGOPT_MAGNETID = 0,
-    CRSYNCGOPT_BASEURL,
-    CRSYNCGOPT_LOCALAPP,
-    CRSYNCGOPT_LOCALRES,
-} CRSYNCGLOBALoption;
+    ONEPIECEOPT_MAGNETID = 0,
+    ONEPIECEOPT_BASEURL,
+    ONEPIECEOPT_LOCALAPP,
+    ONEPIECEOPT_LOCALRES,
+} ONEPIECEoption;
 
 typedef enum {
-    CRSYNCGINFO_MAGNETID = 0,
-} CRSYNCGLOBALinfo;
+    ONEPIECEINFO_QUERY = 0,
+} ONEPIECEinfo;
 
 static crsync_handle_t *gCrsyncHandle = NULL;
 static crsync_magnet_t *gMagnet = NULL;
-static UT_string *gMagnetID = NULL;
-static UT_string *gBaseUrl = NULL;
-static UT_string *gLocalApp = NULL;
-static UT_string *gLocalRes = NULL;
-static int gAction = -1;
+static char *gMagnetID = NULL;
+static char *gBaseUrl = NULL;
+static char *gLocalApp = NULL;
+static char *gLocalRes = NULL;
 static CURL *gCurlHandle = NULL;
 
 static void perform_query_next() {
@@ -72,6 +70,10 @@ static CRSYNCcode perform_updateres() {
     return code;
 }
 
+void client_xfer(char *file, int percent) {
+    LOGI("xfer %s %d", file, percent);
+}
+
 jint native_crsync_init(JNIEnv *env, jclass clazz) {
     LOGI("native_crsync_init");
     CRSYNCcode code = CRSYNCE_OK;
@@ -86,10 +88,6 @@ jint native_crsync_init(JNIEnv *env, jclass clazz) {
         code = (NULL == gCrsyncHandle) ? CRSYNCE_FAILED_INIT : CRSYNCE_OK;
         if(CRSYNCE_OK != code) break;
         crsync_magnet_new(gMagnet);
-        utstring_new(gMagnetID);
-        utstring_new(gBaseUrl);
-        utstring_new(gLocalApp);
-        utstring_new(gLocalRes);
         gCurlHandle = curl_easy_init();
         code = (NULL == gCurlHandle) ? CRSYNCE_FAILED_INIT : CRSYNCE_OK;
     } while(0);
@@ -106,21 +104,29 @@ jint native_crsync_setopt(JNIEnv *env, jclass clazz, jint opt, jstring j_value) 
             break;
         }
         switch(opt) {
-        case CRSYNCGOPT_MAGNETID:
-            utstring_clear(gMagnetID);
-            utstring_printf(gMagnetID, "%s", value);
+        case ONEPIECEOPT_MAGNETID:
+            if(gMagnetID) {
+                free(gMagnetID);
+            }
+            gMagnetID = strdup( value );
             break;
-        case CRSYNCGOPT_BASEURL:
-            utstring_clear(gBaseUrl);
-            utstring_printf(gBaseUrl, "%s", value);
+        case ONEPIECEOPT_BASEURL:
+            if(gBaseUrl) {
+                free(gBaseUrl);
+            }
+            gBaseUrl = strdup( value );
             break;
-        case CRSYNCGOPT_LOCALAPP:
-            utstring_clear(gLocalApp);
-            utstring_printf(gLocalApp, "%s", value);
+        case ONEPIECEOPT_LOCALAPP:
+            if(gLocalApp) {
+                free(gLocalApp);
+            }
+            gLocalApp = strdup( value );
             break;
-        case CRSYNCGOPT_LOCALRES:
-            utstring_clear(gLocalRes);
-            utstring_printf(gLocalRes, "%s", value);
+        case ONEPIECEOPT_LOCALRES:
+            if(gLocalRes) {
+                free(gLocalRes);
+            }
+            gLocalRes = strdup( value );
             break;
         default:
             LOGE("Unknown opt : %d", opt);
@@ -135,8 +141,25 @@ jint native_crsync_setopt(JNIEnv *env, jclass clazz, jint opt, jstring j_value) 
 jstring native_crsync_getinfo(JNIEnv *env, jclass clazz, jint info) {
     LOGI("native_crsync_getinfo %d", info);
     switch (info) {
-    case CRSYNCGINFO_MAGNETID:
-        return (*env)->NewStringUTF( env, gMagnet->curr_id );
+    case ONEPIECEINFO_QUERY:
+    {
+        UT_string *info = NULL;
+        utstring_new(info);
+        if(gMagnet) {
+            utstring_printf(info, "%s;", gMagnet->curr_id);
+            utstring_printf(info, "%s;", gMagnet->next_id);
+            utstring_printf(info, "%s;", gMagnet->appname);
+            utstring_printf(info, "%s;", gMagnet->apphash);
+            char **p = NULL, **q = NULL;
+            while ( (p=(char**)utarray_next(gMagnet->resname,p)) && (q=(char**)utarray_next(gMagnet->reshash,q)) ) {
+                utstring_printf(info, "%s;", *p);
+                utstring_printf(info, "%s;", *q);
+            }
+        }
+        jstring jinfo = (*env)->NewStringUTF( env, utstring_body(info) );
+        utstring_free(info);
+        return jinfo;
+    }
     default:
         LOGE("Unknown opt : %d", info);
         return (*env)->NewStringUTF( env, "" );
@@ -147,13 +170,8 @@ jint native_crsync_perform_query(JNIEnv *env, jclass clazz) {
     LOGI("native_crsync_perform_query");
     CRSYNCcode code = CRSYNCE_CURL_ERROR;
 
-    UT_string *magnetUrl = NULL;
-    utstring_new(magnetUrl);
-    utstring_printf(magnetUrl, "%s%s%s", utstring_body(gBaseUrl), utstring_body(gMagnetID), MAGNET_SUFFIX);
-
-    UT_string *magnetFilename = NULL;
-    utstring_new(magnetFilename);
-    utstring_printf(magnetFilename, "%s%s%s", utstring_body(gLocalRes), utstring_body(gMagnetID), MAGNET_SUFFIX);
+    UT_string *magnetUrl = get_full_string(gBaseUrl, gMagnetID, MAGNET_SUFFIX);
+    UT_string *magnetFilename = get_full_string(gLocalRes, gMagnetID, MAGNET_SUFFIX);
 
     int retry = MAX_CURL_RETRY;
     do {
@@ -198,36 +216,31 @@ jint native_crsync_perform_updateapp(JNIEnv *env, jclass clazz) {
     return code;
 }
 
-void client_xfer(int percent) {
-    LOGI("xfer %d", percent);
-}
-
 jint native_crsync_perform_updateres(JNIEnv *env, jclass clazz) {
     LOGI("native_crsync_perform_updateres");
     CRSYNCcode code = CRSYNCE_OK;
-
-    UT_string *url = NULL;
-    utstring_new(url);
-    
     char **p = NULL, **q = NULL;
     while ( (p=(char**)utarray_next(gMagnet->resname,p)) && (q=(char**)utarray_next(gMagnet->reshash,q)) ) {
         LOGI("updateres %s %s", *p, *q);
-        crsync_easy_setopt(gCrsyncHandle, CRSYNCOPT_ROOT, utstring_body(gLocalRes));
+        crsync_easy_setopt(gCrsyncHandle, CRSYNCOPT_OUTPUTDIR, gLocalRes);
         crsync_easy_setopt(gCrsyncHandle, CRSYNCOPT_FILE, *p);
-
-        utstring_clear(url);
-        utstring_printf(url, "%s%s", utstring_body(gBaseUrl), *q);
-        crsync_easy_setopt(gCrsyncHandle, CRSYNCOPT_URL, utstring_body(url));
-        utstring_printf(url, "%s", RSUM_SUFFIX);
-        crsync_easy_setopt(gCrsyncHandle, CRSYNCOPT_SUMURL, utstring_body(url));
+        crsync_easy_setopt(gCrsyncHandle, CRSYNCOPT_HASH, *q);
+        crsync_easy_setopt(gCrsyncHandle, CRSYNCOPT_BASEURL, gBaseUrl);
         crsync_easy_setopt(gCrsyncHandle, CRSYNCOPT_XFER, (void*)client_xfer);
 
         code = crsync_easy_perform_match(gCrsyncHandle);
         if(CRSYNCE_OK != code) break;
         code = crsync_easy_perform_patch(gCrsyncHandle);
         if(CRSYNCE_OK != code) break;
+        UT_string *old = get_full_string( gLocalRes, *p, NULL);
+        UT_string *new = get_full_string( gLocalRes, *q, NULL );
+        remove( utstring_body(old) );
+        code = (0 == rename(utstring_body(new), utstring_body(old))) ? CRSYNCE_OK : CRSYNCE_FILE_ERROR;
+        utstring_free(old);
+        utstring_free(new);
+        if(CRSYNCE_OK != code) break;
     }
-    utstring_free(url);
+
     LOGI("native_crsync_perform_updateres code = %d", code);
     return (jint)code;
 }
@@ -235,16 +248,15 @@ jint native_crsync_perform_updateres(JNIEnv *env, jclass clazz) {
 jint native_crsync_cleanup(JNIEnv *env, jclass clazz) {
     LOGI("native_crsync_cleanup");
     CRSYNCcode code = CRSYNCE_OK;
-    gAction = -1;
     curl_easy_cleanup(gCurlHandle);
     gCurlHandle = NULL;
-    utstring_free(gMagnetID);
-    gMagnet = NULL;
-    utstring_free(gBaseUrl);
+    free(gMagnetID);
+    gMagnetID = NULL;
+    free(gBaseUrl);
     gBaseUrl = NULL;
-    utstring_free(gLocalApp);
+    free(gLocalApp);
     gLocalApp = NULL;
-    utstring_free(gLocalRes);
+    free(gLocalRes);
     gLocalRes = NULL;
 
     crsync_magnet_free(gMagnet);

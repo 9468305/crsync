@@ -1,0 +1,29 @@
+# Object files
+*.o
+*.ko
+*.obj
+*.elf
+*.d
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Executables
+*.exe
+*.out
+*.app
+*.i*86
+*.x86_64
+*.hex
+
+# Debug files
+*.dSYM/
+
+# User files
+*.user
+.project
+.classpath
+.settings/
+bin/
+gen/

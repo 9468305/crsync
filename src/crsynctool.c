@@ -24,7 +24,6 @@ SOFTWARE.
 #include <dirent.h>
 #include <sys/stat.h>
 #include "crsynctool.h"
-#include "utstring.h"
 #include "log.h"
 
 #define Default_BLOCK_SIZE 2048 /*default block size to 2K*/

@@ -26,6 +26,7 @@ SOFTWARE.
 
 #include "uthash.h"
 #include "utarray.h"
+#include "utstring.h"
 #include "tpl.h"
 #include "curl/curl.h"
 
@@ -89,18 +90,10 @@ typedef struct crsync_magnet_t {
 } while(0)
 
 typedef enum {
-    CRSYNCACTION_INIT = 1,
-    CRSYNCACTION_MATCH,
-    CRSYNCACTION_PATCH,
-    //...
-    CRSYNCACTION_CLEANUP,
-} CRSYNCaction;
-
-typedef enum {
-    CRSYNCOPT_ROOT = 1,     /* local root dir */
+    CRSYNCOPT_OUTPUTDIR = 1,/* local output dir */
     CRSYNCOPT_FILE,         /* local file name */
-    CRSYNCOPT_URL,          /* remote file's url */
-    CRSYNCOPT_SUMURL,       /* remote file's rsum url */
+    CRSYNCOPT_HASH,         /* remote file's hash */
+    CRSYNCOPT_BASEURL,      /* remote file's base url */
     CRSYNCOPT_XFER,         /* progress callback hook */
 } CRSYNCoption;
 
@@ -115,16 +108,15 @@ typedef enum {
     CRSYNCE_BUG = 100,
 } CRSYNCcode;
 
-typedef void (crsync_xfer_fcn)(int percent);
+typedef void (crsync_xfer_fcn)(char* file, int percent);
 
 typedef struct crsync_handle_t {
-    CRSYNCaction    action;
     rsum_meta_t     *meta;              /* file meta info */
     rsum_t          *sums;              /* rsum hash table */
-    char            *root;              /* local root dir */
-    char            *file;              /* local file name */
-    char            *url;               /* remote file's url */
-    char            *sum_url;          /* remote file's rsum url */
+    char            *outputdir;         /* local root dir */
+    char            *file;              /* local file full name */
+    char            *hash;              /* remote file hash */
+    char            *baseurl;           /* remote base url */
     CURL            *curl_handle;       /* curl handle */
     uint8_t         *curl_buffer;       /* curl write callback data */
     uint32_t        curl_buffer_offset; /* curl write callback data offset */
@@ -135,6 +127,7 @@ void rsum_weak_block(const uint8_t *data, uint32_t start, uint32_t block_sz, uin
 void rsum_weak_rolling(const uint8_t *data, uint32_t start, uint32_t block_sz, uint32_t *weak);
 void rsum_strong_block(const uint8_t *p, uint32_t start, uint32_t block_sz, uint8_t *strong);
 
+UT_string* get_full_string(const char *base, const char *value, const char *suffix);
 void crsync_curl_setopt(CURL *curlhandle);
 CRSYNCcode crsync_sum_check(const char *filename, const char *sumfmt);
 CRSYNCcode crsync_magnet_load(const char *magnetFilename, crsync_magnet_t *magnet);
