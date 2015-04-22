@@ -38,19 +38,15 @@ typedef struct JNIJavaMethods {
 static jmethodID GMethod_callback = NULL;
 
 typedef enum {
-    CRSYNCGA_Query = 0,
-    CRSYNCGA_UpdateApp,
-    CRSYNCGA_UpdateRes,
-} CRSYNCGaction;
-
-typedef enum {
     CRSYNCGOPT_MAGNETID = 0,
     CRSYNCGOPT_BASEURL,
     CRSYNCGOPT_LOCALAPP,
     CRSYNCGOPT_LOCALRES,
-    CRSYNCGOPT_ACTION,
+} CRSYNCGLOBALoption;
 
-} CRSYNCBLOBALoption;
+typedef enum {
+    CRSYNCGINFO_MAGNETID = 0,
+} CRSYNCGLOBALinfo;
 
 static crsync_handle_t *gHandle = NULL;
 static crsync_magnet_t *gMagnet = NULL;
@@ -65,8 +61,91 @@ static void perform_query_next() {
     
 }
 
-static CRSYNCcode perform_query() {
+static CRSYNCcode perform_updateapp() {
+    
+}
+
+static CRSYNCcode perform_updateres() {
     CRSYNCcode code;
+    
+    
+    return code;
+}
+
+jint native_crsync_init(JNIEnv *env, jclass clazz) {
+    LOGI("native_crsync_init");
+    CRSYNCcode code = CRSYNCE_OK;
+    do {
+        if(gHandle) {
+            code = CRSYNCE_FAILED_INIT;
+            break;
+        }
+        code = crsync_global_init();
+        if(CRSYNCE_OK != code) break;
+        gHandle = crsync_easy_init();
+        code = (NULL == gHandle) ? CRSYNCE_FAILED_INIT : CRSYNCE_OK;
+        if(CRSYNCE_OK != code) break;
+        crsync_magnet_new(gMagnet);
+        utstring_new(gMagnetID);
+        utstring_new(gBaseUrl);
+        utstring_new(gLocalApp);
+        utstring_new(gLocalRes);
+        gCurlHandle = curl_easy_init();
+        code = (NULL == gCurlHandle) ? CRSYNCE_FAILED_INIT : CRSYNCE_OK;
+    } while(0);
+    return (jint)code;
+}
+
+jint native_crsync_setopt(JNIEnv *env, jclass clazz, jint opt, jstring j_value) {
+    LOGI("native_crsync_setopt %d", opt);
+    CRSYNCcode code = CRSYNCE_OK;
+    const char *value = (*env)->GetStringUTFChars(env, j_value, NULL);
+    do {
+        if(!gHandle) {
+            code = CRSYNCE_INVALID_OPT;
+            break;
+        }
+        switch(opt) {
+        case CRSYNCGOPT_MAGNETID:
+            utstring_clear(gMagnetID);
+            utstring_printf(gMagnetID, "%s", value);
+            break;
+        case CRSYNCGOPT_BASEURL:
+            utstring_clear(gBaseUrl);
+            utstring_printf(gBaseUrl, "%s", value);
+            break;
+        case CRSYNCGOPT_LOCALAPP:
+            utstring_clear(gLocalApp);
+            utstring_printf(gLocalApp, "%s", value);
+            break;
+        case CRSYNCGOPT_LOCALRES:
+            utstring_clear(gLocalRes);
+            utstring_printf(gLocalRes, "%s", value);
+            break;
+        default:
+            LOGE("Unknown opt : %d", opt);
+            code = CRSYNCE_INVALID_OPT;
+            break;
+        }
+    } while(0);
+    (*env)->ReleaseStringUTFChars(env, j_value, value);
+    return (jint)code;
+}
+
+jstring native_crsync_getinfo(JNIEnv *env, jclass clazz, jint info) {
+    LOGI("native_crsync_getinfo %d", info);
+    switch (info) {
+    case CRSYNCGINFO_MAGNETID:
+        return (*env)->NewStringUTF( env, gMagnet->curr_id );
+    default:
+        LOGE("Unknown opt : %d", info);
+        return (*env)->NewStringUTF( env, "" );
+    }
+}
+
+jint native_crsync_perform_query(JNIEnv *env, jclass clazz) {
+    LOGI("native_crsync_perform_query");
+    CRSYNCcode code = CRSYNCE_CURL_ERROR;
 
     UT_string *magnetUrl = NULL;
     utstring_new(magnetUrl);
@@ -101,119 +180,27 @@ static CRSYNCcode perform_query() {
     } while(retry-- > 0);
 
     if(CRSYNCE_OK == code) {
-        crsync_magnet_free(gMagnet);
+        if(gMagnet){
+            crsync_magnet_free(gMagnet);
+        }
+        crsync_magnet_new(gMagnet);
         code = crsync_magnet_load(utstring_body(magnetFilename), gMagnet);
     }
 
     utstring_free(magnetUrl);
     utstring_free(magnetFilename);
 
-    return code;
-}
-
-static CRSYNCcode perform_updateapp() {
-    CRSYNCcode code;
-    
-    
-    return code;
-}
-
-static CRSYNCcode perform_updateres() {
-    CRSYNCcode code;
-    
-    
-    return code;
-}
-
-jint native_crsync_init(JNIEnv *env, jclass clazz) {
-    LOGI("native_crsync_init");
-    CRSYNCcode code = CRSYNCE_OK;
-    do {
-        if(gHandle) {
-            code = CRSYNCE_FAILED_INIT;
-            break;
-        }
-        code = crsync_global_init();
-        if(CRSYNCE_OK != code) break;
-        gHandle = crsync_easy_init();
-        code = (NULL == gHandle) ? CRSYNCE_FAILED_INIT : CRSYNCE_OK;
-        if(CRSYNCE_OK != code) break;
-        gMagnet = calloc(1, sizeof(crsync_magnet_t));
-        utstring_new(gMagnetID);
-        utstring_new(gBaseUrl);
-        utstring_new(gLocalApp);
-        utstring_new(gLocalRes);
-        gCurlHandle = curl_easy_init();
-        code = (NULL == gCurlHandle) ? CRSYNCE_FAILED_INIT : CRSYNCE_OK;
-    } while(0);
     return (jint)code;
 }
 
-jint native_crsync_setopt(JNIEnv *env, jclass clazz, int opt, jstring j_value) {
-    LOGI("native_crsync_setopt");
+jint native_crsync_perform_updateapp(JNIEnv *env, jclass clazz) {
     CRSYNCcode code = CRSYNCE_OK;
-    const char *value = (*env)->GetStringUTFChars(env, j_value, NULL);
-    do {
-        if(!gHandle) {
-            code = CRSYNCE_INVALID_OPT;
-            break;
-        }
-        switch(opt) {
-        case CRSYNCGOPT_MAGNETID:
-            utstring_clear(gMagnetID);
-            utstring_printf(gMagnetID, "%s", value);
-            break;
-        case CRSYNCGOPT_BASEURL:
-            utstring_clear(gBaseUrl);
-            utstring_printf(gBaseUrl, "%s", value);
-            break;
-        case CRSYNCGOPT_LOCALAPP:
-            utstring_clear(gLocalApp);
-            utstring_printf(gLocalApp, "%s", value);
-            break;
-        case CRSYNCGOPT_LOCALRES:
-            utstring_clear(gLocalRes);
-            utstring_printf(gLocalRes, "%s", value);
-            break;
-        case CRSYNCGOPT_ACTION:
-            gAction = atoi(value);
-            break;
-        default:
-            LOGE("Unknown opt : %d", opt);
-            code = CRSYNCE_INVALID_OPT;
-            break;
-        }
-    } while(0);
-    (*env)->ReleaseStringUTFChars(env, j_value, value);
-    return (jint)code;
+    return code;
 }
 
-jstring native_crsync_getinfo(JNIEnv *env, jclass clazz, int info) {
-    LOGI("native_crsync_getinfo");
+jint native_crsync_perform_updateres(JNIEnv *env, jclass clazz) {
     CRSYNCcode code = CRSYNCE_OK;
-    jstring result;
-    return result;
-}
-
-jint native_crsync_perform(JNIEnv *env, jclass clazz) {
-    LOGI("native_crsync_perform");
-    CRSYNCcode code = CRSYNCE_OK;
-    switch(gAction) {
-    case CRSYNCGA_Query:
-        code = perform_query();
-        break;
-    case CRSYNCGA_UpdateApp:
-        code = perform_updateapp();
-        break;
-    case CRSYNCGA_UpdateRes:
-        code = perform_updateres();
-        break;
-    default:
-        LOGE("Unknown action : %d", gAction);
-        code = CRSYNCE_INVALID_OPT;
-        break;
-    }
-    return (jint)code;
+    return code;
 }
 
 jint native_crsync_cleanup(JNIEnv *env, jclass clazz) {
@@ -232,7 +219,6 @@ jint native_crsync_cleanup(JNIEnv *env, jclass clazz) {
     gLocalRes = NULL;
 
     crsync_magnet_free(gMagnet);
-    gMagnet = NULL;
     crsync_easy_cleanup(gHandle);
     gHandle = NULL;
     crsync_global_cleanup();
@@ -252,11 +238,13 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
 
     // hook up native functions to string names and params
     JNINativeMethod NativeMethods[] = {
-        { "native_crsync_init",     "()I",                      (void*)native_crsync_init       },
-        { "native_crsync_setopt",   "(ILjava/lang/String;)I",   (void*)native_crsync_setopt     },
-        { "native_crsync_getinfo",  "(I)Ljava/lang/String;",    (void*)native_crsync_getinfo    },
-        { "native_crsync_perform",  "()I",                      (void*)native_crsync_perform    },
-        { "native_crsync_cleanup",  "()I",                      (void*)native_crsync_cleanup    },
+        { "native_crsync_init",                 "()I",                      (void*)native_crsync_init               },
+        { "native_crsync_setopt",               "(ILjava/lang/String;)I",   (void*)native_crsync_setopt             },
+        { "native_crsync_getinfo",              "(I)Ljava/lang/String;",    (void*)native_crsync_getinfo            },
+        { "native_crsync_perform_query",        "()I",                      (void*)native_crsync_perform_query      },
+        { "native_crsync_perform_updateapp",    "()I",                      (void*)native_crsync_perform_updateapp  },
+        { "native_crsync_perform_updateres",    "()I",                      (void*)native_crsync_perform_updateres  },
+        { "native_crsync_cleanup",  "()I",                                  (void*)native_crsync_cleanup            },
     };
 
     // get the java class from JNI

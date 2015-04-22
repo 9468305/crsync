@@ -537,22 +537,9 @@ static CRSYNCcode crsync_patch(crsync_handle_t *handle) {
     return code;
 }
 
-void crsync_magnet_free(crsync_magnet_t *magnet) {
-    if(magnet) {
-        free(magnet->curr_id);
-        free(magnet->next_id);
-        free(magnet->appname);
-        free(magnet->apphash);
-        utarray_free(magnet->resname);
-        utarray_free(magnet->reshash);
-        free(magnet);
-    }
-}
-
 CRSYNCcode crsync_magnet_load(const char *magnetFilename, crsync_magnet_t *magnet) {
     CRSYNCcode code = CRSYNCE_OK;
     char *resname = NULL, *reshash = NULL;
-
     tpl_node *tn = tpl_map(MAGNET_TPLMAP_FORMAT,
                  &magnet->curr_id,
                  &magnet->next_id,
@@ -563,9 +550,9 @@ CRSYNCcode crsync_magnet_load(const char *magnetFilename, crsync_magnet_t *magne
     if (!tpl_load(tn, TPL_FILE, magnetFilename) ) {
         tpl_unpack(tn, 0);
         while (tpl_unpack(tn, 1) > 0) {
-            utarray_push_back(magnet->resname, resname);
+            utarray_push_back(magnet->resname, &resname);
             free(resname);
-            utarray_push_back(magnet->reshash, reshash);
+            utarray_push_back(magnet->reshash, &reshash);
             free(reshash);
         }
     } else {

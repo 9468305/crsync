@@ -71,6 +71,23 @@ typedef struct crsync_magnet_t {
     UT_array    *reshash;   /* resources hash */
 } crsync_magnet_t;
 
+#define crsync_magnet_new(a) do {\
+    a=calloc(1, sizeof(crsync_magnet_t));\
+    utarray_new(a->resname,&ut_str_icd);\
+    utarray_new(a->reshash,&ut_str_icd);\
+} while(0)
+
+#define crsync_magnet_free(a) do {\
+    free(a->curr_id);\
+    free(a->next_id);\
+    free(a->appname);\
+    free(a->apphash);\
+    utarray_free(a->resname);\
+    utarray_free(a->reshash);\
+    free(a);\
+    a=NULL;\
+} while(0)
+
 typedef enum {
     CRSYNCACTION_INIT = 1,
     CRSYNCACTION_MATCH,
@@ -121,7 +138,6 @@ void rsum_strong_block(const uint8_t *p, uint32_t start, uint32_t block_sz, uint
 void crsync_curl_setopt(CURL *curlhandle);
 CRSYNCcode crsync_sum_check(const char *filename, const char *sumfmt);
 CRSYNCcode crsync_magnet_load(const char *magnetFilename, crsync_magnet_t *magnet);
-void crsync_magnet_free(crsync_magnet_t *magnet);
 
 CRSYNCcode crsync_global_init();
 

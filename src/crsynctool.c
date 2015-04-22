@@ -30,7 +30,7 @@ SOFTWARE.
 #define Default_BLOCK_SIZE 2048 /*default block size to 2K*/
 
 typedef struct crsynctool_handle_t {
-    crsync_magnet_t magnet;     /* magnet info */
+    crsync_magnet_t *magnet;    /* magnet info */
     char            *appdir;    /* app directory */
     char            *resdir;    /* islands directory */
     char            *outputdir; /* output directory */
@@ -159,9 +159,7 @@ static CRSYNCcode crsynctool_magnet_generate(const char *magnetFilename, crsync_
 
 crsynctool_handle_t* crsynctool_init() {
     crsynctool_handle_t *handle = calloc(1, sizeof(crsynctool_handle_t));
-    utarray_new(handle->magnet.resname,&ut_str_icd);
-    utarray_new(handle->magnet.reshash,&ut_str_icd);
-
+    crsync_magnet_new(handle->magnet);
     handle->block_sz = Default_BLOCK_SIZE;
     return handle;
 }
@@ -177,27 +175,27 @@ CRSYNCcode crsynctool_setopt(crsynctool_handle_t *handle, CRSYNCTOOLoption opt, 
 
     switch (opt) {
     case CRSYNCTOOLOPT_CURRID:
-        if(handle->magnet.curr_id) {
-            free(handle->magnet.curr_id);
+        if(handle->magnet->curr_id) {
+            free(handle->magnet->curr_id);
         }
-        handle->magnet.curr_id = strdup( va_arg(arg, const char*) );
+        handle->magnet->curr_id = strdup( va_arg(arg, const char*) );
         break;
     case CRSYNCTOOLOPT_NEXTID:
-        if(handle->magnet.next_id) {
-            free(handle->magnet.next_id);
+        if(handle->magnet->next_id) {
+            free(handle->magnet->next_id);
         }
-        handle->magnet.next_id = strdup( va_arg(arg, const char*) );
+        handle->magnet->next_id = strdup( va_arg(arg, const char*) );
         break;
     case CRSYNCTOOLOPT_APPNAME:
-        if(handle->magnet.appname) {
-            free(handle->magnet.appname);
+        if(handle->magnet->appname) {
+            free(handle->magnet->appname);
         }
-        handle->magnet.appname =strdup( va_arg(arg, const char*) );
+        handle->magnet->appname =strdup( va_arg(arg, const char*) );
         break;
     case CRSYNCTOOLOPT_RESNAME:
     {
         const char *p = va_arg(arg, const char*);
-        utarray_push_back(handle->magnet.resname, &p);
+        utarray_push_back(handle->magnet->resname, &p);
     }
         break;
     case CRSYNCTOOLOPT_APPDIR:
@@ -235,9 +233,9 @@ static CRSYNCcode crsynctool_checkopt(crsynctool_handle_t *handle) {
         handle->resdir &&
         handle->outputdir &&
         handle->block_sz >= Default_BLOCK_SIZE &&
-        handle->magnet.curr_id &&
-        handle->magnet.next_id &&
-        handle->magnet.appname ) {
+        handle->magnet->curr_id &&
+        handle->magnet->next_id &&
+        handle->magnet->appname ) {
         return CRSYNCE_OK;
     }
     return CRSYNCE_INVALID_OPT;
@@ -286,24 +284,24 @@ CRSYNCcode crsynctool_perform(crsynctool_handle_t *handle) {
         }
 
         //generate app rsum file
-        LOGI("perform app %s\n", handle->magnet.appname);
+        LOGI("perform app %s\n", handle->magnet->appname);
         utstring_clear(input);
-        utstring_printf(input, "%s%s", handle->appdir, handle->magnet.appname);
+        utstring_printf(input, "%s%s", handle->appdir, handle->magnet->appname);
         code = crsynctool_rsum_generate(utstring_body(input), handle->block_sz, hash);
         if(CRSYNCE_OK != code) break;
-        handle->magnet.apphash = strdup(utstring_body(hash));
+        handle->magnet->apphash = strdup(utstring_body(hash));
         code = crsync_movefile(utstring_body(input), handle->outputdir, utstring_body(hash));
         if(CRSYNCE_OK != code) break;
 
         //generate base resource rsum file
         p = NULL;
-        while ( (p=(char**)utarray_next(handle->magnet.resname,p))) {
+        while ( (p=(char**)utarray_next(handle->magnet->resname,p))) {
             LOGI("perform res %s\n", *p);
             utstring_clear(input);
             utstring_printf(input, "%s%s", handle->resdir, *p);
             code = crsynctool_rsum_generate(utstring_body(input), handle->block_sz, hash);
             if(CRSYNCE_OK != code) break;
-            utarray_push_back(handle->magnet.reshash, &utstring_body(hash));
+            utarray_push_back(handle->magnet->reshash, &utstring_body(hash));
             code = crsync_movefile(utstring_body(input), handle->outputdir, utstring_body(hash));
             if(CRSYNCE_OK != code) break;
         }
@@ -311,7 +309,7 @@ CRSYNCcode crsynctool_perform(crsynctool_handle_t *handle) {
 
         //generate magnet info file
         utstring_clear(output);
-        utstring_printf(output, "%s%s%s", handle->outputdir, handle->magnet.curr_id, MAGNET_SUFFIX);
+        utstring_printf(output, "%s%s%s", handle->outputdir, handle->magnet->curr_id, MAGNET_SUFFIX);
         code = crsynctool_magnet_generate(utstring_body(output), &handle->magnet);
     } while (0);
 
@@ -324,7 +322,7 @@ CRSYNCcode crsynctool_perform(crsynctool_handle_t *handle) {
 
 void crsynctool_cleanup(crsynctool_handle_t *handle) {
     if(handle) {
-        crsync_magnet_free(&handle->magnet);
+        crsync_magnet_free(handle->magnet);
         free(handle->appdir);
         free(handle->resdir);
         free(handle->outputdir);
