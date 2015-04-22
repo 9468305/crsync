@@ -140,6 +140,7 @@ static int crsync_curl_progress(void *clientp, curl_off_t dltotal, curl_off_t dl
 }
 
 static CRSYNCcode crsync_rsum_curl(crsync_handle_t *handle) {
+    LOGI("crsync_rsum_curl\n");
     CRSYNCcode  code = CRSYNCE_CURL_ERROR;
     UT_string   *rsumFilename = get_full_filename(handle, RSUM_SUFFIX);
     int         retry = MAX_CURL_RETRY;
@@ -157,6 +158,7 @@ static CRSYNCcode crsync_rsum_curl(crsync_handle_t *handle) {
 
             CURLcode curlcode = curl_easy_perform(handle->curl_handle);
             fclose(rsumFile);
+            LOGI("crsync_rsum_curl curlcode = %d\n", curlcode);
             if( CURLE_OK == curlcode) {
                 if( CRSYNCE_OK == crsync_sum_check(utstring_body(rsumFilename), RSUM_TPLMAP_FORMAT) ) {
                     code = CRSYNCE_OK;
@@ -170,10 +172,12 @@ static CRSYNCcode crsync_rsum_curl(crsync_handle_t *handle) {
     } while(retry-- > 0);
 
     utstring_free(rsumFilename);
+    LOGI("crsync_rsum_curl code = %d\n", code);
     return code;
 }
 
 static CRSYNCcode crsync_rsum_load(crsync_handle_t *handle) {
+    LOGI("crsync_rsum_load\n");
     CRSYNCcode code = CRSYNCE_OK;
 
     UT_string   *rsumFilename = get_full_filename(handle, RSUM_SUFFIX);
@@ -221,10 +225,12 @@ static CRSYNCcode crsync_rsum_load(crsync_handle_t *handle) {
     tpl_free(tn);
 
     utstring_free(rsumFilename);
+    LOGI("crsync_rsum_load code = %d\n", code);
     return code;
 }
 
 static CRSYNCcode crsync_msum_generate(crsync_handle_t *handle) {
+    LOGI("crsync_msum_generate\n");
     CRSYNCcode code = CRSYNCE_OK;
 
     UT_string *oldFilename = get_full_filename(handle, NULL);
@@ -261,10 +267,12 @@ static CRSYNCcode crsync_msum_generate(crsync_handle_t *handle) {
         tpl_unmap_file(&rec);
     }
     utstring_free(oldFilename);
+    LOGI("crsync_msum_generate code = %d\n", code);
     return code;
 }
 
 static CRSYNCcode crsync_msum_save(crsync_handle_t *handle) {
+    LOGI("crsync_msum_save\n");
     CRSYNCcode code = CRSYNCE_OK;
 
     tpl_node    *tn = NULL;
@@ -308,10 +316,12 @@ static CRSYNCcode crsync_msum_save(crsync_handle_t *handle) {
     tpl_free(tn);
 
     utstring_free(msumFilename);
+    LOGI("crsync_msum_save code = %d\n", code);
     return code;
 }
 
 static CRSYNCcode crsync_msum_load(crsync_handle_t *handle) {
+    LOGI("crsync_msum_load\n");
     CRSYNCcode  code = CRSYNCE_OK;
     tpl_node    *tn;
     rsum_t      *sumItem=NULL, *sumTemp=NULL;
@@ -362,6 +372,7 @@ static CRSYNCcode crsync_msum_load(crsync_handle_t *handle) {
     tpl_free(tn);
 
     utstring_free(msumFilename);
+    LOGI("crsync_msum_load code = %d\n", code);
     return code;
 }
 
@@ -408,6 +419,8 @@ static CURLcode crsync_msum_curl(crsync_handle_t *handle, rsum_t *sumItem, tpl_m
                     break;
                 }
             }
+        } else {
+            LOGI("crsync_msum_curl code = %d\n", code);
         }
         code = CURL_LAST;
     } while(retry-- > 0);
@@ -417,6 +430,7 @@ static CURLcode crsync_msum_curl(crsync_handle_t *handle, rsum_t *sumItem, tpl_m
 }
 
 static CRSYNCcode crsync_msum_patch(crsync_handle_t *handle, rsum_t *sumItem, tpl_mmap_rec *recOld, tpl_mmap_rec *recNew, uint8_t *strong) {
+    LOGI("crsync_msum_patch\n");
     CRSYNCcode code = CRSYNCE_OK;
     rsum_strong_block(recNew->text, sumItem->seq * handle->meta->block_sz, handle->meta->block_sz, strong);
     if(0 != memcmp(strong, sumItem->strong, STRONG_SUM_SIZE)) {
@@ -426,11 +440,148 @@ static CRSYNCcode crsync_msum_patch(crsync_handle_t *handle, rsum_t *sumItem, tp
             code = crsync_msum_curl(handle, sumItem, recNew);
         }
     }
+    LOGI("crsync_msum_patch code = %d\n", code);
     return code;
 }
 
-static CRSYNCcode crsync_match(crsync_handle_t *handle) {
-    CRSYNCcode  code = CRSYNCE_OK;
+CRSYNCcode crsync_magnet_load(const char *magnetFilename, crsync_magnet_t *magnet) {
+    LOGI("crsync_magnet_load\n");
+    CRSYNCcode code = CRSYNCE_OK;
+    char *resname = NULL, *reshash = NULL;
+    tpl_node *tn = tpl_map(MAGNET_TPLMAP_FORMAT,
+                 &magnet->curr_id,
+                 &magnet->next_id,
+                 &magnet->appname,
+                 &magnet->apphash,
+                 &resname,
+                 &reshash);
+    if (!tpl_load(tn, TPL_FILE, magnetFilename) ) {
+        tpl_unpack(tn, 0);
+        while (tpl_unpack(tn, 1) > 0) {
+            utarray_push_back(magnet->resname, &resname);
+            free(resname);
+            utarray_push_back(magnet->reshash, &reshash);
+            free(reshash);
+        }
+    } else {
+        code = CRSYNCE_FILE_ERROR;
+    }
+    tpl_free(tn);
+    LOGI("crsync_magnet_load code = %d\n", code);
+    return code;
+}
+
+CRSYNCcode crsync_global_init() {
+    LOGI("crsync_global_init\n");
+    CRSYNCcode code = CRSYNCE_FAILED_INIT;
+    if(CURLE_OK == curl_global_init(CURL_GLOBAL_DEFAULT)) {
+        code = CRSYNCE_OK;
+    }
+    LOGI("crsync_global_init code = %d\n", code);
+    return code;
+}
+
+crsync_handle_t* crsync_easy_init() {
+    LOGI("crsync_easy_init\n");
+    crsync_handle_t *handle = NULL;
+    do {
+        handle = calloc(1, sizeof(crsync_handle_t));
+        if(!handle) {
+            break;
+        }
+        handle->curl_handle = curl_easy_init();
+        if(!handle->curl_handle) {
+            break;
+        }
+        handle->curl_buffer = malloc(MAX_CURL_WRITESIZE);
+        if(!handle->curl_buffer) {
+            break;
+        }
+        handle->action = CRSYNCACTION_INIT;
+        handle->xfer = xfer_fcn;
+        LOGI("crsync_easy_init success\n");
+        return handle;
+    } while (0);
+
+    if(handle) {
+        if(handle->curl_handle) {
+            curl_easy_cleanup(handle->curl_handle);
+        }
+        if(handle->curl_buffer) {
+            free(handle->curl_buffer);
+        }
+        free(handle);
+    }
+    LOGI("crsync_easy_init fail\n");
+    return NULL;
+}
+
+CRSYNCcode crsync_easy_setopt(crsync_handle_t *handle, CRSYNCoption opt, ...) {
+    LOGI("crsync_easy_setopt\n");
+    if(!handle) {
+        LOGI("crsync_easy_setopt code = %d\n", CRSYNCE_INVALID_OPT);
+        return CRSYNCE_INVALID_OPT;
+    }
+
+    CRSYNCcode code = CRSYNCE_OK;
+    va_list arg;
+    va_start(arg, opt);
+
+    switch (opt) {
+    case CRSYNCOPT_ROOT:
+        if(handle->root) {
+            free(handle->root);
+        }
+        handle->root = strdup( va_arg(arg, const char*) );
+        break;
+    case CRSYNCOPT_FILE:
+        if(handle->file) {
+            free(handle->file);
+        }
+        handle->file = strdup( va_arg(arg, const char*) );
+        break;
+    case CRSYNCOPT_URL:
+        if(handle->url) {
+            free(handle->url);
+        }
+        handle->url = strdup( va_arg(arg, const char*) );
+        break;
+    case CRSYNCOPT_SUMURL:
+        if(handle->sum_url) {
+            free(handle->sum_url);
+        }
+        handle->sum_url = strdup( va_arg(arg, const char*) );
+        break;
+    case CRSYNCOPT_XFER:
+        handle->xfer = va_arg(arg, crsync_xfer_fcn*);
+        break;
+    default:
+        code = CRSYNCE_INVALID_OPT;
+        break;
+    }
+    va_end(arg);
+    LOGI("crsync_easy_setopt code = %d\n", code);
+    return code;
+}
+
+static CRSYNCcode crsync_checkopt(crsync_handle_t *handle) {
+    if( handle &&
+        handle->root &&
+        handle->file &&
+        handle->url &&
+        handle->sum_url) {
+        return CRSYNCE_OK;
+    }
+    return CRSYNCE_INVALID_OPT;
+}
+
+CRSYNCcode crsync_easy_perform_match(crsync_handle_t *handle) {
+    LOGI("crsync_easy_perform_match\n");
+    CRSYNCcode code = crsync_checkopt(handle);
+    if(CRSYNCE_OK != code){
+        LOGI("crsync_easy_perform_match code = %d\n", code);
+        return code;
+    }
     UT_string *filename = NULL;
     utstring_new(filename);
     do {
@@ -443,28 +594,29 @@ static CRSYNCcode crsync_match(crsync_handle_t *handle) {
             utstring_free(filename);
             filename = get_full_filename(handle, RSUM_SUFFIX);
             if(CRSYNCE_OK != crsync_sum_check(utstring_body(filename), RSUM_TPLMAP_FORMAT)) {
-                if( CRSYNCE_OK != (code = crsync_rsum_curl(handle)) ) {
-                    break;
-                }
+                if( CRSYNCE_OK != (code = crsync_rsum_curl(handle)) ) break;
             }
             //load rsum file
-            if( CRSYNCE_OK != (code = crsync_rsum_load(handle)) ) {
-                break;
-            }
+            if( CRSYNCE_OK != (code = crsync_rsum_load(handle)) ) break;
             //generate msum
-            if( CRSYNCE_OK != (code = crsync_msum_generate(handle)) ) {
-                break;
-            }
+            if( CRSYNCE_OK != (code = crsync_msum_generate(handle)) ) break;
             //save msum to file
             crsync_msum_save(handle);
         }
     } while(0);
     utstring_free(filename);
+
+    LOGI("crsync_easy_perform_match code = %d\n", code);
     return code;
 }
 
-static CRSYNCcode crsync_patch(crsync_handle_t *handle) {
-    CRSYNCcode code = CRSYNCE_OK;
+CRSYNCcode crsync_easy_perform_patch(crsync_handle_t *handle) {
+    LOGI("crsync_easy_perform_patch\n");
+    CRSYNCcode code = crsync_checkopt(handle);
+    if(CRSYNCE_OK != code){
+        LOGI("crsync_easy_perform_patch code = %d\n", code);
+        return code;
+    }
 
     UT_string *oldFilename = get_full_filename(handle, NULL);
     UT_string *newFilename = get_full_filename(handle, NEW_SUFFIX);
@@ -533,155 +685,12 @@ static CRSYNCcode crsync_patch(crsync_handle_t *handle) {
 
     utstring_free(oldFilename);
     utstring_free(newFilename);
-
-    return code;
-}
-
-CRSYNCcode crsync_magnet_load(const char *magnetFilename, crsync_magnet_t *magnet) {
-    CRSYNCcode code = CRSYNCE_OK;
-    char *resname = NULL, *reshash = NULL;
-    tpl_node *tn = tpl_map(MAGNET_TPLMAP_FORMAT,
-                 &magnet->curr_id,
-                 &magnet->next_id,
-                 &magnet->appname,
-                 &magnet->apphash,
-                 &resname,
-                 &reshash);
-    if (!tpl_load(tn, TPL_FILE, magnetFilename) ) {
-        tpl_unpack(tn, 0);
-        while (tpl_unpack(tn, 1) > 0) {
-            utarray_push_back(magnet->resname, &resname);
-            free(resname);
-            utarray_push_back(magnet->reshash, &reshash);
-            free(reshash);
-        }
-    } else {
-        code = CRSYNCE_FILE_ERROR;
-    }
-    tpl_free(tn);
-    return code;
-}
-
-CRSYNCcode crsync_global_init() {
-    CRSYNCcode code = CRSYNCE_FAILED_INIT;
-    if(CURLE_OK == curl_global_init(CURL_GLOBAL_DEFAULT)) {
-        code = CRSYNCE_OK;
-    }
-    return code;
-}
-
-crsync_handle_t* crsync_easy_init() {
-    crsync_handle_t *handle = NULL;
-    do {
-        handle = calloc(1, sizeof(crsync_handle_t));
-        if(!handle) {
-            break;
-        }
-        handle->curl_handle = curl_easy_init();
-        if(!handle->curl_handle) {
-            break;
-        }
-        handle->curl_buffer = malloc(MAX_CURL_WRITESIZE);
-        if(!handle->curl_buffer) {
-            break;
-        }
-        handle->action = CRSYNCACTION_INIT;
-        handle->xfer = xfer_fcn;
-        return handle;
-    } while (0);
-
-    if(handle) {
-        if(handle->curl_handle) {
-            curl_easy_cleanup(handle->curl_handle);
-        }
-        if(handle->curl_buffer) {
-            free(handle->curl_buffer);
-        }
-        free(handle);
-    }
-    return NULL;
-}
-
-CRSYNCcode crsync_easy_setopt(crsync_handle_t *handle, CRSYNCoption opt, ...) {
-    if(!handle) {
-        return CRSYNCE_INVALID_OPT;
-    }
-
-    CRSYNCcode code = CRSYNCE_OK;
-    va_list arg;
-    va_start(arg, opt);
-
-    switch (opt) {
-    case CRSYNCOPT_ROOT:
-        if(handle->root) {
-            free(handle->root);
-        }
-        handle->root = strdup( va_arg(arg, const char*) );
-        break;
-    case CRSYNCOPT_FILE:
-        if(handle->file) {
-            free(handle->file);
-        }
-        handle->file = strdup( va_arg(arg, const char*) );
-        break;
-    case CRSYNCOPT_URL:
-        if(handle->url) {
-            free(handle->url);
-        }
-        handle->url = strdup( va_arg(arg, const char*) );
-        break;
-    case CRSYNCOPT_SUMURL:
-        if(handle->sum_url) {
-            free(handle->sum_url);
-        }
-        handle->sum_url = strdup( va_arg(arg, const char*) );
-        break;
-    case CRSYNCOPT_XFER:
-        handle->xfer = va_arg(arg, crsync_xfer_fcn*);
-        break;
-    default:
-        code = CRSYNCE_INVALID_OPT;
-        break;
-    }
-    va_end(arg);
-    return code;
-}
-
-static CRSYNCcode crsync_checkopt(crsync_handle_t *handle) {
-    if( handle &&
-        handle->root &&
-        handle->file &&
-        handle->url &&
-        handle->sum_url) {
-        return CRSYNCE_OK;
-    }
-    return CRSYNCE_INVALID_OPT;
-}
-
-CRSYNCcode crsync_easy_perform(crsync_handle_t *handle) {
-    CRSYNCcode code = CRSYNCE_OK;
-    do {
-        code = crsync_checkopt(handle);
-        if(CRSYNCE_OK != code) {
-            break;
-        }
-        handle->action++;
-        switch(handle->action) {
-        case CRSYNCACTION_MATCH:
-            code = crsync_match(handle);
-            break;
-        case CRSYNCACTION_PATCH:
-            code = crsync_patch(handle);
-            break;
-        default:
-            break;
-        }
-    } while (0);
-
+    LOGI("crsync_easy_perform_patch code = %d\n", code);
     return code;
 }
 
 void crsync_easy_cleanup(crsync_handle_t *handle) {
+    LOGI("crsync_easy_cleanup\n");
     if(handle) {
         crsync_sum_free(handle);
         free(handle->file);
@@ -697,5 +706,6 @@ void crsync_easy_cleanup(crsync_handle_t *handle) {
 }
 
 void crsync_global_cleanup() {
+    LOGI("crsync_global_cleanup\n");
     curl_global_cleanup();
 }

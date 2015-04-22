@@ -48,7 +48,7 @@ typedef enum {
     CRSYNCGINFO_MAGNETID = 0,
 } CRSYNCGLOBALinfo;
 
-static crsync_handle_t *gHandle = NULL;
+static crsync_handle_t *gCrsyncHandle = NULL;
 static crsync_magnet_t *gMagnet = NULL;
 static UT_string *gMagnetID = NULL;
 static UT_string *gBaseUrl = NULL;
@@ -76,14 +76,14 @@ jint native_crsync_init(JNIEnv *env, jclass clazz) {
     LOGI("native_crsync_init");
     CRSYNCcode code = CRSYNCE_OK;
     do {
-        if(gHandle) {
+        if(gCrsyncHandle) {
             code = CRSYNCE_FAILED_INIT;
             break;
         }
         code = crsync_global_init();
         if(CRSYNCE_OK != code) break;
-        gHandle = crsync_easy_init();
-        code = (NULL == gHandle) ? CRSYNCE_FAILED_INIT : CRSYNCE_OK;
+        gCrsyncHandle = crsync_easy_init();
+        code = (NULL == gCrsyncHandle) ? CRSYNCE_FAILED_INIT : CRSYNCE_OK;
         if(CRSYNCE_OK != code) break;
         crsync_magnet_new(gMagnet);
         utstring_new(gMagnetID);
@@ -101,7 +101,7 @@ jint native_crsync_setopt(JNIEnv *env, jclass clazz, jint opt, jstring j_value) 
     CRSYNCcode code = CRSYNCE_OK;
     const char *value = (*env)->GetStringUTFChars(env, j_value, NULL);
     do {
-        if(!gHandle) {
+        if(!gCrsyncHandle) {
             code = CRSYNCE_INVALID_OPT;
             break;
         }
@@ -198,9 +198,38 @@ jint native_crsync_perform_updateapp(JNIEnv *env, jclass clazz) {
     return code;
 }
 
+void client_xfer(int percent) {
+    LOGI("xfer %d", percent);
+}
+
 jint native_crsync_perform_updateres(JNIEnv *env, jclass clazz) {
+    LOGI("native_crsync_perform_updateres");
     CRSYNCcode code = CRSYNCE_OK;
-    return code;
+
+    UT_string *url = NULL;
+    utstring_new(url);
+    
+    char **p = NULL, **q = NULL;
+    while ( (p=(char**)utarray_next(gMagnet->resname,p)) && (q=(char**)utarray_next(gMagnet->reshash,q)) ) {
+        LOGI("updateres %s %s", *p, *q);
+        crsync_easy_setopt(gCrsyncHandle, CRSYNCOPT_ROOT, utstring_body(gLocalRes));
+        crsync_easy_setopt(gCrsyncHandle, CRSYNCOPT_FILE, *p);
+
+        utstring_clear(url);
+        utstring_printf(url, "%s%s", utstring_body(gBaseUrl), *q);
+        crsync_easy_setopt(gCrsyncHandle, CRSYNCOPT_URL, utstring_body(url));
+        utstring_printf(url, "%s", RSUM_SUFFIX);
+        crsync_easy_setopt(gCrsyncHandle, CRSYNCOPT_SUMURL, utstring_body(url));
+        crsync_easy_setopt(gCrsyncHandle, CRSYNCOPT_XFER, (void*)client_xfer);
+
+        code = crsync_easy_perform_match(gCrsyncHandle);
+        if(CRSYNCE_OK != code) break;
+        code = crsync_easy_perform_patch(gCrsyncHandle);
+        if(CRSYNCE_OK != code) break;
+    }
+    utstring_free(url);
+    LOGI("native_crsync_perform_updateres code = %d", code);
+    return (jint)code;
 }
 
 jint native_crsync_cleanup(JNIEnv *env, jclass clazz) {
@@ -219,8 +248,8 @@ jint native_crsync_cleanup(JNIEnv *env, jclass clazz) {
     gLocalRes = NULL;
 
     crsync_magnet_free(gMagnet);
-    crsync_easy_cleanup(gHandle);
-    gHandle = NULL;
+    crsync_easy_cleanup(gCrsyncHandle);
+    gCrsyncHandle = NULL;
     crsync_global_cleanup();
     return (jint)code;
 }

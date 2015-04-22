@@ -147,8 +147,8 @@ crsync_handle_t* crsync_easy_init();
 /* return: only CRSYNCE_OK or CRSYNC_INVALID_OPT */
 CRSYNCcode crsync_easy_setopt(crsync_handle_t *handle, CRSYNCoption opt, ...);
 
-/* return CRSYNCcode (<=0) or CURLcode (>=0) */
-CRSYNCcode crsync_easy_perform(crsync_handle_t *handle);
+CRSYNCcode crsync_easy_perform_match(crsync_handle_t *handle);
+CRSYNCcode crsync_easy_perform_patch(crsync_handle_t *handle);
 
 void crsync_easy_cleanup(crsync_handle_t *handle);
 

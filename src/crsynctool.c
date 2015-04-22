@@ -310,7 +310,7 @@ CRSYNCcode crsynctool_perform(crsynctool_handle_t *handle) {
         //generate magnet info file
         utstring_clear(output);
         utstring_printf(output, "%s%s%s", handle->outputdir, handle->magnet->curr_id, MAGNET_SUFFIX);
-        code = crsynctool_magnet_generate(utstring_body(output), &handle->magnet);
+        code = crsynctool_magnet_generate(utstring_body(output), handle->magnet);
     } while (0);
 
     utstring_free(input);
