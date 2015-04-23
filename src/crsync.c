@@ -22,6 +22,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 #include <stdio.h>
+#if ( defined __CYGWIN__ || defined __MINGW32__ || defined _WIN32 )
+#   include "win/mman.h"   /* mmap */
+#else
+#   include <sys/mman.h>   /* mmap */
+#endif
 
 #include "crsync.h"
 #include "blake2.h"
@@ -31,8 +36,8 @@ SOFTWARE.
 
 static const size_t MAX_CURL_WRITESIZE = 16*1024; /* curl write data buffer size */
 
-static void xfer_fcn(char *file, int percent) {
-    (void)file;
+static void xfer_fcn(const char *name, int percent) {
+    (void)name;
     (void)percent;
 }
 
@@ -68,6 +73,16 @@ void rsum_strong_block(const uint8_t *p, uint32_t start, uint32_t block_sz, uint
     blake2s_final(&ctx, (uint8_t *)strong, STRONG_SUM_SIZE);
 }
 
+void rsum_strong_file(const char *file, uint8_t *strong) {
+    tpl_mmap_rec rec = {-1, NULL, 0};
+    if(0 == tpl_mmap_file(file, &rec)) {
+        rsum_strong_block(rec.text, 0, rec.text_sz, strong);
+        tpl_unmap_file(&rec);
+    } else {
+        memset(strong, 0, STRONG_SUM_SIZE);
+    }
+}
+
 UT_string* get_full_string(const char *base, const char *value, const char *suffix) {
     UT_string *name = NULL;
     utstring_new(name);
@@ -95,7 +110,7 @@ void crsync_curl_setopt(CURL *curlhandle) {
     curl_easy_setopt(curlhandle, CURLOPT_CONNECTTIMEOUT, 20); /* connection timeout 20s */
 }
 
-CRSYNCcode crsync_sum_check(const char *filename, const char *sumfmt) {
+CRSYNCcode crsync_tplfile_check(const char *filename, const char *sumfmt) {
     CRSYNCcode  code = CRSYNCE_FILE_ERROR;
     char *fmt = tpl_peek(TPL_FILE, filename);
     if(fmt) {
@@ -161,7 +176,7 @@ static CRSYNCcode crsync_rsum_curl(crsync_handle_t *handle) {
             fclose(rsumFile);
             LOGI("crsync_rsum_curl curlcode = %d\n", curlcode);
             if( CURLE_OK == curlcode) {
-                if( CRSYNCE_OK == crsync_sum_check(utstring_body(rsumFilename), RSUM_TPLMAP_FORMAT) ) {
+                if( CRSYNCE_OK == crsync_tplfile_check(utstring_body(rsumFilename), RSUM_TPLMAP_FORMAT) ) {
                     code = CRSYNCE_OK;
                     break;
                 }
@@ -584,13 +599,13 @@ CRSYNCcode crsync_easy_perform_match(crsync_handle_t *handle) {
     do {
         //if msum file exist, load it.
         filename = get_full_string(handle->outputdir, handle->hash, MSUM_SUFFIX);
-        if(CRSYNCE_OK == crsync_sum_check(utstring_body(filename), MSUM_TPLMAP_FORMAT)) {
+        if(CRSYNCE_OK == crsync_tplfile_check(utstring_body(filename), MSUM_TPLMAP_FORMAT)) {
             code = crsync_msum_load(handle);
         } else { //generate msum from rsum
             //if rsum file not exist, curl it.
             utstring_free(filename);
             filename = get_full_string(handle->outputdir, handle->hash, RSUM_SUFFIX);
-            if(CRSYNCE_OK != crsync_sum_check(utstring_body(filename), RSUM_TPLMAP_FORMAT)) {
+            if(CRSYNCE_OK != crsync_tplfile_check(utstring_body(filename), RSUM_TPLMAP_FORMAT)) {
                 if( CRSYNCE_OK != (code = crsync_rsum_curl(handle)) ) break;
             }
             //load rsum file
@@ -614,9 +629,7 @@ CRSYNCcode crsync_easy_perform_patch(crsync_handle_t *handle) {
         LOGI("crsync_easy_perform_patch code = %d\n", code);
         return code;
     }
-
     UT_string *newFilename = get_full_string(handle->outputdir, handle->hash, NULL);
-
     tpl_mmap_rec    recOld = {-1, NULL, 0};
     tpl_mmap_rec    recNew = {-1, NULL, 0};
 
@@ -661,9 +674,12 @@ CRSYNCcode crsync_easy_perform_patch(crsync_handle_t *handle) {
                 code = CRSYNCE_BUG;
             }
         }
-
     } while (0);
 
+    int ret = msync(recNew.text,recNew.text_sz,MS_SYNC);
+    if(-1 == ret) {
+        LOGE("msync failed %s\n", utstring_body(newFilename));
+    }
     tpl_unmap_file(&recNew);
     tpl_unmap_file(&recOld);
 

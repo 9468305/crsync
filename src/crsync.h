@@ -108,7 +108,7 @@ typedef enum {
     CRSYNCE_BUG = 100,
 } CRSYNCcode;
 
-typedef void (crsync_xfer_fcn)(char* file, int percent);
+typedef void (crsync_xfer_fcn)(const char* name, int percent);
 
 typedef struct crsync_handle_t {
     rsum_meta_t     *meta;              /* file meta info */
@@ -126,10 +126,11 @@ typedef struct crsync_handle_t {
 void rsum_weak_block(const uint8_t *data, uint32_t start, uint32_t block_sz, uint32_t *weak);
 void rsum_weak_rolling(const uint8_t *data, uint32_t start, uint32_t block_sz, uint32_t *weak);
 void rsum_strong_block(const uint8_t *p, uint32_t start, uint32_t block_sz, uint8_t *strong);
+void rsum_strong_file(const char *file, uint8_t *strong);
 
 UT_string* get_full_string(const char *base, const char *value, const char *suffix);
 void crsync_curl_setopt(CURL *curlhandle);
-CRSYNCcode crsync_sum_check(const char *filename, const char *sumfmt);
+CRSYNCcode crsync_tplfile_check(const char *filename, const char *sumfmt);
 CRSYNCcode crsync_magnet_load(const char *magnetFilename, crsync_magnet_t *magnet);
 
 CRSYNCcode crsync_global_init();

@@ -12,6 +12,8 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Vector;
 
+import com.shaddock.crsync.CrsyncInfo.ResInfo;
+
 import android.app.Service;
 import android.content.Intent;
 import android.database.ContentObserver;
@@ -20,7 +22,7 @@ import android.net.Uri;
 import android.os.Handler;
 import android.os.IBinder;
 
-public class CrsyncService extends Service {
+public class CrsyncService extends Service implements OnepieceObserver {
 
 	public static volatile boolean isRunning = false;
 
@@ -43,7 +45,6 @@ public class CrsyncService extends Service {
 
 		@Override
         public void onChange(final boolean selfChange) {
-            logger.info("CrsyncContentObserver onChange");
             updateFromProvider();
         }
 
@@ -110,8 +111,10 @@ public class CrsyncService extends Service {
                     }
                     mPendingUpdate = false;
                 }
+                CrsyncJava.setObserver(CrsyncService.this);
                 CrsyncInfo.StateInfo stateInfo = CrsyncInfo.queryState(getContentResolver());
             	handleFromProvider(stateInfo);
+            	CrsyncJava.delObserver();
             }
         }
     }// End of class UpdateThread
@@ -459,5 +462,13 @@ public class CrsyncService extends Service {
 		GetDownInfo.updateState(getContentResolver(), stateInfo);
 
     }*/
+
+    @Override
+    public void onepiece_xfer(String name, int percent) {
+        CrsyncInfo.ResInfo ri = new CrsyncInfo.ResInfo();
+        ri.mName = name;
+        ri.mPercent = percent;
+        CrsyncInfo.updateRes(getContentResolver(), ri);
+    }
 
 }

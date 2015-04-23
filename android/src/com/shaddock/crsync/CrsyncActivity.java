@@ -29,7 +29,6 @@ public class CrsyncActivity extends Activity {
 
         @Override
         public void onChange(final boolean selfChange) {
-            logger.info("Activity onChange");
             updateFromProvider();
         }
 
@@ -37,7 +36,7 @@ public class CrsyncActivity extends Activity {
 
     private TextView mTV = null;
     private AlertDialog mConfirmDialog = null;
-    
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

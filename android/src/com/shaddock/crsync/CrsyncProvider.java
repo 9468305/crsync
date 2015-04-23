@@ -108,7 +108,6 @@ public class CrsyncProvider extends ContentProvider {
 	public Cursor query(final Uri uri, final String[] projection, final String selection, final String[] selectionArgs, final String sortOrder) {
 		Cursor c = null;
 		int match = sURIMatcher.match(uri);
-		logger.info("CrsyncProvider query match: " + match);
 		switch (match) {
 		case CODE_STATE:
 		{
@@ -170,7 +169,6 @@ public class CrsyncProvider extends ContentProvider {
 	@Override
 	public int update(final Uri uri, final ContentValues values, final String selection, final String[] selectionArgs) {
 		int match = sURIMatcher.match(uri);
-		logger.info("CrsyncProvider update match: " + match);
 		switch (match) {
 		case CODE_STATE:
 		    mAction = values.getAsInteger(CrsyncConstants.COLUMN_STATE_ACTION);
@@ -191,10 +189,12 @@ public class CrsyncProvider extends ContentProvider {
             for (CrsyncInfo.ResInfo x : mRes) {
                 if(x.mName.equalsIgnoreCase(r.mName)) {
                     x.mPercent = r.mPercent;
+                    notifyChange(uri);
                     return 1;
                 }
             }
             mRes.add(r);
+            notifyChange(uri);
             return 1;
         default:
             logger.severe("Unknown URI: " + uri);

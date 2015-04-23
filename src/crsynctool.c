@@ -333,8 +333,8 @@ CRSYNCcode crsynctool_main() {
     CRSYNCcode code = CRSYNCE_OK;
     crsynctool_handle_t *handle = crsynctool_init();
     if(handle) {
-        crsynctool_setopt(handle, CRSYNCTOOLOPT_CURRID, "14012");
-        crsynctool_setopt(handle, CRSYNCTOOLOPT_NEXTID, "14013");
+        crsynctool_setopt(handle, CRSYNCTOOLOPT_CURRID, "14014");
+        crsynctool_setopt(handle, CRSYNCTOOLOPT_NEXTID, "14015");
         crsynctool_setopt(handle, CRSYNCTOOLOPT_APPNAME, "swordgame.apk");
 
         crsynctool_setopt(handle, CRSYNCTOOLOPT_RESNAME, "base.obb");
@@ -342,7 +342,6 @@ CRSYNCcode crsynctool_main() {
         crsynctool_setopt(handle, CRSYNCTOOLOPT_RESNAME, "chapter20.obb");
         crsynctool_setopt(handle, CRSYNCTOOLOPT_RESNAME, "chapter21.obb");
         crsynctool_setopt(handle, CRSYNCTOOLOPT_RESNAME, "chapter1.obb");
-
         crsynctool_setopt(handle, CRSYNCTOOLOPT_RESNAME, "chapter2.obb");
         crsynctool_setopt(handle, CRSYNCTOOLOPT_RESNAME, "chapter3.obb");
         crsynctool_setopt(handle, CRSYNCTOOLOPT_RESNAME, "chapter4.obb");
@@ -357,9 +356,9 @@ CRSYNCcode crsynctool_main() {
         crsynctool_setopt(handle, CRSYNCTOOLOPT_RESNAME, "chapter13.obb");
         crsynctool_setopt(handle, CRSYNCTOOLOPT_RESNAME, "chapter14.obb");
 
-        crsynctool_setopt(handle, CRSYNCTOOLOPT_APPDIR, "../14012/apk/");
-        crsynctool_setopt(handle, CRSYNCTOOLOPT_RESDIR, "../14012/obb_etc/");
-        crsynctool_setopt(handle, CRSYNCTOOLOPT_OUTPUT, "../14012/crsync/");
+        crsynctool_setopt(handle, CRSYNCTOOLOPT_APPDIR, "../14014/apk/");
+        crsynctool_setopt(handle, CRSYNCTOOLOPT_RESDIR, "../14014/obb/pvr/");
+        crsynctool_setopt(handle, CRSYNCTOOLOPT_OUTPUT, "../14014/crsyncpvr/");
         crsynctool_setopt(handle, CRSYNCTOOLOPT_BLOCKSIZE, 2048);
 
         code = crsynctool_perform(handle);

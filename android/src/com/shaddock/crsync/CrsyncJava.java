@@ -27,6 +27,16 @@ public class CrsyncJava {
 
     public static final int INFO_Magnet     = 0;
 
+    private static OnepieceObserver mObserver = null;
+
+    public static void setObserver(OnepieceObserver ob) {
+        mObserver = ob;
+    }
+    
+    public static void delObserver() {
+        mObserver = null;
+    }
+
     static {
         System.loadLibrary("crsync");
     }
@@ -40,7 +50,10 @@ public class CrsyncJava {
     public static native int    native_crsync_perform_updateres();
     public static native int    native_crsync_cleanup();
 
-    public static void java_callback() {
+    public static void java_onepiece_xfer(String name, int percent) {
+        if(null != mObserver) {
+            mObserver.onepiece_xfer(name, percent);
+        }
     }
 
     public static class Magnet {
