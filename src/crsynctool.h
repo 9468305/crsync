@@ -54,7 +54,7 @@ CRSYNCcode crsynctool_perform(crsynctool_handle_t *handle);
 
 void crsynctool_cleanup(crsynctool_handle_t *handle);
 
-CRSYNCcode crsynctool_main();
+CRSYNCcode crsynctool_main(int argc, char **argv);
 
 #if defined __cplusplus
     }

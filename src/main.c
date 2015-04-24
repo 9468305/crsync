@@ -33,10 +33,9 @@ void client_xfer(int percent) {
     LOGI("%d", percent);
 }
 
-int main(void)
-{
+int main(int argc, char **argv) {
     LOGI("crsynctool begin\n");
-    crsynctool_main();
+    crsynctool_main(argc, argv);
     LOGI("crsynctool end\n");
     return 0;
 }

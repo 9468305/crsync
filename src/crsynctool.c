@@ -329,13 +329,30 @@ void crsynctool_cleanup(crsynctool_handle_t *handle) {
     }
 }
 
-CRSYNCcode crsynctool_main() {
+CRSYNCcode crsynctool_main(int argc, char **argv) {
+
+    for(int i=0; i<argc; i++) {
+        LOGI("argv %d %s\n", i, argv[i]);
+    }
+
+    if(argc < 8) {
+        LOGE("main argc < 8\n");
+        return -1;
+    }
+    const char *curr_id = argv[1];
+    const char *next_id = argv[2];
+    const char *appname = argv[3];
+    const char *appdir = argv[4];
+    const char *resdir = argv[5];
+    const char *output = argv[6];
+    uint32_t blocksize = atoi(argv[7]);
+
     CRSYNCcode code = CRSYNCE_OK;
     crsynctool_handle_t *handle = crsynctool_init();
     if(handle) {
-        crsynctool_setopt(handle, CRSYNCTOOLOPT_CURRID, "14014");
-        crsynctool_setopt(handle, CRSYNCTOOLOPT_NEXTID, "14015");
-        crsynctool_setopt(handle, CRSYNCTOOLOPT_APPNAME, "swordgame.apk");
+        crsynctool_setopt(handle, CRSYNCTOOLOPT_CURRID, curr_id);
+        crsynctool_setopt(handle, CRSYNCTOOLOPT_NEXTID, next_id);
+        crsynctool_setopt(handle, CRSYNCTOOLOPT_APPNAME, appname);
 
         crsynctool_setopt(handle, CRSYNCTOOLOPT_RESNAME, "base.obb");
         crsynctool_setopt(handle, CRSYNCTOOLOPT_RESNAME, "chapter0.obb");
@@ -356,10 +373,10 @@ CRSYNCcode crsynctool_main() {
         crsynctool_setopt(handle, CRSYNCTOOLOPT_RESNAME, "chapter13.obb");
         crsynctool_setopt(handle, CRSYNCTOOLOPT_RESNAME, "chapter14.obb");
 
-        crsynctool_setopt(handle, CRSYNCTOOLOPT_APPDIR, "../14014/apk/");
-        crsynctool_setopt(handle, CRSYNCTOOLOPT_RESDIR, "../14014/obb/pvr/");
-        crsynctool_setopt(handle, CRSYNCTOOLOPT_OUTPUT, "../14014/crsyncpvr/");
-        crsynctool_setopt(handle, CRSYNCTOOLOPT_BLOCKSIZE, 2048);
+        crsynctool_setopt(handle, CRSYNCTOOLOPT_APPDIR, appdir);
+        crsynctool_setopt(handle, CRSYNCTOOLOPT_RESDIR, resdir);
+        crsynctool_setopt(handle, CRSYNCTOOLOPT_OUTPUT, output);
+        crsynctool_setopt(handle, CRSYNCTOOLOPT_BLOCKSIZE, blocksize);
 
         code = crsynctool_perform(handle);
         crsynctool_cleanup(handle);
