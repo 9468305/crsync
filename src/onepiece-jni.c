@@ -128,7 +128,7 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
     };
 
     // get the java class from JNI
-    gJavaClass = (*env)->FindClass(env, "com/shaddock/crsync/CrsyncJava");
+    gJavaClass = (*env)->FindClass(env, "com/shaddock/crsync/Crsync");
     (*env)->NewGlobalRef(env, gJavaClass);
     (*env)->RegisterNatives(env, gJavaClass, NativeMethods, ARRAY_COUNT(NativeMethods));
 

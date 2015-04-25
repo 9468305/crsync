@@ -42,8 +42,6 @@ extern "C" {
 #define MSUM_TPLMAP_FORMAT "uuc#BA(uc#ui)"
 #define MSUM_SUFFIX ".msum"
 
-static const int MAX_CURL_RETRY = 5;
-
 typedef struct rsum_meta_t{
     uint32_t    file_sz;                    /*file length*/
     uint32_t    block_sz;                   /*block length*/

@@ -56,8 +56,8 @@ public class CrsyncProvider extends ContentProvider {
 
     private static SharedPreferences mSP = null;
 
-    private static volatile int mAction = CrsyncJava.Action_Idle;
-    private static volatile int mCode = CrsyncJava.Code_OK;
+    private static volatile int mAction = Crsync.Action_Idle;
+    private static volatile int mCode = Crsync.Code_OK;
 
     private static volatile String mMagnet = "";
     private static volatile String mBaseUrl = "";

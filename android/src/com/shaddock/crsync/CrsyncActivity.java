@@ -74,7 +74,7 @@ public class CrsyncActivity extends Activity {
         sb.append("Action = " + si.mAction + " Code = " + si.mCode + "\n");
 
         switch (si.mAction) {
-        case CrsyncJava.Action_Idle:
+        case Crsync.Action_Idle:
             CrsyncInfo.ContentInfo ci = new CrsyncInfo.ContentInfo();
             ci.mMagnet = "14014etc";
             ci.mBaseUrl = "http://dlied5.qq.com/wjzj/a/test/etc/";
@@ -82,22 +82,22 @@ public class CrsyncActivity extends Activity {
             ci.mLocalRes = Environment.getExternalStorageDirectory().getAbsolutePath() + "/crsync/";
             CrsyncInfo.updateContent(getContentResolver(), ci);
             break;
-        case CrsyncJava.Action_Query:
+        case Crsync.Action_Query:
             break;
-        case CrsyncJava.Action_UserConfirm:
+        case Crsync.Action_UserConfirm:
             break;
-        case CrsyncJava.Action_UpdateApp:
+        case Crsync.Action_UpdateApp:
             break;
-        case CrsyncJava.Action_UserInstall:
+        case Crsync.Action_UserInstall:
             break;
-        case CrsyncJava.Action_UpdateRes:
+        case Crsync.Action_UpdateRes:
             Vector<CrsyncInfo.ResInfo> ri = CrsyncInfo.queryRes(getContentResolver());
             sb.append("Res size : " + ri.size() + "\n");
             for(CrsyncInfo.ResInfo x : ri) {
                 sb.append(x.mName + " : " + x.mPercent + "\n");
             }
             break;
-        case CrsyncJava.Action_Done:
+        case Crsync.Action_Done:
             break;
         default:
             break;

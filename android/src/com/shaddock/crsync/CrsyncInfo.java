@@ -11,8 +11,8 @@ import android.net.Uri;
 
 public class CrsyncInfo {
     public static class StateInfo {
-        public int mAction = CrsyncJava.Action_Idle;
-        public int mCode = CrsyncJava.Code_OK;
+        public int mAction = Crsync.Action_Idle;
+        public int mCode = Crsync.Code_OK;
 
         public void dump() {
             logger.info("####StateInfo Action : " + mAction);

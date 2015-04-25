@@ -27,6 +27,7 @@ SOFTWARE.
 #else
 #   include <sys/mman.h>   /* mmap */
 #endif
+#include <unistd.h>
 
 #include "crsync.h"
 #include "blake2.h"
@@ -35,6 +36,8 @@ SOFTWARE.
 #define NEW_SUFFIX ".new"
 
 static const size_t MAX_CURL_WRITESIZE = 16*1024; /* curl write data buffer size */
+static const int MAX_CURL_RETRY = 5;
+static const unsigned int SLEEP_CURL_RETRY = 5;
 
 int xfer_default(const char *name, int percent) {
     (void)name;
@@ -186,6 +189,7 @@ static CRSYNCcode crsync_rsum_curl(crsync_handle_t *handle) {
             code = CRSYNCE_FILE_ERROR;
             break;
         }
+        sleep(SLEEP_CURL_RETRY);
     } while(retry-- > 0);
 
     utstring_free(rsumFilename);
@@ -495,6 +499,7 @@ static CURLcode crsync_msum_curl(crsync_handle_t *handle, rsum_t *sumItem, tpl_m
             LOGI("crsync_msum_curl code = %d\n", code);
         }
         code = CURL_LAST;
+        sleep(SLEEP_CURL_RETRY);
     } while(--retry > 0);
 
     utstring_free(range);

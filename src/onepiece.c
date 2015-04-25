@@ -21,8 +21,12 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
+#include <unistd.h>
 #include "onepiece.h"
 #include "log.h"
+
+static const int MAGNET_CURL_RETRY = 2;
+static const unsigned int MAGNET_SLEEP_RETRY = 1;
 
 CRSYNCcode onepiece_magnet_load(const char *magnetFilename, magnet_t *magnet) {
     LOGI("onepiece_magnet_load\n");
@@ -188,6 +192,64 @@ static CRSYNCcode onepiece_checkopt() {
     return CRSYNCE_INVALID_OPT;
 }
 
+static CRSYNCcode onepiece_magnet_curl(const char *id, magnet_t *magnet) {
+    LOGI("onepiece_magnet_curl %s\n", id);
+    CRSYNCcode code = CRSYNCE_CURL_ERROR;
+    UT_string *magnetUrl = get_full_string(onepiece->baseUrl, id, MAGNET_SUFFIX);
+    UT_string *magnetFilename = get_full_string(onepiece->localRes, id, MAGNET_SUFFIX);
+
+    int retry = MAGNET_CURL_RETRY;
+    do {
+        FILE *magnetFile = fopen(utstring_body(magnetFilename), "wb");
+        if(magnetFile) {
+            crsync_curl_setopt(onepiece->curl_handle);
+            curl_easy_setopt(onepiece->curl_handle, CURLOPT_URL, utstring_body(magnetUrl));
+            curl_easy_setopt(onepiece->curl_handle, CURLOPT_HTTPGET, 1);
+            curl_easy_setopt(onepiece->curl_handle, CURLOPT_WRITEFUNCTION, NULL);
+            curl_easy_setopt(onepiece->curl_handle, CURLOPT_WRITEDATA, (void *)magnetFile);
+            curl_easy_setopt(onepiece->curl_handle, CURLOPT_NOPROGRESS, 1);
+            CURLcode curlcode = curl_easy_perform(onepiece->curl_handle);
+            fclose(magnetFile);
+            LOGI("onepiece_magnet_curl curlcode = %d\n", curlcode);
+            if( CURLE_OK == curlcode) {
+                if( CRSYNCE_OK == crsync_tplfile_check(utstring_body(magnetFilename), MAGNET_TPLMAP_FORMAT) ) {
+                    LOGI("onepiece_magnet_curl gotfile\n");
+                    code = CRSYNCE_OK;
+                    break;
+                }
+            }
+        } else {
+            code = CRSYNCE_FILE_ERROR;
+            break;
+        }
+        sleep(MAGNET_SLEEP_RETRY);
+    } while(retry-- > 0);
+
+    if(CRSYNCE_OK == code) {
+        code = onepiece_magnet_load(utstring_body(magnetFilename), magnet);
+    }
+
+    utstring_free(magnetUrl);
+    utstring_free(magnetFilename);
+    LOGI("onepiece_magnet_curl code = %d\n", code);
+    return code;
+}
+
+
+static CRSYNCcode onepiece_magnet_query(const char *id, magnet_t *magnet) {
+    LOGI("onepiece_magnet_query id = %s\n", id);
+    CRSYNCcode code;
+    UT_string *magnetFilename = get_full_string(onepiece->localRes, id, MAGNET_SUFFIX);
+    if(CRSYNCE_OK == crsync_tplfile_check(utstring_body(magnetFilename), MAGNET_TPLMAP_FORMAT)) {
+        code = onepiece_magnet_load(utstring_body(magnetFilename), magnet);
+    } else {
+        code = onepiece_magnet_curl(id, magnet);
+    }
+    utstring_free(magnetFilename);
+    LOGI("onepiece_magnet_query code = %d", code);
+    return code;
+}
+
 UT_string* onepiece_getinfo(ONEPIECEinfo info) {
     LOGI("onepiece_getinfo %d\n", info);
     UT_string *result = NULL;
@@ -221,52 +283,18 @@ CRSYNCcode onepiece_perform_query() {
         LOGE("onepiece_perform_query code = %d\n", code);
         return code;
     }
-
-    UT_string *magnetUrl = get_full_string(onepiece->baseUrl, onepiece->start_id, MAGNET_SUFFIX);
-    UT_string *magnetFilename = get_full_string(onepiece->localRes, onepiece->start_id, MAGNET_SUFFIX);
-
-    int retry = MAX_CURL_RETRY;
-    do {
-        FILE *magnetFile = fopen(utstring_body(magnetFilename), "wb");
-        if(magnetFile) {
-            crsync_curl_setopt(onepiece->curl_handle);
-            curl_easy_setopt(onepiece->curl_handle, CURLOPT_URL, utstring_body(magnetUrl));
-            curl_easy_setopt(onepiece->curl_handle, CURLOPT_HTTPGET, 1);
-            curl_easy_setopt(onepiece->curl_handle, CURLOPT_WRITEFUNCTION, NULL);
-            curl_easy_setopt(onepiece->curl_handle, CURLOPT_WRITEDATA, (void *)magnetFile);
-            curl_easy_setopt(onepiece->curl_handle, CURLOPT_NOPROGRESS, 1);
-            CURLcode curlcode = curl_easy_perform(onepiece->curl_handle);
-            fclose(magnetFile);
-            if( CURLE_OK == curlcode) {
-                if( CRSYNCE_OK == crsync_tplfile_check(utstring_body(magnetFilename), MAGNET_TPLMAP_FORMAT) ) {
-                    LOGI("onepiece_perform_query gotfile\n");
-                    code = CRSYNCE_OK;
-                    break;
-                }
-            }
-        } else {
-            code = CRSYNCE_FILE_ERROR;
-            break;
+    const char *id = onepiece->start_id;
+    magnet_t *magnet = NULL;
+    onepiece_magnet_new(magnet);
+    while( CRSYNCE_OK == onepiece_magnet_query(id, magnet) ) {
+        if(onepiece->magnet) {
+            onepiece_magnet_free(onepiece->magnet);
         }
-    } while(retry-- > 0);
-
-    if(CRSYNCE_OK == code) {
-        magnet_t *magnet = NULL;
+        onepiece->magnet = magnet;
         onepiece_magnet_new(magnet);
-        code = onepiece_magnet_load(utstring_body(magnetFilename), magnet);
-        if(CRSYNCE_OK == code) {
-            if(onepiece->magnet){
-                onepiece_magnet_free(onepiece->magnet);
-            }
-            onepiece->magnet = magnet;
-        } else {
-            LOGE("onepiece_magnet_load fail");
-            onepiece_magnet_free(magnet);
-        }
+        id = onepiece->magnet->next_id;
     }
-
-    utstring_free(magnetUrl);
-    utstring_free(magnetFilename);
+    code = (onepiece->magnet->curr_id >= onepiece->start_id) ? CRSYNCE_OK : CRSYNCE_CURL_ERROR;
     LOGI("onepiece_perform_query code = %d\n", code);
     return code;
 }

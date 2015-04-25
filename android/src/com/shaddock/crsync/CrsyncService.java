@@ -111,10 +111,10 @@ public class CrsyncService extends Service implements OnepieceObserver {
                     }
                     mPendingUpdate = false;
                 }
-                CrsyncJava.setObserver(CrsyncService.this);
+                Crsync.setObserver(CrsyncService.this);
                 CrsyncInfo.StateInfo stateInfo = CrsyncInfo.queryState(getContentResolver());
             	handleFromProvider(stateInfo);
-            	CrsyncJava.delObserver();
+            	Crsync.delObserver();
             }
         }
     }// End of class UpdateThread
@@ -123,25 +123,25 @@ public class CrsyncService extends Service implements OnepieceObserver {
         logger.info("CrsyncService handleFromProvider");
         stateInfo.dump();
         switch (stateInfo.mAction) {
-        case CrsyncJava.Action_Idle:
+        case Crsync.Action_Idle:
             handleIdle(stateInfo);
             break;
-        case CrsyncJava.Action_Query:
+        case Crsync.Action_Query:
             handleQuery(stateInfo);
             break;
-        case CrsyncJava.Action_UserConfirm:
+        case Crsync.Action_UserConfirm:
             //do nothing
             break;
-        case CrsyncJava.Action_UpdateApp:
+        case Crsync.Action_UpdateApp:
             handleUpdateApp(stateInfo);
             break;
-        case CrsyncJava.Action_UserInstall:
+        case Crsync.Action_UserInstall:
             //do nothing
             break;
-        case CrsyncJava.Action_UpdateRes:
+        case Crsync.Action_UpdateRes:
             handleUpdateRes(stateInfo);
             break;
-        case CrsyncJava.Action_Done:
+        case Crsync.Action_Done:
             //do nothing
             break;
         default:
@@ -164,23 +164,23 @@ public class CrsyncService extends Service implements OnepieceObserver {
         
         int code;
         do {
-            code = CrsyncJava.JNI_onepiece_init();
-            if(CrsyncJava.Code_OK != code) break;
-            code = CrsyncJava.JNI_onepiece_setopt(CrsyncJava.OPT_MagnetID, contentInfo.mMagnet);
-            if(CrsyncJava.Code_OK != code) break;
-            code = CrsyncJava.JNI_onepiece_setopt(CrsyncJava.OPT_BaseUrl, contentInfo.mBaseUrl);
-            if(CrsyncJava.Code_OK != code) break;
-            code = CrsyncJava.JNI_onepiece_setopt(CrsyncJava.OPT_LocalApp, contentInfo.mLocalApp);
-            if(CrsyncJava.Code_OK != code) break;
-            code = CrsyncJava.JNI_onepiece_setopt(CrsyncJava.OPT_LocalRes, contentInfo.mLocalRes);
-            if(CrsyncJava.Code_OK != code) break;
+            code = Crsync.JNI_onepiece_init();
+            if(Crsync.Code_OK != code) break;
+            code = Crsync.JNI_onepiece_setopt(Crsync.OPT_MagnetID, contentInfo.mMagnet);
+            if(Crsync.Code_OK != code) break;
+            code = Crsync.JNI_onepiece_setopt(Crsync.OPT_BaseUrl, contentInfo.mBaseUrl);
+            if(Crsync.Code_OK != code) break;
+            code = Crsync.JNI_onepiece_setopt(Crsync.OPT_LocalApp, contentInfo.mLocalApp);
+            if(Crsync.Code_OK != code) break;
+            code = Crsync.JNI_onepiece_setopt(Crsync.OPT_LocalRes, contentInfo.mLocalRes);
+            if(Crsync.Code_OK != code) break;
         } while(false);
 
-        if(CrsyncJava.Code_OK == code) {
-            stateInfo.mAction = CrsyncJava.Action_Query;
-            stateInfo.mCode = CrsyncJava.Code_OK;
+        if(Crsync.Code_OK == code) {
+            stateInfo.mAction = Crsync.Action_Query;
+            stateInfo.mCode = Crsync.Code_OK;
         } else {
-            stateInfo.mAction = CrsyncJava.Action_Done;
+            stateInfo.mAction = Crsync.Action_Done;
             stateInfo.mCode = code;
         }
         CrsyncInfo.updateState(getContentResolver(), stateInfo);
@@ -189,12 +189,12 @@ public class CrsyncService extends Service implements OnepieceObserver {
 
     private void handleQuery(CrsyncInfo.StateInfo stateInfo) {
         logger.info("CrsyncService handleQuery");
-        int code = CrsyncJava.JNI_onepiece_perform_query();
-        if(CrsyncJava.Code_OK == code) {
+        int code = Crsync.JNI_onepiece_perform_query();
+        if(Crsync.Code_OK == code) {
             CrsyncInfo.ContentInfo ci = CrsyncInfo.queryContent(getContentResolver());
-            String magnetString = CrsyncJava.JNI_onepiece_getinfo(CrsyncJava.INFO_Magnet);
+            String magnetString = Crsync.JNI_onepiece_getinfo(Crsync.INFO_Magnet);
             logger.info("INFO_Magnet = " + magnetString);
-            CrsyncJava.Magnet magnet = CrsyncJava.Magnet.getValue(magnetString);
+            Crsync.Magnet magnet = Crsync.Magnet.getValue(magnetString);
             if(null != magnet) {
                 int size = magnet.resname.length;
                 for(int i=0; i < size; i++) {
@@ -204,18 +204,18 @@ public class CrsyncService extends Service implements OnepieceObserver {
                     CrsyncInfo.updateRes(getContentResolver(), r);
                 }
                 if(magnet.curr_id.equalsIgnoreCase(ci.mMagnet)) {
-                    stateInfo.mAction = CrsyncJava.Action_UpdateRes;
-                    stateInfo.mCode = CrsyncJava.Code_OK;
+                    stateInfo.mAction = Crsync.Action_UpdateRes;
+                    stateInfo.mCode = Crsync.Code_OK;
                 } else {
-                    stateInfo.mAction = CrsyncJava.Action_UserConfirm;
-                    stateInfo.mCode = CrsyncJava.Code_OK;
+                    stateInfo.mAction = Crsync.Action_UserConfirm;
+                    stateInfo.mCode = Crsync.Code_OK;
                 }
             } else {
-                stateInfo.mAction = CrsyncJava.Action_Done;
-                stateInfo.mCode = CrsyncJava.Code_BUG;
+                stateInfo.mAction = Crsync.Action_Done;
+                stateInfo.mCode = Crsync.Code_BUG;
             }
         } else {
-            stateInfo.mAction = CrsyncJava.Action_Done;
+            stateInfo.mAction = Crsync.Action_Done;
             stateInfo.mCode = code;
         }
         CrsyncInfo.updateState(getContentResolver(), stateInfo);
@@ -223,15 +223,15 @@ public class CrsyncService extends Service implements OnepieceObserver {
     }
 
     private void handleUpdateApp(CrsyncInfo.StateInfo stateInfo) {
-        int code = CrsyncJava.JNI_onepiece_perform_updateapp();
-        if(CrsyncJava.Code_OK == code) {
+        int code = Crsync.JNI_onepiece_perform_updateapp();
+        if(Crsync.Code_OK == code) {
             ;
         }
     }
 
     private void handleUpdateRes(CrsyncInfo.StateInfo stateInfo) {
-        int code = CrsyncJava.JNI_onepiece_perform_updateres();
-        stateInfo.mAction = CrsyncJava.Action_Done;
+        int code = Crsync.JNI_onepiece_perform_updateres();
+        stateInfo.mAction = Crsync.Action_Done;
         stateInfo.mCode = code;
         CrsyncInfo.updateState(getContentResolver(), stateInfo);
         handleFromProvider(stateInfo);

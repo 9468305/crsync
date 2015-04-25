@@ -1,6 +1,6 @@
 package com.shaddock.crsync;
 
-public class CrsyncJava {
+public class Crsync {
 
     public static final int Action_Idle             = 0;
     public static final int Action_Query            = 1;
