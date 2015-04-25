@@ -3,10 +3,11 @@ CONFIG += console
 CONFIG -= app_bundle
 CONFIG -= qt
 
-TARGET = crsynctool
+TARGET = crsync
 
 SOURCES += main.c \
     crsync.c \
+    onepiece.c\
     crsynctool.c \
     ../extra/tpl.c \
     ../extra/win/mmap.c \
@@ -17,6 +18,7 @@ qtcAddDeployment()
 
 HEADERS += \
     crsync.h \
+    onepiece.h\
     crsynctool.h\
     log.h\
     ../extra/tpl.h \

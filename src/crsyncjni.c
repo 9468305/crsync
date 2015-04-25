@@ -25,7 +25,7 @@ SOFTWARE.
 #include <time.h>
 
 #include "log.h"
-#include "crsync.h"
+#include "onepiece.h"
 
 #define ARRAY_COUNT(x) ((int) (sizeof(x) / sizeof((x)[0])))
 
@@ -51,7 +51,7 @@ typedef enum {
 static JavaVM* gJavaVM = NULL;
 static jclass gJavaClass = NULL;
 static crsync_handle_t *gCrsyncHandle = NULL;
-static crsync_magnet_t *gMagnet = NULL;
+static magnet_t *gMagnet = NULL;
 static char *gMagnetID = NULL;
 static char *gBaseUrl = NULL;
 static char *gLocalApp = NULL;
@@ -103,7 +103,7 @@ jint native_crsync_init(JNIEnv *env, jclass clazz) {
         gCrsyncHandle = crsync_easy_init();
         code = (NULL == gCrsyncHandle) ? CRSYNCE_FAILED_INIT : CRSYNCE_OK;
         if(CRSYNCE_OK != code) break;
-        crsync_magnet_new(gMagnet);
+        onepiece_magnet_new(gMagnet);
         gCurlHandle = curl_easy_init();
         code = (NULL == gCurlHandle) ? CRSYNCE_FAILED_INIT : CRSYNCE_OK;
     } while(0);
@@ -215,10 +215,10 @@ jint native_crsync_perform_query(JNIEnv *env, jclass clazz) {
 
     if(CRSYNCE_OK == code) {
         if(gMagnet){
-            crsync_magnet_free(gMagnet);
+            onepiece_magnet_free(gMagnet);
         }
-        crsync_magnet_new(gMagnet);
-        code = crsync_magnet_load(utstring_body(magnetFilename), gMagnet);
+        onepiece_magnet_new(gMagnet);
+        code = onepiece_magnet_load(utstring_body(magnetFilename), gMagnet);
     }
 
     utstring_free(magnetUrl);
@@ -293,7 +293,7 @@ jint native_crsync_cleanup(JNIEnv *env, jclass clazz) {
     free(gLocalRes);
     gLocalRes = NULL;
 
-    crsync_magnet_free(gMagnet);
+    onepiece_magnet_free(gMagnet);
     crsync_easy_cleanup(gCrsyncHandle);
     gCrsyncHandle = NULL;
     crsync_global_cleanup();

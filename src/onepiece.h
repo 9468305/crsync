@@ -21,43 +21,50 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-#ifndef CRSYNC_TOOL_H
-#define CRSYNC_TOOL_H
+#ifndef CRSYNC_ONEPIECE_H
+#define CRSYNC_ONEPIECE_H
 
 #if defined __cplusplus
 extern "C" {
 #endif
 
-#include "onepiece.h"
+#include "crsync.h"
 
-typedef enum {
-    CRSYNCTOOLOPT_CURRID = 1,   /* current magnet info id */
-    CRSYNCTOOLOPT_NEXTID,       /* next magnet info id */
-    CRSYNCTOOLOPT_APPNAME,      /* app name */
-    CRSYNCTOOLOPT_RESNAME,      /* resource name array */
-    CRSYNCTOOLOPT_APPDIR,       /* app directory */
-    CRSYNCTOOLOPT_RESDIR,       /* resource directory */
-    CRSYNCTOOLOPT_OUTPUT,       /* output directory */
-    CRSYNCTOOLOPT_BLOCKSIZE,    /* block size, default 2K */
-} CRSYNCTOOLoption;
+#define MAGNET_SUFFIX ".magnet"
+#define MAGNET_TPLMAP_FORMAT "ssssA(ss)"
 
-typedef struct crsynctool_handle_t crsynctool_handle_t;
+typedef struct magnet_t {
+    char        *curr_id;   /* current magnet info id */
+    char        *next_id;   /* next magnet info id */
+    char        *appname;   /* android apk name */
+    char        *apphash;   /* android apk hash */
+    UT_array    *resname;   /* resources name */
+    UT_array    *reshash;   /* resources hash */
+} magnet_t;
 
-/* return: NULL for fail */
-crsynctool_handle_t* crsynctool_init();
+#define onepiece_magnet_new(a) do {\
+    a=calloc(1, sizeof(magnet_t));\
+    utarray_new(a->resname,&ut_str_icd);\
+    utarray_new(a->reshash,&ut_str_icd);\
+} while(0)
 
-/* return: only CRSYNCE_OK or CRSYNC_INVALID_OPT */
-CRSYNCcode crsynctool_setopt(crsynctool_handle_t *handle, CRSYNCTOOLoption opt, ...);
+#define onepiece_magnet_free(a) do {\
+    free(a->curr_id);\
+    free(a->next_id);\
+    free(a->appname);\
+    free(a->apphash);\
+    utarray_free(a->resname);\
+    utarray_free(a->reshash);\
+    free(a);\
+    a=NULL;\
+} while(0)
 
-/* return CRSYNCcode (<=0) or CURLcode (>=0) */
-CRSYNCcode crsynctool_perform(crsynctool_handle_t *handle);
-
-void crsynctool_cleanup(crsynctool_handle_t *handle);
-
-CRSYNCcode crsynctool_main(int argc, char **argv);
+CRSYNCcode onepiece_magnet_load(const char *magnetFilename, magnet_t *magnet);
+CRSYNCcode onepiece_magnet_generate(const char *magnetFilename, magnet_t *magnet);
 
 #if defined __cplusplus
     }
 #endif
 
-#endif // CRSYNC_TOOL_H
+#endif // CRSYNC_ONEPIECE_H
+

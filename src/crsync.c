@@ -246,6 +246,63 @@ static CRSYNCcode crsync_rsum_load(crsync_handle_t *handle) {
     return code;
 }
 
+CRSYNCcode crsync_rsum_generate(const char *filename, uint32_t blocksize, UT_string *hash) {
+    CRSYNCcode code = CRSYNCE_OK;
+    UT_string *rsumFilename = NULL;
+    utstring_new(rsumFilename);
+    utstring_printf(rsumFilename, "%s%s", filename, RSUM_SUFFIX);
+    tpl_mmap_rec    rec = {-1, NULL, 0};
+
+    if (0 == tpl_mmap_file(filename, &rec)) {
+        rsum_meta_t meta;
+        meta.block_sz = blocksize;
+        meta.file_sz = rec.text_sz;
+        rsum_strong_block(rec.text, 0, rec.text_sz, meta.file_sum);
+        utstring_clear(hash);
+        for(int j=0; j < STRONG_SUM_SIZE; j++) {
+            utstring_printf(hash, "%02x", meta.file_sum[j] );
+        }
+        uint32_t blocks = meta.file_sz / meta.block_sz;
+        uint32_t rest = meta.file_sz - blocks * meta.block_sz;
+        if (rest > 0) {
+            tpl_bin_malloc(&meta.rest_tb, rest);
+            memcpy(meta.rest_tb.addr, rec.text + rec.text_sz - rest, rest);
+        }
+        uint32_t weak = 0;
+        uint8_t strong[STRONG_SUM_SIZE] = {0};
+        tpl_node *tn = tpl_map(RSUM_TPLMAP_FORMAT,
+                     &meta.file_sz,
+                     &meta.block_sz,
+                     meta.file_sum,
+                     STRONG_SUM_SIZE,
+                     &meta.rest_tb,
+                     &weak,
+                     &strong,
+                     STRONG_SUM_SIZE);
+        tpl_pack(tn, 0);
+
+        for (uint32_t i = 0; i < blocks; i++) {
+            rsum_weak_block(rec.text, i*meta.block_sz, meta.block_sz, &weak);
+            rsum_strong_block(rec.text, i*meta.block_sz, meta.block_sz, strong);
+            tpl_pack(tn, 1);
+        }
+
+        int result = tpl_dump(tn, TPL_FILE, utstring_body(rsumFilename));
+        code = (-1 == result) ? CRSYNCE_FILE_ERROR : CRSYNCE_OK;
+        tpl_free(tn);
+
+        if(rest > 0) {
+            tpl_bin_free(&meta.rest_tb);
+        }
+
+        tpl_unmap_file(&rec);
+    } else {
+        code = CRSYNCE_FILE_ERROR;
+    }
+    utstring_free(rsumFilename);
+    return code;
+}
+
 static CRSYNCcode crsync_msum_generate(crsync_handle_t *handle) {
     LOGI("crsync_msum_generate\n");
     CRSYNCcode code = CRSYNCE_OK;
@@ -454,33 +511,6 @@ static CRSYNCcode crsync_msum_patch(crsync_handle_t *handle, rsum_t *sumItem, tp
             code = crsync_msum_curl(handle, sumItem, recNew);
         }
     }
-    return code;
-}
-
-CRSYNCcode crsync_magnet_load(const char *magnetFilename, crsync_magnet_t *magnet) {
-    LOGI("crsync_magnet_load\n");
-    CRSYNCcode code = CRSYNCE_OK;
-    char *resname = NULL, *reshash = NULL;
-    tpl_node *tn = tpl_map(MAGNET_TPLMAP_FORMAT,
-                 &magnet->curr_id,
-                 &magnet->next_id,
-                 &magnet->appname,
-                 &magnet->apphash,
-                 &resname,
-                 &reshash);
-    if (!tpl_load(tn, TPL_FILE, magnetFilename) ) {
-        tpl_unpack(tn, 0);
-        while (tpl_unpack(tn, 1) > 0) {
-            utarray_push_back(magnet->resname, &resname);
-            free(resname);
-            utarray_push_back(magnet->reshash, &reshash);
-            free(reshash);
-        }
-    } else {
-        code = CRSYNCE_FILE_ERROR;
-    }
-    tpl_free(tn);
-    LOGI("crsync_magnet_load code = %d\n", code);
     return code;
 }
 

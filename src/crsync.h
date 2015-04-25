@@ -42,9 +42,6 @@ extern "C" {
 #define MSUM_TPLMAP_FORMAT "uuc#BA(uc#ui)"
 #define MSUM_SUFFIX ".msum"
 
-#define MAGNET_SUFFIX ".magnet"
-#define MAGNET_TPLMAP_FORMAT "ssssA(ss)"
-
 static const int MAX_CURL_RETRY = 5;
 
 typedef struct rsum_meta_t{
@@ -62,32 +59,6 @@ typedef struct rsum_t {
     struct rsum_t   *sub;                   /*sub HashTable*/
     UT_hash_handle  hh;
 } rsum_t;
-
-typedef struct crsync_magnet_t {
-    char        *curr_id;   /* current magnet info id */
-    char        *next_id;   /* next magnet info id */
-    char        *appname;   /* android apk name */
-    char        *apphash;   /* android apk hash */
-    UT_array    *resname;   /* resources name */
-    UT_array    *reshash;   /* resources hash */
-} crsync_magnet_t;
-
-#define crsync_magnet_new(a) do {\
-    a=calloc(1, sizeof(crsync_magnet_t));\
-    utarray_new(a->resname,&ut_str_icd);\
-    utarray_new(a->reshash,&ut_str_icd);\
-} while(0)
-
-#define crsync_magnet_free(a) do {\
-    free(a->curr_id);\
-    free(a->next_id);\
-    free(a->appname);\
-    free(a->apphash);\
-    utarray_free(a->resname);\
-    utarray_free(a->reshash);\
-    free(a);\
-    a=NULL;\
-} while(0)
 
 typedef enum {
     CRSYNCOPT_OUTPUTDIR = 1,/* local output dir */
@@ -128,10 +99,10 @@ void rsum_weak_rolling(const uint8_t *data, uint32_t start, uint32_t block_sz, u
 void rsum_strong_block(const uint8_t *p, uint32_t start, uint32_t block_sz, uint8_t *strong);
 void rsum_strong_file(const char *file, uint8_t *strong);
 
+CRSYNCcode crsync_rsum_generate(const char *filename, uint32_t blocksize, UT_string *hash);
 UT_string* get_full_string(const char *base, const char *value, const char *suffix);
 void crsync_curl_setopt(CURL *curlhandle);
 CRSYNCcode crsync_tplfile_check(const char *filename, const char *sumfmt);
-CRSYNCcode crsync_magnet_load(const char *magnetFilename, crsync_magnet_t *magnet);
 
 CRSYNCcode crsync_global_init();
 

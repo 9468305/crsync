@@ -29,10 +29,6 @@ SOFTWARE.
 extern "C" {
 #endif
 
-void client_xfer(int percent) {
-    LOGI("%d", percent);
-}
-
 int main(int argc, char **argv) {
     LOGI("crsynctool begin\n");
     crsynctool_main(argc, argv);

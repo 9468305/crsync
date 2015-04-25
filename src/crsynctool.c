@@ -23,17 +23,18 @@ SOFTWARE.
 */
 #include <dirent.h>
 #include <sys/stat.h>
+
 #include "crsynctool.h"
 #include "log.h"
 
 #define Default_BLOCK_SIZE 2048 /*default block size to 2K*/
 
 typedef struct crsynctool_handle_t {
-    crsync_magnet_t *magnet;    /* magnet info */
-    char            *appdir;    /* app directory */
-    char            *resdir;    /* islands directory */
-    char            *outputdir; /* output directory */
-    uint32_t        block_sz;   /* block size */
+    magnet_t    *magnet;    /* magnet info */
+    char        *appdir;    /* app directory */
+    char        *resdir;    /* islands directory */
+    char        *outputdir; /* output directory */
+    uint32_t    block_sz;   /* block size */
 } crsynctool_handle_t;
 
 static CRSYNCcode crsync_movefile(const char *inputfile, const char *outputdir, const char *hash) {
@@ -72,93 +73,9 @@ static CRSYNCcode crsync_movefile(const char *inputfile, const char *outputdir, 
     return code;
 }
 
-static CRSYNCcode crsynctool_rsum_generate(const char *filename, uint32_t blocksize, UT_string *hash) {
-    CRSYNCcode code = CRSYNCE_OK;
-    UT_string *rsumFilename = NULL;
-    utstring_new(rsumFilename);
-    utstring_printf(rsumFilename, "%s%s", filename, RSUM_SUFFIX);
-    tpl_mmap_rec    rec = {-1, NULL, 0};
-
-    if (0 == tpl_mmap_file(filename, &rec)) {
-        rsum_meta_t meta;
-        meta.block_sz = blocksize;
-        meta.file_sz = rec.text_sz;
-        rsum_strong_block(rec.text, 0, rec.text_sz, meta.file_sum);
-        utstring_clear(hash);
-        for(int j=0; j < STRONG_SUM_SIZE; j++) {
-            utstring_printf(hash, "%02x", meta.file_sum[j] );
-        }
-        uint32_t blocks = meta.file_sz / meta.block_sz;
-        uint32_t rest = meta.file_sz - blocks * meta.block_sz;
-        if (rest > 0) {
-            tpl_bin_malloc(&meta.rest_tb, rest);
-            memcpy(meta.rest_tb.addr, rec.text + rec.text_sz - rest, rest);
-        }
-        uint32_t weak = 0;
-        uint8_t strong[STRONG_SUM_SIZE] = {0};
-        tpl_node *tn = tpl_map(RSUM_TPLMAP_FORMAT,
-                     &meta.file_sz,
-                     &meta.block_sz,
-                     meta.file_sum,
-                     STRONG_SUM_SIZE,
-                     &meta.rest_tb,
-                     &weak,
-                     &strong,
-                     STRONG_SUM_SIZE);
-        tpl_pack(tn, 0);
-
-        for (uint32_t i = 0; i < blocks; i++) {
-            rsum_weak_block(rec.text, i*meta.block_sz, meta.block_sz, &weak);
-            rsum_strong_block(rec.text, i*meta.block_sz, meta.block_sz, strong);
-            tpl_pack(tn, 1);
-        }
-
-        int result = tpl_dump(tn, TPL_FILE, utstring_body(rsumFilename));
-        code = (-1 == result) ? CRSYNCE_FILE_ERROR : CRSYNCE_OK;
-        tpl_free(tn);
-
-        if(rest > 0) {
-            tpl_bin_free(&meta.rest_tb);
-        }
-
-        tpl_unmap_file(&rec);
-    } else {
-        code = CRSYNCE_FILE_ERROR;
-    }
-    utstring_free(rsumFilename);
-    return code;
-}
-
-static CRSYNCcode crsynctool_magnet_generate(const char *magnetFilename, crsync_magnet_t *magnet) {
-    CRSYNCcode code = CRSYNCE_OK;
-    char *resname = NULL, *reshash = NULL;
-    char **p = NULL, **q = NULL;
-
-    tpl_node *tn = tpl_map(MAGNET_TPLMAP_FORMAT,
-                 &magnet->curr_id,
-                 &magnet->next_id,
-                 &magnet->appname,
-                 &magnet->apphash,
-                 &resname,
-                 &reshash);
-    tpl_pack(tn, 0);
-
-    p = NULL;
-    q = NULL;
-    while ( (p=(char**)utarray_next(magnet->resname,p)) && (q=(char**)utarray_next(magnet->reshash,q))) {
-        resname = *p;
-        reshash = *q;
-        tpl_pack(tn, 1);
-    }
-    int result = tpl_dump(tn, TPL_FILE, magnetFilename);
-    code = (-1 == result) ? CRSYNCE_FILE_ERROR : CRSYNCE_OK;
-    tpl_free(tn);
-    return code;
-}
-
 crsynctool_handle_t* crsynctool_init() {
     crsynctool_handle_t *handle = calloc(1, sizeof(crsynctool_handle_t));
-    crsync_magnet_new(handle->magnet);
+    onepiece_magnet_new(handle->magnet);
     handle->block_sz = Default_BLOCK_SIZE;
     return handle;
 }
@@ -286,7 +203,7 @@ CRSYNCcode crsynctool_perform(crsynctool_handle_t *handle) {
         LOGI("perform app %s\n", handle->magnet->appname);
         utstring_clear(input);
         utstring_printf(input, "%s%s", handle->appdir, handle->magnet->appname);
-        code = crsynctool_rsum_generate(utstring_body(input), handle->block_sz, hash);
+        code = crsync_rsum_generate(utstring_body(input), handle->block_sz, hash);
         if(CRSYNCE_OK != code) break;
         handle->magnet->apphash = strdup(utstring_body(hash));
         code = crsync_movefile(utstring_body(input), handle->outputdir, utstring_body(hash));
@@ -298,7 +215,7 @@ CRSYNCcode crsynctool_perform(crsynctool_handle_t *handle) {
             LOGI("perform res %s\n", *p);
             utstring_clear(input);
             utstring_printf(input, "%s%s", handle->resdir, *p);
-            code = crsynctool_rsum_generate(utstring_body(input), handle->block_sz, hash);
+            code = crsync_rsum_generate(utstring_body(input), handle->block_sz, hash);
             if(CRSYNCE_OK != code) break;
             utarray_push_back(handle->magnet->reshash, &utstring_body(hash));
             code = crsync_movefile(utstring_body(input), handle->outputdir, utstring_body(hash));
@@ -309,7 +226,7 @@ CRSYNCcode crsynctool_perform(crsynctool_handle_t *handle) {
         //generate magnet info file
         utstring_clear(output);
         utstring_printf(output, "%s%s%s", handle->outputdir, handle->magnet->curr_id, MAGNET_SUFFIX);
-        code = crsynctool_magnet_generate(utstring_body(output), handle->magnet);
+        code = onepiece_magnet_generate(utstring_body(output), handle->magnet);
     } while (0);
 
     utstring_free(input);
@@ -321,7 +238,7 @@ CRSYNCcode crsynctool_perform(crsynctool_handle_t *handle) {
 
 void crsynctool_cleanup(crsynctool_handle_t *handle) {
     if(handle) {
-        crsync_magnet_free(handle->magnet);
+        onepiece_magnet_free(handle->magnet);
         free(handle->appdir);
         free(handle->resdir);
         free(handle->outputdir);
