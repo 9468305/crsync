@@ -25,7 +25,7 @@ SOFTWARE.
 #include "log.h"
 
 CRSYNCcode onepiece_magnet_load(const char *magnetFilename, magnet_t *magnet) {
-    LOGI("crsync_magnet_load\n");
+    LOGI("onepiece_magnet_load\n");
     CRSYNCcode code = CRSYNCE_OK;
     char *resname = NULL, *reshash = NULL;
     tpl_node *tn = tpl_map(MAGNET_TPLMAP_FORMAT,
@@ -47,7 +47,7 @@ CRSYNCcode onepiece_magnet_load(const char *magnetFilename, magnet_t *magnet) {
         code = CRSYNCE_FILE_ERROR;
     }
     tpl_free(tn);
-    LOGI("crsync_magnet_load code = %d\n", code);
+    LOGI("onepiece_magnet_load code = %d\n", code);
     return code;
 }
 
@@ -65,8 +65,6 @@ CRSYNCcode onepiece_magnet_generate(const char *magnetFilename, magnet_t *magnet
                  &reshash);
     tpl_pack(tn, 0);
 
-    p = NULL;
-    q = NULL;
     while ( (p=(char**)utarray_next(magnet->resname,p)) && (q=(char**)utarray_next(magnet->reshash,q))) {
         resname = *p;
         reshash = *q;

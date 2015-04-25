@@ -24,20 +24,20 @@ SOFTWARE.
 #include <dirent.h>
 #include <sys/stat.h>
 
-#include "crsynctool.h"
+#include "onepiecetool.h"
 #include "log.h"
 
 #define Default_BLOCK_SIZE 2048 /*default block size to 2K*/
 
-typedef struct crsynctool_handle_t {
+typedef struct onepiecetool_handle_t {
     magnet_t    *magnet;    /* magnet info */
     char        *appdir;    /* app directory */
     char        *resdir;    /* islands directory */
     char        *outputdir; /* output directory */
     uint32_t    block_sz;   /* block size */
-} crsynctool_handle_t;
+} onepiecetool_handle_t;
 
-static CRSYNCcode crsync_movefile(const char *inputfile, const char *outputdir, const char *hash) {
+static CRSYNCcode onepiecetool_movefile(const char *inputfile, const char *outputdir, const char *hash) {
     CRSYNCcode code = CRSYNCE_FILE_ERROR;
     UT_string *input = NULL;
     utstring_new(input);
@@ -73,14 +73,14 @@ static CRSYNCcode crsync_movefile(const char *inputfile, const char *outputdir, 
     return code;
 }
 
-crsynctool_handle_t* crsynctool_init() {
-    crsynctool_handle_t *handle = calloc(1, sizeof(crsynctool_handle_t));
+onepiecetool_handle_t* onepiecetool_init() {
+    onepiecetool_handle_t *handle = calloc(1, sizeof(onepiecetool_handle_t));
     onepiece_magnet_new(handle->magnet);
     handle->block_sz = Default_BLOCK_SIZE;
     return handle;
 }
 
-CRSYNCcode crsynctool_setopt(crsynctool_handle_t *handle, CRSYNCTOOLoption opt, ...) {
+CRSYNCcode onepiecetool_setopt(onepiecetool_handle_t *handle, ONEPIECETOOLoption opt, ...) {
     if(!handle) {
         return CRSYNCE_INVALID_OPT;
     }
@@ -90,49 +90,49 @@ CRSYNCcode crsynctool_setopt(crsynctool_handle_t *handle, CRSYNCTOOLoption opt, 
     va_start(arg, opt);
 
     switch (opt) {
-    case CRSYNCTOOLOPT_CURRID:
+    case ONEPIECETOOLOPT_CURRID:
         if(handle->magnet->curr_id) {
             free(handle->magnet->curr_id);
         }
         handle->magnet->curr_id = strdup( va_arg(arg, const char*) );
         break;
-    case CRSYNCTOOLOPT_NEXTID:
+    case ONEPIECETOOLOPT_NEXTID:
         if(handle->magnet->next_id) {
             free(handle->magnet->next_id);
         }
         handle->magnet->next_id = strdup( va_arg(arg, const char*) );
         break;
-    case CRSYNCTOOLOPT_APPNAME:
+    case ONEPIECETOOLOPT_APPNAME:
         if(handle->magnet->appname) {
             free(handle->magnet->appname);
         }
         handle->magnet->appname =strdup( va_arg(arg, const char*) );
         break;
-    case CRSYNCTOOLOPT_RESNAME:
+    case ONEPIECETOOLOPT_RESNAME:
     {
         const char *p = va_arg(arg, const char*);
         utarray_push_back(handle->magnet->resname, &p);
     }
         break;
-    case CRSYNCTOOLOPT_APPDIR:
+    case ONEPIECETOOLOPT_APPDIR:
         if(handle->appdir) {
             free(handle->appdir);
         }
         handle->appdir = strdup( va_arg(arg, const char*) );
         break;
-    case CRSYNCTOOLOPT_RESDIR:
+    case ONEPIECETOOLOPT_RESDIR:
         if(handle->resdir) {
             free(handle->resdir);
         }
         handle->resdir = strdup( va_arg(arg, const char*) );
         break;
-    case CRSYNCTOOLOPT_OUTPUT:
+    case ONEPIECETOOLOPT_OUTPUT:
         if(handle->outputdir) {
             free(handle->outputdir);
         }
         handle->outputdir = strdup( va_arg(arg, const char*) );
         break;
-    case CRSYNCTOOLOPT_BLOCKSIZE:
+    case ONEPIECETOOLOPT_BLOCKSIZE:
         handle->block_sz = va_arg(arg, uint32_t);
         break;
     default:
@@ -143,7 +143,7 @@ CRSYNCcode crsynctool_setopt(crsynctool_handle_t *handle, CRSYNCTOOLoption opt, 
     return code;
 }
 
-static CRSYNCcode crsynctool_checkopt(crsynctool_handle_t *handle) {
+static CRSYNCcode onepiecetool_checkopt(onepiecetool_handle_t *handle) {
     if( handle &&
         handle->appdir &&
         handle->resdir &&
@@ -157,7 +157,7 @@ static CRSYNCcode crsynctool_checkopt(crsynctool_handle_t *handle) {
     return CRSYNCE_INVALID_OPT;
 }
 
-CRSYNCcode crsynctool_perform(crsynctool_handle_t *handle) {
+CRSYNCcode onepiecetool_perform(onepiecetool_handle_t *handle) {
     CRSYNCcode code = CRSYNCE_OK;
 
     UT_string *input = NULL;
@@ -172,7 +172,7 @@ CRSYNCcode crsynctool_perform(crsynctool_handle_t *handle) {
     char **p = NULL;
 
     do {
-        code = crsynctool_checkopt(handle);
+        code = onepiecetool_checkopt(handle);
         if(CRSYNCE_OK != code) break;
 
         //empty output dir
@@ -206,7 +206,7 @@ CRSYNCcode crsynctool_perform(crsynctool_handle_t *handle) {
         code = crsync_rsum_generate(utstring_body(input), handle->block_sz, hash);
         if(CRSYNCE_OK != code) break;
         handle->magnet->apphash = strdup(utstring_body(hash));
-        code = crsync_movefile(utstring_body(input), handle->outputdir, utstring_body(hash));
+        code = onepiecetool_movefile(utstring_body(input), handle->outputdir, utstring_body(hash));
         if(CRSYNCE_OK != code) break;
 
         //generate base resource rsum file
@@ -218,7 +218,7 @@ CRSYNCcode crsynctool_perform(crsynctool_handle_t *handle) {
             code = crsync_rsum_generate(utstring_body(input), handle->block_sz, hash);
             if(CRSYNCE_OK != code) break;
             utarray_push_back(handle->magnet->reshash, &utstring_body(hash));
-            code = crsync_movefile(utstring_body(input), handle->outputdir, utstring_body(hash));
+            code = onepiecetool_movefile(utstring_body(input), handle->outputdir, utstring_body(hash));
             if(CRSYNCE_OK != code) break;
         }
         if(CRSYNCE_OK != code) break;
@@ -236,7 +236,7 @@ CRSYNCcode crsynctool_perform(crsynctool_handle_t *handle) {
     return code;
 }
 
-void crsynctool_cleanup(crsynctool_handle_t *handle) {
+void onepiecetool_cleanup(onepiecetool_handle_t *handle) {
     if(handle) {
         onepiece_magnet_free(handle->magnet);
         free(handle->appdir);
@@ -246,7 +246,7 @@ void crsynctool_cleanup(crsynctool_handle_t *handle) {
     }
 }
 
-CRSYNCcode crsynctool_main(int argc, char **argv) {
+CRSYNCcode onepiecetool_main(int argc, char **argv) {
 
     for(int i=0; i<argc; i++) {
         LOGI("argv %d %s\n", i, argv[i]);
@@ -265,38 +265,38 @@ CRSYNCcode crsynctool_main(int argc, char **argv) {
     uint32_t blocksize = atoi(argv[7]);
 
     CRSYNCcode code = CRSYNCE_OK;
-    crsynctool_handle_t *handle = crsynctool_init();
+    onepiecetool_handle_t *handle = onepiecetool_init();
     if(handle) {
-        crsynctool_setopt(handle, CRSYNCTOOLOPT_CURRID, curr_id);
-        crsynctool_setopt(handle, CRSYNCTOOLOPT_NEXTID, next_id);
-        crsynctool_setopt(handle, CRSYNCTOOLOPT_APPNAME, appname);
+        onepiecetool_setopt(handle, ONEPIECETOOLOPT_CURRID, curr_id);
+        onepiecetool_setopt(handle, ONEPIECETOOLOPT_NEXTID, next_id);
+        onepiecetool_setopt(handle, ONEPIECETOOLOPT_APPNAME, appname);
 
-        crsynctool_setopt(handle, CRSYNCTOOLOPT_RESNAME, "base.obb");
-        crsynctool_setopt(handle, CRSYNCTOOLOPT_RESNAME, "chapter0.obb");
-        crsynctool_setopt(handle, CRSYNCTOOLOPT_RESNAME, "chapter20.obb");
-        crsynctool_setopt(handle, CRSYNCTOOLOPT_RESNAME, "chapter21.obb");
-        crsynctool_setopt(handle, CRSYNCTOOLOPT_RESNAME, "chapter1.obb");
-        crsynctool_setopt(handle, CRSYNCTOOLOPT_RESNAME, "chapter2.obb");
-        crsynctool_setopt(handle, CRSYNCTOOLOPT_RESNAME, "chapter3.obb");
-        crsynctool_setopt(handle, CRSYNCTOOLOPT_RESNAME, "chapter4.obb");
-        crsynctool_setopt(handle, CRSYNCTOOLOPT_RESNAME, "chapter5.obb");
-        crsynctool_setopt(handle, CRSYNCTOOLOPT_RESNAME, "chapter6.obb");
-        crsynctool_setopt(handle, CRSYNCTOOLOPT_RESNAME, "chapter7.obb");
-        crsynctool_setopt(handle, CRSYNCTOOLOPT_RESNAME, "chapter8.obb");
-        crsynctool_setopt(handle, CRSYNCTOOLOPT_RESNAME, "chapter9.obb");
-        crsynctool_setopt(handle, CRSYNCTOOLOPT_RESNAME, "chapter10.obb");
-        crsynctool_setopt(handle, CRSYNCTOOLOPT_RESNAME, "chapter11.obb");
-        crsynctool_setopt(handle, CRSYNCTOOLOPT_RESNAME, "chapter12.obb");
-        crsynctool_setopt(handle, CRSYNCTOOLOPT_RESNAME, "chapter13.obb");
-        crsynctool_setopt(handle, CRSYNCTOOLOPT_RESNAME, "chapter14.obb");
+        onepiecetool_setopt(handle, ONEPIECETOOLOPT_RESNAME, "base.obb");
+        onepiecetool_setopt(handle, ONEPIECETOOLOPT_RESNAME, "chapter0.obb");
+        onepiecetool_setopt(handle, ONEPIECETOOLOPT_RESNAME, "chapter20.obb");
+        onepiecetool_setopt(handle, ONEPIECETOOLOPT_RESNAME, "chapter21.obb");
+        onepiecetool_setopt(handle, ONEPIECETOOLOPT_RESNAME, "chapter1.obb");
+        onepiecetool_setopt(handle, ONEPIECETOOLOPT_RESNAME, "chapter2.obb");
+        onepiecetool_setopt(handle, ONEPIECETOOLOPT_RESNAME, "chapter3.obb");
+        onepiecetool_setopt(handle, ONEPIECETOOLOPT_RESNAME, "chapter4.obb");
+        onepiecetool_setopt(handle, ONEPIECETOOLOPT_RESNAME, "chapter5.obb");
+        onepiecetool_setopt(handle, ONEPIECETOOLOPT_RESNAME, "chapter6.obb");
+        onepiecetool_setopt(handle, ONEPIECETOOLOPT_RESNAME, "chapter7.obb");
+        onepiecetool_setopt(handle, ONEPIECETOOLOPT_RESNAME, "chapter8.obb");
+        onepiecetool_setopt(handle, ONEPIECETOOLOPT_RESNAME, "chapter9.obb");
+        onepiecetool_setopt(handle, ONEPIECETOOLOPT_RESNAME, "chapter10.obb");
+        onepiecetool_setopt(handle, ONEPIECETOOLOPT_RESNAME, "chapter11.obb");
+        onepiecetool_setopt(handle, ONEPIECETOOLOPT_RESNAME, "chapter12.obb");
+        onepiecetool_setopt(handle, ONEPIECETOOLOPT_RESNAME, "chapter13.obb");
+        onepiecetool_setopt(handle, ONEPIECETOOLOPT_RESNAME, "chapter14.obb");
 
-        crsynctool_setopt(handle, CRSYNCTOOLOPT_APPDIR, appdir);
-        crsynctool_setopt(handle, CRSYNCTOOLOPT_RESDIR, resdir);
-        crsynctool_setopt(handle, CRSYNCTOOLOPT_OUTPUT, output);
-        crsynctool_setopt(handle, CRSYNCTOOLOPT_BLOCKSIZE, blocksize);
+        onepiecetool_setopt(handle, ONEPIECETOOLOPT_APPDIR, appdir);
+        onepiecetool_setopt(handle, ONEPIECETOOLOPT_RESDIR, resdir);
+        onepiecetool_setopt(handle, ONEPIECETOOLOPT_OUTPUT, output);
+        onepiecetool_setopt(handle, ONEPIECETOOLOPT_BLOCKSIZE, blocksize);
 
-        code = crsynctool_perform(handle);
-        crsynctool_cleanup(handle);
+        code = onepiecetool_perform(handle);
+        onepiecetool_cleanup(handle);
     } else {
         code = CRSYNCE_FAILED_INIT;
     }

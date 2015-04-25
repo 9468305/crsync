@@ -8,7 +8,7 @@ TARGET = crsync
 SOURCES += main.c \
     crsync.c \
     onepiece.c\
-    crsynctool.c \
+    onepiecetool.c\
     ../extra/tpl.c \
     ../extra/win/mmap.c \
     ../extra/blake2s-ref.c
@@ -19,7 +19,7 @@ qtcAddDeployment()
 HEADERS += \
     crsync.h \
     onepiece.h\
-    crsynctool.h\
+    onepiecetool.h\
     log.h\
     ../extra/tpl.h \
     ../extra/win/mman.h \

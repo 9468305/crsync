@@ -23,7 +23,7 @@ SOFTWARE.
 */
 #include "log.h"
 #include "crsync.h"
-#include "crsynctool.h"
+#include "onepiecetool.h"
 
 #if defined __cplusplus
 extern "C" {
@@ -31,7 +31,7 @@ extern "C" {
 
 int main(int argc, char **argv) {
     LOGI("crsynctool begin\n");
-    crsynctool_main(argc, argv);
+    onepiecetool_main(argc, argv);
     LOGI("crsynctool end\n");
     return 0;
 }

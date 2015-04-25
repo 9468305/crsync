@@ -21,8 +21,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-#ifndef CRSYNC_TOOL_H
-#define CRSYNC_TOOL_H
+#ifndef ONEPIECE_TOOL_H
+#define ONEPIECE_TOOL_H
 
 #if defined __cplusplus
 extern "C" {
@@ -31,33 +31,33 @@ extern "C" {
 #include "onepiece.h"
 
 typedef enum {
-    CRSYNCTOOLOPT_CURRID = 1,   /* current magnet info id */
-    CRSYNCTOOLOPT_NEXTID,       /* next magnet info id */
-    CRSYNCTOOLOPT_APPNAME,      /* app name */
-    CRSYNCTOOLOPT_RESNAME,      /* resource name array */
-    CRSYNCTOOLOPT_APPDIR,       /* app directory */
-    CRSYNCTOOLOPT_RESDIR,       /* resource directory */
-    CRSYNCTOOLOPT_OUTPUT,       /* output directory */
-    CRSYNCTOOLOPT_BLOCKSIZE,    /* block size, default 2K */
-} CRSYNCTOOLoption;
+    ONEPIECETOOLOPT_CURRID = 1,   /* current magnet info id */
+    ONEPIECETOOLOPT_NEXTID,       /* next magnet info id */
+    ONEPIECETOOLOPT_APPNAME,      /* app name */
+    ONEPIECETOOLOPT_RESNAME,      /* resource name array */
+    ONEPIECETOOLOPT_APPDIR,       /* app directory */
+    ONEPIECETOOLOPT_RESDIR,       /* resource directory */
+    ONEPIECETOOLOPT_OUTPUT,       /* output directory */
+    ONEPIECETOOLOPT_BLOCKSIZE,    /* block size, default 2K */
+} ONEPIECETOOLoption;
 
-typedef struct crsynctool_handle_t crsynctool_handle_t;
+typedef struct onepiecetool_handle_t onepiecetool_handle_t;
 
 /* return: NULL for fail */
-crsynctool_handle_t* crsynctool_init();
+onepiecetool_handle_t* onepiecetool_init();
 
 /* return: only CRSYNCE_OK or CRSYNC_INVALID_OPT */
-CRSYNCcode crsynctool_setopt(crsynctool_handle_t *handle, CRSYNCTOOLoption opt, ...);
+CRSYNCcode onepiecetool_setopt(onepiecetool_handle_t *handle, ONEPIECETOOLoption opt, ...);
 
 /* return CRSYNCcode (<=0) or CURLcode (>=0) */
-CRSYNCcode crsynctool_perform(crsynctool_handle_t *handle);
+CRSYNCcode onepiecetool_perform(onepiecetool_handle_t *handle);
 
-void crsynctool_cleanup(crsynctool_handle_t *handle);
+void onepiecetool_cleanup(onepiecetool_handle_t *handle);
 
-CRSYNCcode crsynctool_main(int argc, char **argv);
+CRSYNCcode onepiecetool_main(int argc, char **argv);
 
 #if defined __cplusplus
     }
 #endif
 
-#endif // CRSYNC_TOOL_H
+#endif // ONEPIECE_TOOL_H
