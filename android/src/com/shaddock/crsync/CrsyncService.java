@@ -164,15 +164,15 @@ public class CrsyncService extends Service implements OnepieceObserver {
         
         int code;
         do {
-            code = CrsyncJava.native_crsync_init();
+            code = CrsyncJava.JNI_onepiece_init();
             if(CrsyncJava.Code_OK != code) break;
-            code = CrsyncJava.native_crsync_setopt(CrsyncJava.OPT_MagnetID, contentInfo.mMagnet);
+            code = CrsyncJava.JNI_onepiece_setopt(CrsyncJava.OPT_MagnetID, contentInfo.mMagnet);
             if(CrsyncJava.Code_OK != code) break;
-            code = CrsyncJava.native_crsync_setopt(CrsyncJava.OPT_BaseUrl, contentInfo.mBaseUrl);
+            code = CrsyncJava.JNI_onepiece_setopt(CrsyncJava.OPT_BaseUrl, contentInfo.mBaseUrl);
             if(CrsyncJava.Code_OK != code) break;
-            code = CrsyncJava.native_crsync_setopt(CrsyncJava.OPT_LocalApp, contentInfo.mLocalApp);
+            code = CrsyncJava.JNI_onepiece_setopt(CrsyncJava.OPT_LocalApp, contentInfo.mLocalApp);
             if(CrsyncJava.Code_OK != code) break;
-            code = CrsyncJava.native_crsync_setopt(CrsyncJava.OPT_LocalRes, contentInfo.mLocalRes);
+            code = CrsyncJava.JNI_onepiece_setopt(CrsyncJava.OPT_LocalRes, contentInfo.mLocalRes);
             if(CrsyncJava.Code_OK != code) break;
         } while(false);
 
@@ -189,10 +189,10 @@ public class CrsyncService extends Service implements OnepieceObserver {
 
     private void handleQuery(CrsyncInfo.StateInfo stateInfo) {
         logger.info("CrsyncService handleQuery");
-        int code = CrsyncJava.native_crsync_perform_query();
+        int code = CrsyncJava.JNI_onepiece_perform_query();
         if(CrsyncJava.Code_OK == code) {
             CrsyncInfo.ContentInfo ci = CrsyncInfo.queryContent(getContentResolver());
-            String magnetString = CrsyncJava.native_crsync_getinfo(CrsyncJava.INFO_Magnet);
+            String magnetString = CrsyncJava.JNI_onepiece_getinfo(CrsyncJava.INFO_Magnet);
             logger.info("INFO_Magnet = " + magnetString);
             CrsyncJava.Magnet magnet = CrsyncJava.Magnet.getValue(magnetString);
             if(null != magnet) {
@@ -223,14 +223,14 @@ public class CrsyncService extends Service implements OnepieceObserver {
     }
 
     private void handleUpdateApp(CrsyncInfo.StateInfo stateInfo) {
-        int code = CrsyncJava.native_crsync_perform_updateapp();
+        int code = CrsyncJava.JNI_onepiece_perform_updateapp();
         if(CrsyncJava.Code_OK == code) {
             ;
         }
     }
 
     private void handleUpdateRes(CrsyncInfo.StateInfo stateInfo) {
-        int code = CrsyncJava.native_crsync_perform_updateres();
+        int code = CrsyncJava.JNI_onepiece_perform_updateres();
         stateInfo.mAction = CrsyncJava.Action_Done;
         stateInfo.mCode = code;
         CrsyncInfo.updateState(getContentResolver(), stateInfo);

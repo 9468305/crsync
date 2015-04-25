@@ -62,6 +62,28 @@ typedef struct magnet_t {
 CRSYNCcode onepiece_magnet_load(const char *magnetFilename, magnet_t *magnet);
 CRSYNCcode onepiece_magnet_generate(const char *magnetFilename, magnet_t *magnet);
 
+typedef struct onepiece_t onepiece_t;
+
+typedef enum {
+    ONEPIECEOPT_STARTID = 0,
+    ONEPIECEOPT_BASEURL,
+    ONEPIECEOPT_LOCALAPP,
+    ONEPIECEOPT_LOCALRES,
+    ONEPIECEOPT_XFER,
+} ONEPIECEoption;
+
+typedef enum {
+    ONEPIECEINFO_QUERY = 0,
+} ONEPIECEinfo;
+
+CRSYNCcode onepiece_init();
+CRSYNCcode onepiece_setopt(ONEPIECEoption opt, void *value);
+UT_string* onepiece_getinfo(ONEPIECEinfo info);
+CRSYNCcode onepiece_perform_query();
+CRSYNCcode onepiece_perform_updateapp();
+CRSYNCcode onepiece_perform_updateres();
+void onepiece_cleanup();
+
 #if defined __cplusplus
     }
 #endif

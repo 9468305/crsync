@@ -42,13 +42,13 @@ public class CrsyncJava {
     }
 
     //native crsync functions
-    public static native int    native_crsync_init();
-    public static native int    native_crsync_setopt(int opt, String value);
-    public static native String native_crsync_getinfo(int info);
-    public static native int    native_crsync_perform_query();
-    public static native int    native_crsync_perform_updateapp();
-    public static native int    native_crsync_perform_updateres();
-    public static native int    native_crsync_cleanup();
+    public static native int    JNI_onepiece_init();
+    public static native int    JNI_onepiece_setopt(int opt, String value);
+    public static native String JNI_onepiece_getinfo(int info);
+    public static native int    JNI_onepiece_perform_query();
+    public static native int    JNI_onepiece_perform_updateapp();
+    public static native int    JNI_onepiece_perform_updateres();
+    public static native void   JNI_onepiece_cleanup();
 
     public static void java_onepiece_xfer(String name, int percent) {
         if(null != mObserver) {

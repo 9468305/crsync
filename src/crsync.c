@@ -36,9 +36,10 @@ SOFTWARE.
 
 static const size_t MAX_CURL_WRITESIZE = 16*1024; /* curl write data buffer size */
 
-static void xfer_fcn(const char *name, int percent) {
+int xfer_default(const char *name, int percent) {
     (void)name;
     (void)percent;
+    return 1;
 }
 
 void rsum_weak_block(const uint8_t *data, uint32_t start, uint32_t block_sz, uint32_t *weak) {
@@ -540,7 +541,7 @@ crsync_handle_t* crsync_easy_init() {
         if(!handle->curl_buffer) {
             break;
         }
-        handle->xfer = xfer_fcn;
+        handle->xfer = xfer_default;
         LOGI("crsync_easy_init success\n");
         return handle;
     } while (0);
@@ -595,7 +596,7 @@ CRSYNCcode crsync_easy_setopt(crsync_handle_t *handle, CRSYNCoption opt, ...) {
         handle->baseurl = strdup( va_arg(arg, const char*) );
         break;
     case CRSYNCOPT_XFER:
-        handle->xfer = va_arg(arg, crsync_xfer_fcn*);
+        handle->xfer = va_arg(arg, xfer_callback*);
         break;
     default:
         code = CRSYNCE_INVALID_OPT;

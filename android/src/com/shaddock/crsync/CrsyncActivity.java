@@ -76,9 +76,9 @@ public class CrsyncActivity extends Activity {
         switch (si.mAction) {
         case CrsyncJava.Action_Idle:
             CrsyncInfo.ContentInfo ci = new CrsyncInfo.ContentInfo();
-            ci.mMagnet = "14012";
+            ci.mMagnet = "14014etc";
             ci.mBaseUrl = "http://dlied5.qq.com/wjzj/a/test/etc/";
-            ci.mLocalApp = Environment.getExternalStorageDirectory().getAbsolutePath() + "/crsync/swordgame.apk";
+            ci.mLocalApp = this.getApplicationInfo().sourceDir;
             ci.mLocalRes = Environment.getExternalStorageDirectory().getAbsolutePath() + "/crsync/";
             CrsyncInfo.updateContent(getContentResolver(), ci);
             break;
