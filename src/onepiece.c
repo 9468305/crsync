@@ -198,7 +198,7 @@ static CRSYNCcode onepiece_magnet_curl(const char *id, magnet_t *magnet) {
     UT_string *magnetUrl = get_full_string(onepiece->baseUrl, id, MAGNET_SUFFIX);
     UT_string *magnetFilename = get_full_string(onepiece->localRes, id, MAGNET_SUFFIX);
 
-    int retry = MAGNET_CURL_RETRY;
+    int retry = 0;
     do {
         FILE *magnetFile = fopen(utstring_body(magnetFilename), "wb");
         if(magnetFile) {
@@ -222,8 +222,8 @@ static CRSYNCcode onepiece_magnet_curl(const char *id, magnet_t *magnet) {
             code = CRSYNCE_FILE_ERROR;
             break;
         }
-        sleep(MAGNET_SLEEP_RETRY);
-    } while(retry-- > 0);
+        sleep(MAGNET_SLEEP_RETRY * (++retry));
+    } while(retry < MAGNET_CURL_RETRY);
 
     if(CRSYNCE_OK == code) {
         code = onepiece_magnet_load(utstring_body(magnetFilename), magnet);

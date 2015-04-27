@@ -163,7 +163,7 @@ static CRSYNCcode crsync_rsum_curl(crsync_handle_t *handle) {
     CRSYNCcode  code = CRSYNCE_CURL_ERROR;
     UT_string   *rsumFilename = get_full_string(handle->outputdir, handle->hash, RSUM_SUFFIX);
     UT_string   *rsumUrl = get_full_string(handle->baseurl, handle->hash, RSUM_SUFFIX);
-    int         retry = MAX_CURL_RETRY;
+    int         retry = 0;
     do {
         FILE *rsumFile = fopen(utstring_body(rsumFilename), "wb");
         if(rsumFile) {
@@ -189,8 +189,8 @@ static CRSYNCcode crsync_rsum_curl(crsync_handle_t *handle) {
             code = CRSYNCE_FILE_ERROR;
             break;
         }
-        sleep(SLEEP_CURL_RETRY);
-    } while(retry-- > 0);
+        sleep(SLEEP_CURL_RETRY * (++retry));
+    } while(retry < MAX_CURL_RETRY);
 
     utstring_free(rsumFilename);
     utstring_free(rsumUrl);
@@ -473,7 +473,7 @@ static CURLcode crsync_msum_curl(crsync_handle_t *handle, rsum_t *sumItem, tpl_m
 
     UT_string   *url = get_full_string(handle->baseurl, handle->hash, NULL);
 
-    int retry = MAX_CURL_RETRY;
+    int retry = 0;
     do {
         crsync_curl_setopt(handle->curl_handle);
         curl_easy_setopt(handle->curl_handle, CURLOPT_URL, utstring_body(url));
@@ -499,8 +499,8 @@ static CURLcode crsync_msum_curl(crsync_handle_t *handle, rsum_t *sumItem, tpl_m
             LOGI("crsync_msum_curl code = %d\n", code);
         }
         code = CURL_LAST;
-        sleep(SLEEP_CURL_RETRY);
-    } while(--retry > 0);
+        sleep(SLEEP_CURL_RETRY * (++retry));
+    } while(retry < MAX_CURL_RETRY);
 
     utstring_free(range);
     utstring_free(url);
