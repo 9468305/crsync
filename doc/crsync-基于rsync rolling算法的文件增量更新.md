@@ -134,37 +134,44 @@ Bloom filter: 2^20
 纯本地差异查找与合并,无网络开销  
 
 测试机: DELL PC, Intel i3 550 (4core 3.2GHz) 4GB RAM  
+
 | 分块大小 | 校验表生成时间 | 校验块数量 | 差异查找时间 | 重复块数量 | 差异块大小 |
-| ------- | :----------: | :-------: | :---------: | :------: | --------: |
+| :------- | :----------: | :-------: | :---------: | :------: | --------: |
 | 2K      | 2182 ms      | 46328     |  3753 ms    | 40418    | 11820 KB  |
 | 4K      | 2156 ms      | 23164     |  2914 ms    | 18960    | 16816 KB  |
 | 8K      | 2154 ms      | 11582     |  2719 ms    | 9249     | 18664 KB  |
-  
+
 测试机 HP PC, Intel i7-3770 (8core 3.4GHz) 8GB RAM:  
+
 | 分块大小 | 校验表生成时间 | 校验块数量 | 差异查找时间 | 重复块数量 | 差异块大小 |
-| ------- | :----------: | :-------: | :---------: | :------: | --------: |
+| :------- | :----------: | :-------: | :---------: | :------: | --------: |
 | 2K      | 1745 ms      | 46328     |  2974 ms    | 40418    | 11820 KB  |
-  
+
 **crsync VS bspatch**  
-|  算法  | 差异量                                     | 内存开销               |
+
+| 算法 | 差异量 | 内存开销 |
+| :--- | :----------: | --------: |
 | bsdiff | 16.7MB (diff文件)                         | 108.7MB (92MB+16.7MB) |
 | crsync | **12.36MB**(校验表835KB + 差异数据11820KB) | **1.76MB**            |
-  
+
 **测试对比2:**  
 测试文件: [我叫MT online Android标准版](http://update2.locojoy.com/android/IamMT/150413/IamMT_200100100_locojoy_standard_ac_4.5.4.0_4540.apk) 90.7MB ~ [我叫MT online Android高清版](http://update.locojoy.com/Client/Android/MT-A/0324/IamMT_200100100_locojoy_ac_hd_4.5.4.0_4540.apk) 102MB  
 (测试版本基于2015.4.4官网下载,目前已变更)
 
 
 测试机 HP PC, Intel i7-3770 (8core 3.4GHz) 8GB RAM:  
+
 | 分块大小 | 校验表生成时间 | 差异查找时间 | merge时间  |
-| ------- | :----------: | :---------: | --------: |
+| :------- | :----------: | :---------: | --------: |
 | 2K      | 1379 ms      |  2950 ms    | 90ms      |
-  
+
 **crsync VS bs diff/patch**  
+
 |  算法  | 差异量                 | 内存开销                 |
+| :------- | :----------: | --------: |
 | bsdiff | **29.5MB** (diff文件) | 120.2MB (90.7MB+29.5MB) |
 | crsync | 40.8MB               |  **1.7MB**              |
-  
+
 **这里发现, 为什么无尽之剑资源包使用crsync得到的差异量更小?**  
 **那么问题来了, 如何设计出适合差异更新的文件格式**  
 几种格式对比:  
@@ -176,23 +183,26 @@ Bloom filter: 2^20
 UnrealEngine3 Android使用的obb格式为:**文件头**(贴图原始大小, 压缩大小,文件体偏移位置)+**文件体**(贴图内容zip压缩).  
 资源更改只影响zip压缩部分和文件头索引内容.对其他未更改资源无影响.  
   
+Android APK是zip压缩格式,但是特定后缀名的文件不压缩,常见图片音视频文件为了支持流式read保持原始格式.  
+因此crsync对比bsdiff的差异量大些.  
+  
 #5.源码  
 纯C语言实现, 遵循C99, 核心部分仅2个文件 crsync.h crsync.c 880行代码.static-link libcurl.  
 release版Android so 166KB, Windows mingw32 exe 299KB.  
 API实现参考curl设计  
 
-    CRSYNCcode crsync_global_init();    
-    crsync_handle_t* crsync_easy_init();  
+```c
+CRSYNCcode crsync_global_init();    
+crsync_handle_t* crsync_easy_init();  
 
-    CRSYNCcode crsync_easy_setopt(crsync_handle_t *handle, CRSYNCoption opt, ...);  
+CRSYNCcode crsync_easy_setopt(crsync_handle_t *handle, CRSYNCoption opt, ...);  
 
-    CRSYNCcode crsync_easy_perform_match(crsync_handle_t *handle);  
-    CRSYNCcode crsync_easy_perform_patch(crsync_handle_t *handle);  
+CRSYNCcode crsync_easy_perform_match(crsync_handle_t *handle);  
+CRSYNCcode crsync_easy_perform_patch(crsync_handle_t *handle);  
 
-    void crsync_easy_cleanup(crsync_handle_t *handle);  
-    void crsync_global_cleanup();  
-
-
+void crsync_easy_cleanup(crsync_handle_t *handle);  
+void crsync_global_cleanup();  
+```
 
 源码托管在[github crsync](https://github.com/9468305/crsync), MIT License, 目前暂时屏蔽访问.  
 (上班时间所做,版权应该是属于公司,得到开源授权后再开放访问).  

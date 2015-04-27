@@ -39,7 +39,7 @@ CRSYNCcode onepiece_magnet_load(const char *magnetFilename, magnet_t *magnet) {
                  &magnet->apphash,
                  &resname,
                  &reshash);
-    if (!tpl_load(tn, TPL_FILE, magnetFilename) ) {
+    if (0 == tpl_load(tn, TPL_FILE, magnetFilename) ) {
         tpl_unpack(tn, 0);
         while (tpl_unpack(tn, 1) > 0) {
             utarray_push_back(magnet->resname, &resname);
@@ -294,7 +294,7 @@ CRSYNCcode onepiece_perform_query() {
         onepiece_magnet_new(magnet);
         id = onepiece->magnet->next_id;
     }
-    code = (onepiece->magnet->curr_id >= onepiece->start_id) ? CRSYNCE_OK : CRSYNCE_CURL_ERROR;
+    code = (NULL == onepiece->magnet->curr_id) ? CRSYNCE_CURL_ERROR : CRSYNCE_OK;
     LOGI("onepiece_perform_query code = %d\n", code);
     return code;
 }

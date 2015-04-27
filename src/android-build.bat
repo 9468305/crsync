@@ -10,4 +10,4 @@ rem NDK_LIBS_OUT = libs path
 rem clean
 rem -B force rebuild
 
-ndk-build NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=./Android.mk APP_ABI=armeabi-v7a APP_PLATFORM=android-15
+%NDKROOTr10d%/ndk-build NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=./Android.mk APP_ABI=armeabi-v7a APP_PLATFORM=android-15
