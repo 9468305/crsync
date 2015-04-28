@@ -23,7 +23,7 @@ public class CrsyncConstants {
 		if(mDebug) {
 			try {
 				String file = Environment.getExternalStorageDirectory().getAbsolutePath() + "/crsync.log";
-				FileHandler fh = new FileHandler(file, false);
+				FileHandler fh = new FileHandler(file, true);
 				fh.setFormatter(new SimpleFormatter());
 				logger.addHandler(fh);
 			} catch (IOException e) {

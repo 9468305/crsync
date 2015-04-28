@@ -102,9 +102,27 @@ UT_string* get_full_string(const char *base, const char *value, const char *suff
     return name;
 }
 
+static const char s_infotype[CURLINFO_END][3] = {"* ", "< ", "> ", "{ ", "} ", "{ ", "} " };
+static int crsync_curl_debug(CURL *handle, curl_infotype type, char *data, size_t size, void *userptr) {
+    (void)handle;
+    (void)size;
+    (void)userptr;
+    switch (type) {
+    case CURLINFO_TEXT:
+    case CURLINFO_HEADER_IN:
+    case CURLINFO_HEADER_OUT:
+        LOGD("%s: %s\n", s_infotype[type], data);
+        break;
+    default:
+        break;
+    }
+    return 0;
+}
+
 void crsync_curl_setopt(CURL *curlhandle) {
 #if CRSYNC_DEBUG
     curl_easy_setopt(curlhandle, CURLOPT_VERBOSE, 1);
+    curl_easy_setopt(curlhandle, CURLOPT_DEBUGFUNCTION, crsync_curl_debug);
 #endif
     curl_easy_setopt(curlhandle, CURLOPT_PROTOCOLS, CURLPROTO_HTTP); /* http protocol only */
     curl_easy_setopt(curlhandle, CURLOPT_FAILONERROR, 1); /* request failure on HTTP response >= 400 */
@@ -149,15 +167,6 @@ static void crsync_sum_free(crsync_handle_t *handle) {
     }
 }
 
-static int crsync_curl_progress(void *clientp, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow) {
-    (void)ultotal;
-    (void)ulnow;
-    crsync_handle_t *handle = (crsync_handle_t *)clientp;
-    int progress = (dltotal == 0) ? 0 : (dlnow * 100 / dltotal);
-    handle->xfer(handle->file, progress);
-    return 0;
-}
-
 static CRSYNCcode crsync_rsum_curl(crsync_handle_t *handle) {
     LOGI("crsync_rsum_curl\n");
     CRSYNCcode  code = CRSYNCE_CURL_ERROR;
@@ -172,9 +181,9 @@ static CRSYNCcode crsync_rsum_curl(crsync_handle_t *handle) {
             curl_easy_setopt(handle->curl_handle, CURLOPT_HTTPGET, 1);
             curl_easy_setopt(handle->curl_handle, CURLOPT_WRITEFUNCTION, NULL);
             curl_easy_setopt(handle->curl_handle, CURLOPT_WRITEDATA, (void *)rsumFile);
-            curl_easy_setopt(handle->curl_handle, CURLOPT_NOPROGRESS, 0);
-            curl_easy_setopt(handle->curl_handle, CURLOPT_XFERINFOFUNCTION, (void *)crsync_curl_progress);
-            curl_easy_setopt(handle->curl_handle, CURLOPT_XFERINFODATA, (void *)handle);
+            curl_easy_setopt(handle->curl_handle, CURLOPT_NOPROGRESS, 1);
+            curl_easy_setopt(handle->curl_handle, CURLOPT_XFERINFOFUNCTION, NULL);
+            curl_easy_setopt(handle->curl_handle, CURLOPT_XFERINFODATA, NULL);
 
             CURLcode curlcode = curl_easy_perform(handle->curl_handle);
             fclose(rsumFile);
@@ -191,6 +200,7 @@ static CRSYNCcode crsync_rsum_curl(crsync_handle_t *handle) {
         }
         sleep(SLEEP_CURL_RETRY * (++retry));
     } while(retry < MAX_CURL_RETRY);
+    curl_easy_reset(handle->curl_handle);
 
     utstring_free(rsumFilename);
     utstring_free(rsumUrl);
@@ -715,6 +725,7 @@ CRSYNCcode crsync_easy_perform_patch(crsync_handle_t *handle) {
             }
         }
     } while (0);
+    curl_easy_reset(handle->curl_handle);
 
     int ret = msync(recNew.text,recNew.text_sz,MS_SYNC);
     if(-1 == ret) {
