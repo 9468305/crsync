@@ -34,7 +34,7 @@ SOFTWARE.
 extern "C" {
 #endif
 
-#define STRONG_SUM_SIZE 16  /*strong checksum size*/
+#define STRONG_SUM_SIZE 32  /*strong checksum size*/
 
 #define RSUM_TPLMAP_FORMAT "uuc#BA(uc#)"
 #define RSUM_SUFFIX ".rsum"

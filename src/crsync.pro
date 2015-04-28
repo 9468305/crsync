@@ -11,7 +11,7 @@ SOURCES += main.c \
     onepiecetool.c\
     ../extra/tpl.c \
     ../extra/win/mmap.c \
-    ../extra/blake2s-ref.c
+    ../extra/blake2b-ref.c
 
 include(deployment.pri)
 qtcAddDeployment()

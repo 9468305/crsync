@@ -1,3 +1,4 @@
+@echo off
 rem ndk-build parameters:
 rem NDK_PROJECT_PATH =  where is project path
 rem NDK_APPLICATION_MK = where is Application.mk
@@ -10,4 +11,5 @@ rem NDK_LIBS_OUT = libs path
 rem clean
 rem -B force rebuild
 
-%NDKROOTr10d%/ndk-build NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=./Android.mk APP_ABI=armeabi-v7a APP_PLATFORM=android-15
+call %NDKROOTr10d%/ndk-build NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=./Android.mk APP_ABI=armeabi-v7a APP_PLATFORM=android-15
+pause

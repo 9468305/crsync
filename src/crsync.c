@@ -71,10 +71,10 @@ void rsum_weak_rolling(const uint8_t *data, uint32_t start, uint32_t block_sz, u
 }
 
 void rsum_strong_block(const uint8_t *p, uint32_t start, uint32_t block_sz, uint8_t *strong) {
-    blake2s_state ctx;
-    blake2s_init(&ctx, STRONG_SUM_SIZE);
-    blake2s_update(&ctx, p+start, block_sz);
-    blake2s_final(&ctx, (uint8_t *)strong, STRONG_SUM_SIZE);
+    blake2b_state ctx;
+    blake2b_init(&ctx, STRONG_SUM_SIZE);
+    blake2b_update(&ctx, p+start, block_sz);
+    blake2b_final(&ctx, (uint8_t *)strong, STRONG_SUM_SIZE);
 }
 
 void rsum_strong_file(const char *file, uint8_t *strong) {
@@ -517,6 +517,10 @@ static CRSYNCcode crsync_msum_patch(crsync_handle_t *handle, rsum_t *sumItem, tp
             code = crsync_msum_curl(handle, sumItem, recNew);
         }
     }
+    int ret = msync(recNew->text,recNew->text_sz,MS_SYNC);
+    if(-1 == ret) {
+        LOGE("msync failed\n");
+    }
     return code;
 }
 
@@ -714,7 +718,7 @@ CRSYNCcode crsync_easy_perform_patch(crsync_handle_t *handle) {
 
     int ret = msync(recNew.text,recNew.text_sz,MS_SYNC);
     if(-1 == ret) {
-        LOGE("msync failed %s\n", utstring_body(newFilename));
+        LOGE("msync failed\n");
     }
     tpl_unmap_file(&recNew);
     tpl_unmap_file(&recOld);

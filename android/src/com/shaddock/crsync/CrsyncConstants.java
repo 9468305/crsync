@@ -16,10 +16,11 @@ import static java.net.HttpURLConnection.HTTP_OK;
 public class CrsyncConstants {
 
 	public static final Logger logger = Logger.getLogger("crsync");
+	private static final boolean mDebug = true;
 
 	static {
-		logger.setLevel( BuildConfig.DEBUG ? Level.ALL : Level.OFF );
-		if(BuildConfig.DEBUG) {
+		logger.setLevel( mDebug ? Level.ALL : Level.OFF );
+		if(mDebug) {
 			try {
 				String file = Environment.getExternalStorageDirectory().getAbsolutePath() + "/crsync.log";
 				FileHandler fh = new FileHandler(file, false);

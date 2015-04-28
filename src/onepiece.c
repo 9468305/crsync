@@ -317,7 +317,7 @@ CRSYNCcode onepiece_perform_updateres() {
     utstring_new(hash);
     char **p = NULL, **q = NULL;
     while ( (p=(char**)utarray_next(onepiece->magnet->resname,p)) && (q=(char**)utarray_next(onepiece->magnet->reshash,q)) ) {
-        LOGI("updateres %s %s", *p, *q);
+        LOGI("updateres %s %s\n", *p, *q);
         //first compare old file's hash to new file's hash
         UT_string *localfile = get_full_string( onepiece->localRes, *p, NULL);
         rsum_strong_file(utstring_body(localfile), strong);
@@ -326,7 +326,8 @@ CRSYNCcode onepiece_perform_updateres() {
         for(int j=0; j < STRONG_SUM_SIZE; j++) {
             utstring_printf(hash, "%02x", strong[j] );
         }
-        if(0 == strncmp(utstring_body(hash), *q, STRONG_SUM_SIZE*2)) {
+        LOGI("localres %s\n", utstring_body(hash));
+        if(0 == strncmp(utstring_body(hash), *q, strlen(*q))) {
             onepiece->xfer(*p, 100);
             continue;
         }
