@@ -54,8 +54,6 @@ CRSYNCcode onepiecetool_perform(onepiecetool_handle_t *handle);
 
 void onepiecetool_cleanup(onepiecetool_handle_t *handle);
 
-CRSYNCcode onepiecetool_main(int argc, char **argv);
-
 #if defined __cplusplus
     }
 #endif

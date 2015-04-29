@@ -24,15 +24,15 @@ SOFTWARE.
 #ifndef CRSYNC_H
 #define CRSYNC_H
 
+#if defined __cplusplus
+extern "C" {
+#endif
+
 #include "uthash.h"
 #include "utarray.h"
 #include "utstring.h"
 #include "tpl.h"
 #include "curl/curl.h"
-
-#if defined __cplusplus
-extern "C" {
-#endif
 
 #define STRONG_SUM_SIZE 32  /*strong checksum size*/
 
