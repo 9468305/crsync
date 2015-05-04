@@ -105,7 +105,7 @@ rolling是什么?
 **rolling计算足够快了,用B文件每个块的校验值check A文件的校验表,如何优化?**  
   
 A文件的校验表size = 102400,冒泡?快速?折半?  
-rsync使用二段HashTable来存储校验值,即H<A, H<B, MD5>>  
+rsync使用二段HashTable来存储校验值,即即H(A, H(B, MD5))  
 用adler32的A做key, B+MD5做value, 其中再用alder32的B做key, MD5做value.  
 表大小2^16,满足A的值范围.冲突值用LinkList存储.  
   
@@ -201,7 +201,7 @@ release版Android so 166KB, Windows mingw32 exe 299KB.
 API实现参考curl设计  
 
 ```c
-CRSYNCcode crsync_global_init();    
+CRSYNCcode crsync_global_init();  
 crsync_handle_t* crsync_easy_init();  
 
 CRSYNCcode crsync_easy_setopt(crsync_handle_t *handle, CRSYNCoption opt, ...);  
