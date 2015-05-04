@@ -142,7 +142,7 @@ public class CrsyncService extends Service implements OnepieceObserver {
             handleUpdateRes(stateInfo);
             break;
         case Crsync.Action_Done:
-            //do nothing
+            handleDone(stateInfo);
             break;
         default:
             logger.severe("wrong action");
@@ -235,6 +235,10 @@ public class CrsyncService extends Service implements OnepieceObserver {
         stateInfo.mCode = code;
         CrsyncInfo.updateState(getContentResolver(), stateInfo);
         handleFromProvider(stateInfo);
+    }
+
+    private void handleDone(CrsyncInfo.StateInfo stateInfo) {
+        Crsync.JNI_onepiece_cleanup();
     }
 /*
 

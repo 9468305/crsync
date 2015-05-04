@@ -32,7 +32,7 @@ public class Crsync {
     public static void setObserver(OnepieceObserver ob) {
         mObserver = ob;
     }
-    
+
     public static void delObserver() {
         mObserver = null;
     }

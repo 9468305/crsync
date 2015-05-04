@@ -24,9 +24,9 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <service android:name=".CrsyncService"></service>
+    <service android:name="com.shaddock.crsync.CrsyncService"></service>
         <provider
-            android:name=".CrsyncProvider"
+        android:name="com.shaddock.crsync.CrsyncProvider"
             android:authorities="com.shaddock.crsync.CrsyncProvider"
             android:exported="false"/>
     </application>
