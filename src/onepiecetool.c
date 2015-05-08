@@ -27,7 +27,7 @@ SOFTWARE.
 #include "onepiecetool.h"
 #include "log.h"
 
-#define Default_BLOCK_SIZE 2048 /*default block size to 2K*/
+#define Default_BLOCK_SIZE 8*1024 /*default block size to 8K*/
 
 typedef struct onepiecetool_handle_t {
     magnet_t    *magnet;    /* magnet info */
@@ -148,7 +148,7 @@ static CRSYNCcode onepiecetool_checkopt(onepiecetool_handle_t *handle) {
         handle->appdir &&
         handle->resdir &&
         handle->outputdir &&
-        handle->block_sz >= Default_BLOCK_SIZE &&
+        handle->block_sz > 0 &&
         handle->magnet->curr_id &&
         handle->magnet->next_id &&
         handle->magnet->appname ) {

@@ -36,7 +36,7 @@ int showUsage() {
     LOGI("crsync onepiecetool curr_id next_id appname appdir resdir outputdir blocksize\n");
     LOGI("Note:\n");
     LOGI("dir should end with '/'\n");
-    LOGI("blocksize is better to be 2048, 4096, 8092, 16184\n");
+    LOGI("blocksize is better to be 2 - 2048, 4 - 4096, 8 - 8092, 16 - 16184\n");
     return -1;
 }
 
@@ -55,7 +55,7 @@ int main_onepiecetool(int argc, char **argv) {
     const char *appdir = argv[c++];
     const char *resdir = argv[c++];
     const char *output = argv[c++];
-    uint32_t blocksize = atoi(argv[c++]);
+    uint32_t blocksize = atoi(argv[c++]) * 1024;
 
     CRSYNCcode code = CRSYNCE_OK;
     onepiecetool_handle_t *handle = onepiecetool_init();

@@ -490,7 +490,7 @@ static CURLcode crsync_msum_curl(crsync_handle_t *handle, rsum_t *sumItem, tpl_m
         curl_easy_setopt(handle->curl_handle, CURLOPT_WRITEFUNCTION, (void*)crsync_msum_curl_callback);
         curl_easy_setopt(handle->curl_handle, CURLOPT_WRITEDATA, (void *)handle);
         curl_easy_setopt(handle->curl_handle, CURLOPT_RANGE, utstring_body(range));
-        curl_easy_setopt(handle->curl_handle, CURLOPT_TIMEOUT, 10);
+        curl_easy_setopt(handle->curl_handle, CURLOPT_TIMEOUT, 20);
         curl_easy_setopt(handle->curl_handle, CURLOPT_NOPROGRESS, 1);
         curl_easy_setopt(handle->curl_handle, CURLOPT_XFERINFOFUNCTION, NULL);
         curl_easy_setopt(handle->curl_handle, CURLOPT_XFERINFODATA, NULL);
