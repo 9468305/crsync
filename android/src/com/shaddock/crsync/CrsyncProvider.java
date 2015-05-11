@@ -49,6 +49,7 @@ public class CrsyncProvider extends ContentProvider {
 
     private static final String[] CURSOR_COLUMN_RESOURCE = {
     	CrsyncConstants.COLUMN_RES_NAME,
+        CrsyncConstants.COLUMN_RES_HASH,
     	CrsyncConstants.COLUMN_RES_PERCENT,
     };
 
@@ -127,7 +128,7 @@ public class CrsyncProvider extends ContentProvider {
 		{
             MatrixCursor mc = new MatrixCursor(CURSOR_COLUMN_RESOURCE);
             for(CrsyncInfo.ResInfo x : mRes) {
-                mc.addRow( new Object[] { x.mName, x.mPercent });
+                mc.addRow( new Object[] { x.mName, x.mHash, x.mPercent });
             }
             c = mc;
 		    break;
@@ -156,14 +157,33 @@ public class CrsyncProvider extends ContentProvider {
 
 	@Override
 	public Uri insert(Uri uri, ContentValues values) {
-		// TODO Auto-generated method stub
-		return null;
+	    throw new IllegalArgumentException("insert Unimplement URI: " + uri);
 	}
 
 	@Override
+    public int bulkInsert(Uri uri, ContentValues[] values) {
+	    int match = sURIMatcher.match(uri);
+        switch (match) {
+        case CODE_RESOURCE:
+            mRes.clear();
+            for(ContentValues v : values) {
+                CrsyncInfo.ResInfo r = new CrsyncInfo.ResInfo();
+                r.mName = v.getAsString(CrsyncConstants.COLUMN_RES_NAME);
+                r.mHash = v.getAsString(CrsyncConstants.COLUMN_RES_HASH);
+                r.mPercent = v.getAsInteger(CrsyncConstants.COLUMN_RES_PERCENT);
+                mRes.add(r);
+            }
+            notifyChange(uri);
+            return values.length;
+        default:
+            logger.severe("Unknown URI: " + uri);
+            throw new IllegalArgumentException("bulkInsert Unknown URI: " + uri);
+        }
+    }
+
+    @Override
 	public int delete(Uri uri, String selection, String[] selectionArgs) {
-		// TODO Auto-generated method stub
-		return 0;
+        throw new IllegalArgumentException("delete Unimplement URI: " + uri);
 	}
 
 	@Override
@@ -185,17 +205,17 @@ public class CrsyncProvider extends ContentProvider {
         case CODE_RESOURCE:
             CrsyncInfo.ResInfo r = new CrsyncInfo.ResInfo();
             r.mName = values.getAsString(CrsyncConstants.COLUMN_RES_NAME);
+            r.mHash = values.getAsString(CrsyncConstants.COLUMN_RES_HASH);
             r.mPercent = values.getAsInteger(CrsyncConstants.COLUMN_RES_PERCENT);
             for (CrsyncInfo.ResInfo x : mRes) {
-                if(x.mName.equalsIgnoreCase(r.mName)) {
+                if(x.mName.equalsIgnoreCase(r.mName) || x.mHash.equalsIgnoreCase(r.mHash)) {
                     x.mPercent = r.mPercent;
                     notifyChange(uri);
                     return 1;
                 }
             }
-            mRes.add(r);
-            notifyChange(uri);
-            return 1;
+            logger.severe("update resource not found : " + r.toString());
+            return 0;
         default:
             logger.severe("Unknown URI: " + uri);
             throw new IllegalArgumentException("update Unknown URI: " + uri);

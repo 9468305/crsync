@@ -45,14 +45,13 @@ int main_onepiece(int argc, char **argv) {
 }
 
 int main_onepiecetool(int argc, char **argv) {
-    if(argc < 9) {
+    if(argc < 8) {
         return showUsage();
     }
     int c = 2;
     const char *curr_id = argv[c++];
     const char *next_id = argv[c++];
-    const char *appname = argv[c++];
-    const char *appdir = argv[c++];
+    const char *appFullname = argv[c++];
     const char *resdir = argv[c++];
     const char *output = argv[c++];
     uint32_t blocksize = atoi(argv[c++]) * 1024;
@@ -62,7 +61,7 @@ int main_onepiecetool(int argc, char **argv) {
     if(handle) {
         onepiecetool_setopt(handle, ONEPIECETOOLOPT_CURRID, curr_id);
         onepiecetool_setopt(handle, ONEPIECETOOLOPT_NEXTID, next_id);
-        onepiecetool_setopt(handle, ONEPIECETOOLOPT_APPNAME, appname);
+        onepiecetool_setopt(handle, ONEPIECETOOLOPT_APP, appFullname);
 
         onepiecetool_setopt(handle, ONEPIECETOOLOPT_RESNAME, "base.obb");
         onepiecetool_setopt(handle, ONEPIECETOOLOPT_RESNAME, "chapter0.obb");
@@ -83,7 +82,6 @@ int main_onepiecetool(int argc, char **argv) {
         onepiecetool_setopt(handle, ONEPIECETOOLOPT_RESNAME, "chapter13.obb");
         onepiecetool_setopt(handle, ONEPIECETOOLOPT_RESNAME, "chapter14.obb");
 
-        onepiecetool_setopt(handle, ONEPIECETOOLOPT_APPDIR, appdir);
         onepiecetool_setopt(handle, ONEPIECETOOLOPT_RESDIR, resdir);
         onepiecetool_setopt(handle, ONEPIECETOOLOPT_OUTPUT, output);
         onepiecetool_setopt(handle, ONEPIECETOOLOPT_BLOCKSIZE, blocksize);

@@ -33,9 +33,8 @@ extern "C" {
 typedef enum {
     ONEPIECETOOLOPT_CURRID = 1,   /* current magnet info id */
     ONEPIECETOOLOPT_NEXTID,       /* next magnet info id */
-    ONEPIECETOOLOPT_APPNAME,      /* app name */
+    ONEPIECETOOLOPT_APP,          /* app full filename */
     ONEPIECETOOLOPT_RESNAME,      /* resource name array */
-    ONEPIECETOOLOPT_APPDIR,       /* app directory */
     ONEPIECETOOLOPT_RESDIR,       /* resource directory */
     ONEPIECETOOLOPT_OUTPUT,       /* output directory */
     ONEPIECETOOLOPT_BLOCKSIZE,    /* block size, default 2K */

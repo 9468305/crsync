@@ -59,31 +59,29 @@ public class Crsync {
     public static class Magnet {
         public String curr_id = "";
         public String next_id = "";
-        public String appname = "";
         public String apphash = "";
         public String[] resname = null;
         public String[] reshash = null;
 
         public static Magnet getValue(String value) {
             String [] s = value.split(";");
-            if(s.length < 4) {
+            if(s.length < 3) {
                 return null;
             }
             Magnet m = new Magnet();
             m.curr_id = s[0];
             m.next_id = s[1];
-            m.appname = s[2];
-            m.apphash = s[3];
+            m.apphash = s[2];
 
-            int size = (s.length - 4)/2;
+            int size = (s.length - 3)/2;
             if(size == 0) {
                 return m;
             }
             m.resname = new String[size];
             m.reshash = new String[size];
-            for(int i = 0; 4+i*2 < s.length; i++) {
-                m.resname[i] = s[4+i*2];
-                m.reshash[i] = s[5+i*2];
+            for(int i = 0; 3+i*2 < s.length; i++) {
+                m.resname[i] = s[3+i*2];
+                m.reshash[i] = s[4+i*2];
             }
             return m;
         }

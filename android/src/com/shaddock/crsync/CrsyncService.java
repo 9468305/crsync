@@ -1,24 +1,13 @@
 package com.shaddock.crsync;
 
 import static com.shaddock.crsync.CrsyncConstants.logger;
-import static java.net.HttpURLConnection.HTTP_OK;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.Vector;
-
-import com.shaddock.crsync.CrsyncInfo.ResInfo;
 
 import android.app.Service;
 import android.content.Intent;
 import android.database.ContentObserver;
 import android.net.NetworkInfo;
-import android.net.Uri;
 import android.os.Handler;
 import android.os.IBinder;
 
@@ -197,12 +186,15 @@ public class CrsyncService extends Service implements OnepieceObserver {
             Crsync.Magnet magnet = Crsync.Magnet.getValue(magnetString);
             if(null != magnet) {
                 int size = magnet.resname.length;
+                CrsyncInfo.ResInfo ri[] = new CrsyncInfo.ResInfo[size];
                 for(int i=0; i < size; i++) {
                     CrsyncInfo.ResInfo r = new CrsyncInfo.ResInfo();
                     r.mName = magnet.resname[i];
+                    r.mHash = magnet.reshash[i];
                     r.mPercent = 0;
-                    CrsyncInfo.updateRes(getContentResolver(), r);
+                    ri[i] = r;
                 }
+                CrsyncInfo.bulkInsertRes(getContentResolver(), ri);
                 if(magnet.curr_id.equalsIgnoreCase(ci.mMagnet)) {
                     stateInfo.mAction = Crsync.Action_UpdateRes;
                     stateInfo.mCode = Crsync.Code_OK;
@@ -468,9 +460,10 @@ public class CrsyncService extends Service implements OnepieceObserver {
     }*/
 
     @Override
-    public void onepiece_xfer(String name, int percent) {
+    public void onepiece_xfer(String hash, int percent) {
+        logger.info("onepiece_xfer : " + hash + " " + percent + "%");
         CrsyncInfo.ResInfo ri = new CrsyncInfo.ResInfo();
-        ri.mName = name;
+        ri.mHash = hash;
         ri.mPercent = percent;
         CrsyncInfo.updateRes(getContentResolver(), ri);
     }

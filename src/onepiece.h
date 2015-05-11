@@ -31,12 +31,11 @@ extern "C" {
 #include "crsync.h"
 
 #define MAGNET_SUFFIX ".magnet"
-#define MAGNET_TPLMAP_FORMAT "ssssA(ss)"
+#define MAGNET_TPLMAP_FORMAT "sssA(ss)"
 
 typedef struct magnet_t {
     char        *curr_id;   /* current magnet info id */
     char        *next_id;   /* next magnet info id */
-    char        *appname;   /* android apk name */
     char        *apphash;   /* android apk hash */
     UT_array    *resname;   /* resources name */
     UT_array    *reshash;   /* resources hash */
@@ -51,7 +50,6 @@ typedef struct magnet_t {
 #define onepiece_magnet_free(a) do {\
     free(a->curr_id);\
     free(a->next_id);\
-    free(a->appname);\
     free(a->apphash);\
     utarray_free(a->resname);\
     utarray_free(a->reshash);\

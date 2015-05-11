@@ -39,8 +39,8 @@ static const size_t MAX_CURL_WRITESIZE = 16*1024; /* curl write data buffer size
 static const int MAX_CURL_RETRY = 5;
 static const unsigned int SLEEP_CURL_RETRY = 5;
 
-int xfer_default(const char *name, int percent) {
-    (void)name;
+int xfer_default(const char *hash, int percent) {
+    (void)hash;
     (void)percent;
     return 1;
 }
@@ -101,7 +101,7 @@ UT_string* get_full_string(const char *base, const char *value, const char *suff
     }
     return name;
 }
-
+#if 0
 static const char s_infotype[CURLINFO_END][3] = {"* ", "< ", "> ", "{ ", "} ", "{ ", "} " };
 static int crsync_curl_debug(CURL *handle, curl_infotype type, char *data, size_t size, void *userptr) {
     (void)handle;
@@ -118,9 +118,9 @@ static int crsync_curl_debug(CURL *handle, curl_infotype type, char *data, size_
     }
     return 0;
 }
-
+#endif
 void crsync_curl_setopt(CURL *curlhandle) {
-#if CRSYNC_DEBUG
+#if 0
     curl_easy_setopt(curlhandle, CURLOPT_VERBOSE, 1);
     curl_easy_setopt(curlhandle, CURLOPT_DEBUGFUNCTION, crsync_curl_debug);
 #endif
@@ -327,7 +327,7 @@ static CRSYNCcode crsync_msum_generate(crsync_handle_t *handle) {
     uint8_t         strong[STRONG_SUM_SIZE] = {""};
     rsum_t          *sumItem = NULL, *sumIter = NULL, *sumTemp = NULL;
 
-    if ( 0 == tpl_mmap_file(handle->file, &rec) ) {
+    if ( 0 == tpl_mmap_file(handle->fullFilename, &rec) ) {
         rsum_weak_block(rec.text, 0, handle->meta->block_sz, &weak);
 
         while (1) {
@@ -597,10 +597,10 @@ CRSYNCcode crsync_easy_setopt(crsync_handle_t *handle, CRSYNCoption opt, ...) {
         handle->outputdir = strdup( va_arg(arg, const char*) );
         break;
     case CRSYNCOPT_FILE:
-        if(handle->file) {
-            free(handle->file);
+        if(handle->fullFilename) {
+            free(handle->fullFilename);
         }
-        handle->file = strdup( va_arg(arg, const char*) );
+        handle->fullFilename = strdup( va_arg(arg, const char*) );
         break;
     case CRSYNCOPT_HASH:
         if(handle->hash) {
@@ -629,7 +629,7 @@ CRSYNCcode crsync_easy_setopt(crsync_handle_t *handle, CRSYNCoption opt, ...) {
 static CRSYNCcode crsync_checkopt(crsync_handle_t *handle) {
     if( handle &&
         handle->outputdir &&
-        handle->file &&
+        handle->fullFilename &&
         handle->hash &&
         handle->baseurl) {
         return CRSYNCE_OK;
@@ -685,7 +685,7 @@ CRSYNCcode crsync_easy_perform_patch(crsync_handle_t *handle) {
 
     do {
         //old file exist or not is OK
-        tpl_mmap_file(handle->file, &recOld);
+        tpl_mmap_file(handle->fullFilename, &recOld);
         //new file must be ready
         recNew.fd = tpl_mmap_output_file(utstring_body(newFilename), handle->meta->file_sz, &recNew.text);
         if( -1 == recNew.fd ) {
@@ -700,13 +700,13 @@ CRSYNCcode crsync_easy_perform_patch(crsync_handle_t *handle) {
         rsum_t *sumItem=NULL, *sumTemp=NULL, *sumIter=NULL, *sumTemp2=NULL;
         HASH_ITER(hh, handle->sums, sumItem, sumTemp) {
             code = crsync_msum_patch(handle, sumItem, &recOld, &recNew, strong);
-            handle->xfer(handle->file, count++ * 100 / blocks );
+            handle->xfer(handle->hash, count++ * 100 / blocks );
             if(CRSYNCE_OK != code) {
                 break;
             }
             HASH_ITER(hh, sumItem->sub, sumIter, sumTemp2 ) {
                 code = crsync_msum_patch(handle, sumIter, &recOld, &recNew, strong);
-                handle->xfer(handle->file, count++ * 100 / blocks );
+                handle->xfer(handle->hash, count++ * 100 / blocks );
                 if(CRSYNCE_OK != code) {
                     break;
                 }
@@ -752,7 +752,7 @@ void crsync_easy_cleanup(crsync_handle_t *handle) {
     if(handle) {
         crsync_sum_free(handle);
         free(handle->outputdir);
-        free(handle->file);
+        free(handle->fullFilename);
         free(handle->hash);
         free(handle->baseurl);
         if(handle->curl_handle) {

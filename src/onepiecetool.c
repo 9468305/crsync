@@ -31,7 +31,7 @@ SOFTWARE.
 
 typedef struct onepiecetool_handle_t {
     magnet_t    *magnet;    /* magnet info */
-    char        *appdir;    /* app directory */
+    char        *app;    /* app */
     char        *resdir;    /* islands directory */
     char        *outputdir; /* output directory */
     uint32_t    block_sz;   /* block size */
@@ -102,23 +102,17 @@ CRSYNCcode onepiecetool_setopt(onepiecetool_handle_t *handle, ONEPIECETOOLoption
         }
         handle->magnet->next_id = strdup( va_arg(arg, const char*) );
         break;
-    case ONEPIECETOOLOPT_APPNAME:
-        if(handle->magnet->appname) {
-            free(handle->magnet->appname);
+    case ONEPIECETOOLOPT_APP:
+        if(handle->app) {
+            free(handle->app);
         }
-        handle->magnet->appname =strdup( va_arg(arg, const char*) );
+        handle->app = strdup( va_arg(arg, const char*) );
         break;
     case ONEPIECETOOLOPT_RESNAME:
     {
         const char *p = va_arg(arg, const char*);
         utarray_push_back(handle->magnet->resname, &p);
     }
-        break;
-    case ONEPIECETOOLOPT_APPDIR:
-        if(handle->appdir) {
-            free(handle->appdir);
-        }
-        handle->appdir = strdup( va_arg(arg, const char*) );
         break;
     case ONEPIECETOOLOPT_RESDIR:
         if(handle->resdir) {
@@ -145,13 +139,12 @@ CRSYNCcode onepiecetool_setopt(onepiecetool_handle_t *handle, ONEPIECETOOLoption
 
 static CRSYNCcode onepiecetool_checkopt(onepiecetool_handle_t *handle) {
     if( handle &&
-        handle->appdir &&
+        handle->app &&
         handle->resdir &&
         handle->outputdir &&
         handle->block_sz > 0 &&
         handle->magnet->curr_id &&
-        handle->magnet->next_id &&
-        handle->magnet->appname ) {
+        handle->magnet->next_id ) {
         return CRSYNCE_OK;
     }
     return CRSYNCE_INVALID_OPT;
@@ -200,13 +193,11 @@ CRSYNCcode onepiecetool_perform(onepiecetool_handle_t *handle) {
         }
 
         //generate app rsum file
-        LOGI("perform app %s\n", handle->magnet->appname);
-        utstring_clear(input);
-        utstring_printf(input, "%s%s", handle->appdir, handle->magnet->appname);
-        code = crsync_rsum_generate(utstring_body(input), handle->block_sz, hash);
+        LOGI("perform app %s\n", handle->app);
+        code = crsync_rsum_generate(handle->app, handle->block_sz, hash);
         if(CRSYNCE_OK != code) break;
         handle->magnet->apphash = strdup(utstring_body(hash));
-        code = onepiecetool_movefile(utstring_body(input), handle->outputdir, utstring_body(hash));
+        code = onepiecetool_movefile(handle->app, handle->outputdir, utstring_body(hash));
         if(CRSYNCE_OK != code) break;
 
         //generate base resource rsum file
@@ -239,7 +230,7 @@ CRSYNCcode onepiecetool_perform(onepiecetool_handle_t *handle) {
 void onepiecetool_cleanup(onepiecetool_handle_t *handle) {
     if(handle) {
         onepiece_magnet_free(handle->magnet);
-        free(handle->appdir);
+        free(handle->app);
         free(handle->resdir);
         free(handle->outputdir);
         free(handle);

@@ -213,8 +213,7 @@ void crsync_easy_cleanup(crsync_handle_t *handle);
 void crsync_global_cleanup();  
 ```
 
-源码托管在[github crsync](https://github.com/9468305/crsync), MIT License, 目前暂时屏蔽访问.  
-(上班时间所做,版权应该是属于公司,得到开源授权后再开放访问).  
+源码托管在...TODO.  
   
 #6.附录  
 - [rsync官网](http://rsync.samba.org/)

@@ -7,7 +7,6 @@ import java.util.Vector;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.database.Cursor;
-import android.net.Uri;
 
 public class CrsyncInfo {
     public static class StateInfo {
@@ -95,12 +94,12 @@ public class CrsyncInfo {
 
     public static class ResInfo {
         public String mName = "";
-        //public String mHash = "";
+        public String mHash = "";
         public int mPercent = 0;
         
         public void dump() {
             logger.info("####ResInfo name : " + mName);
-            //logger.info("####ResInfo hash : " + mHash);
+            logger.info("####ResInfo hash : " + mHash);
             logger.info("####ResInfo Percent : " + mPercent);
         }
     }
@@ -111,11 +110,13 @@ public class CrsyncInfo {
         if(c != null && c.moveToFirst()) {
 
             int nameColumn = c.getColumnIndex(CrsyncConstants.COLUMN_RES_NAME);
+            int hashColumn = c.getColumnIndex(CrsyncConstants.COLUMN_RES_HASH);
             int percentColumn = c.getColumnIndex(CrsyncConstants.COLUMN_RES_PERCENT);
 
             for( ; !c.isAfterLast(); c.moveToNext()) {
                 ResInfo info = new ResInfo();
                 info.mName = c.getString(nameColumn);
+                info.mHash = c.getString(hashColumn);
                 info.mPercent = c.getInt(percentColumn);
                 infos.add(info);
             }
@@ -129,9 +130,22 @@ public class CrsyncInfo {
         return infos;
     }
 
+    public static void bulkInsertRes(ContentResolver cr, ResInfo[] infos) {
+        ContentValues values[] = new ContentValues[infos.length];
+        for(int i=0; i<infos.length; i++) {
+            ContentValues v = new ContentValues();
+            v.put(CrsyncConstants.COLUMN_RES_NAME, infos[i].mName);
+            v.put(CrsyncConstants.COLUMN_RES_HASH, infos[i].mHash);
+            v.put(CrsyncConstants.COLUMN_RES_PERCENT, infos[i].mPercent);
+            values[i] = v;
+        }
+        cr.bulkInsert(CrsyncConstants.URI_RES, values);
+    }
+
     public static void updateRes(ContentResolver cr, ResInfo info) {
         ContentValues values = new ContentValues();
         values.put(CrsyncConstants.COLUMN_RES_NAME, info.mName);
+        values.put(CrsyncConstants.COLUMN_RES_HASH, info.mHash);
         values.put(CrsyncConstants.COLUMN_RES_PERCENT, info.mPercent);
         cr.update(CrsyncConstants.URI_RES, values, null, null);
     }

@@ -77,13 +77,13 @@ typedef enum {
     CRSYNCE_BUG = 100,
 } CRSYNCcode;
 
-typedef int (xfer_callback)(const char* name, int percent);
+typedef int (xfer_callback)(const char* hash, int percent);
 
 typedef struct crsync_handle_t {
     rsum_meta_t     *meta;              /* file meta info */
     rsum_t          *sums;              /* rsum hash table */
     char            *outputdir;         /* local root dir */
-    char            *file;              /* local file full name */
+    char            *fullFilename;      /* local file full name */
     char            *hash;              /* remote file hash */
     char            *baseurl;           /* remote base url */
     CURL            *curl_handle;       /* curl handle */
@@ -92,7 +92,7 @@ typedef struct crsync_handle_t {
     xfer_callback   *xfer;              /* progress callback hook */
 } crsync_handle_t;
 
-int xfer_default(const char *name, int percent);
+int xfer_default(const char *hash, int percent);
 
 void rsum_weak_block(const uint8_t *data, uint32_t start, uint32_t block_sz, uint32_t *weak);
 void rsum_weak_rolling(const uint8_t *data, uint32_t start, uint32_t block_sz, uint32_t *weak);

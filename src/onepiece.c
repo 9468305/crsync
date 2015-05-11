@@ -35,7 +35,6 @@ CRSYNCcode onepiece_magnet_load(const char *magnetFilename, magnet_t *magnet) {
     tpl_node *tn = tpl_map(MAGNET_TPLMAP_FORMAT,
                  &magnet->curr_id,
                  &magnet->next_id,
-                 &magnet->appname,
                  &magnet->apphash,
                  &resname,
                  &reshash);
@@ -63,7 +62,6 @@ CRSYNCcode onepiece_magnet_generate(const char *magnetFilename, magnet_t *magnet
     tpl_node *tn = tpl_map(MAGNET_TPLMAP_FORMAT,
                  &magnet->curr_id,
                  &magnet->next_id,
-                 &magnet->appname,
                  &magnet->apphash,
                  &resname,
                  &reshash);
@@ -259,7 +257,6 @@ UT_string* onepiece_getinfo(ONEPIECEinfo info) {
         if(onepiece && onepiece->magnet) {
             utstring_printf(result, "%s;", onepiece->magnet->curr_id);
             utstring_printf(result, "%s;", onepiece->magnet->next_id);
-            utstring_printf(result, "%s;", onepiece->magnet->appname);
             utstring_printf(result, "%s;", onepiece->magnet->apphash);
             char **p = NULL, **q = NULL;
             while ( (p=(char**)utarray_next(onepiece->magnet->resname,p)) && (q=(char**)utarray_next(onepiece->magnet->reshash,q)) ) {
@@ -300,12 +297,34 @@ CRSYNCcode onepiece_perform_query() {
 }
 
 CRSYNCcode onepiece_perform_updateapp() {
-    CRSYNCcode code = CRSYNCE_OK;
+    LOGI("onepiece_perform_updateapp\n");
+    CRSYNCcode code = onepiece_checkopt();
+    if(CRSYNCE_OK != code) {
+        LOGE("onepiece_perform_updateapp code = %d\n", code);
+        return code;
+    }
+
+    do {
+        //needn't compare old file to new file, since magnet said has new version.
+        crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_OUTPUTDIR, onepiece->localRes);
+        crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_FILE, onepiece->localApp);
+        crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_HASH, onepiece->magnet->apphash);
+        crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_BASEURL, onepiece->baseUrl);
+        crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_XFER, (void*)onepiece->xfer);
+
+        code = crsync_easy_perform_match(onepiece->crsync_handle);
+        if(CRSYNCE_OK != code) break;
+        code = crsync_easy_perform_patch(onepiece->crsync_handle);
+        if(CRSYNCE_OK != code) break;
+        onepiece->xfer(onepiece->magnet->apphash, 100);
+    } while(0);
+
+    LOGI("onepiece_perform_updateapp code = %d", code);
     return code;
 }
 
 CRSYNCcode onepiece_perform_updateres() {
-    LOGI("onepiece_perform_updateres");
+    LOGI("onepiece_perform_updateres\n");
     CRSYNCcode code = onepiece_checkopt();
     if(CRSYNCE_OK != code) {
         LOGE("onepiece_perform_updateres code = %d\n", code);
@@ -318,25 +337,27 @@ CRSYNCcode onepiece_perform_updateres() {
     char **p = NULL, **q = NULL;
     while ( (p=(char**)utarray_next(onepiece->magnet->resname,p)) && (q=(char**)utarray_next(onepiece->magnet->reshash,q)) ) {
         LOGI("updateres %s %s\n", *p, *q);
-        //first compare old file's hash to new file's hash
+        //1. compare old file to new file by strong hash blake2
         UT_string *localfile = get_full_string( onepiece->localRes, *p, NULL);
         rsum_strong_file(utstring_body(localfile), strong);
-        utstring_free(localfile);
         utstring_clear(hash);
         for(int j=0; j < STRONG_SUM_SIZE; j++) {
             utstring_printf(hash, "%02x", strong[j] );
         }
-        LOGI("localres %s\n", utstring_body(hash));
+        LOGI("localres hash = %s\n", utstring_body(hash));
+        //2. skip update if hash is same
         if(0 == strncmp(utstring_body(hash), *q, strlen(*q))) {
-            onepiece->xfer(*p, 100);
+            onepiece->xfer(*q, 100);
+            utstring_free(localfile);
             continue;
         }
         crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_OUTPUTDIR, onepiece->localRes);
-        crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_FILE, *p);
+        crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_FILE, utstring_body(localfile));
         crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_HASH, *q);
         crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_BASEURL, onepiece->baseUrl);
         crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_XFER, (void*)onepiece->xfer);
 
+        utstring_free(localfile);
         code = crsync_easy_perform_match(onepiece->crsync_handle);
         if(CRSYNCE_OK != code) break;
         code = crsync_easy_perform_patch(onepiece->crsync_handle);
@@ -348,11 +369,11 @@ CRSYNCcode onepiece_perform_updateres() {
         utstring_free(oldfile);
         utstring_free(newfile);
         if(CRSYNCE_OK != code) break;
-        onepiece->xfer(*p, 100);
+        onepiece->xfer(*q, 100);
     }
 
     utstring_free(hash);
-    LOGI("onepiece_perform_updateres code = %d", code);
+    LOGI("onepiece_perform_updateres code = %d\n", code);
     return code;
 }
 
