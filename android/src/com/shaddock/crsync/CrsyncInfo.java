@@ -92,6 +92,43 @@ public class CrsyncInfo {
         cr.update(CrsyncConstants.URI_CONTENT, values, null, null);
     }
 
+    public static class AppInfo {
+        public String mHash = "";
+        public int mPercent = 0;
+
+	    public void dump() {
+	        logger.info("####AppInfo Hash : " + mHash);
+	        logger.info("####AppInfo Percent : " + mPercent);
+	    }
+	}
+
+    public static AppInfo queryApp(ContentResolver cr) {
+        AppInfo info = new AppInfo();
+
+        Cursor c = cr.query(CrsyncConstants.URI_APP, null, null, null, null);
+
+        if(c != null && c.moveToFirst()) {
+            int hashColumn = c.getColumnIndex(CrsyncConstants.COLUMN_APP_HASH);
+            int percentColumn = c.getColumnIndex(CrsyncConstants.COLUMN_APP_PERCENT);
+
+            info.mHash = c.getString(hashColumn);
+            info.mPercent = c.getInt( percentColumn );
+        } else {
+            logger.severe("####AppInfo query URI fail");
+        }
+        if(c != null) {
+            c.close();
+        }
+        return info;
+    }
+
+    public static void updateApp(ContentResolver cr, AppInfo info) {
+        ContentValues values = new ContentValues();
+        values.put(CrsyncConstants.COLUMN_APP_HASH, info.mHash);
+        values.put(CrsyncConstants.COLUMN_APP_PERCENT, info.mPercent);
+        cr.update(CrsyncConstants.URI_APP, values, null, null);
+    }
+
     public static class ResInfo {
         public String mName = "";
         public String mHash = "";

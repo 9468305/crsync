@@ -56,7 +56,7 @@ static CRSYNCcode perform_updateres() {
     return code;
 }
 */
-void onepiece_xfer(const char *name, int percent) {
+void onepiece_xfer(const char *hash, int percent) {
     clock_t now = clock();
     long diff = (long)(now - gClock);
     if( diff < CLOCKS_PER_SEC && percent != 100) {
@@ -66,7 +66,7 @@ void onepiece_xfer(const char *name, int percent) {
 
     JNIEnv *env = NULL;
     if ((*gJavaVM)->GetEnv(gJavaVM, (void**)&env, JNI_VERSION_1_6) == JNI_OK) {
-        jstring jname = (*env)->NewStringUTF( env, name );
+        jstring jname = (*env)->NewStringUTF( env, hash );
         (*env)->CallStaticVoidMethod(env, gJavaClass, GMethod_xfer, jname, (jint)percent);
         (*env)->DeleteLocalRef(env, jname);
     }
@@ -96,6 +96,8 @@ jint JNI_onepiece_perform_query(JNIEnv *env, jclass clazz) {
 }
 
 jint JNI_onepiece_perform_updateapp(JNIEnv *env, jclass clazz) {
+    gClock = clock();
+    onepiece_setopt(ONEPIECEOPT_XFER, (void*)onepiece_xfer);
     return (jint)onepiece_perform_updateapp();
 }
 
@@ -110,7 +112,7 @@ void JNI_onepiece_cleanup(JNIEnv *env, jclass clazz) {
 }
 
 jint JNI_OnLoad(JavaVM* vm, void* reserved) {
-    LOGI("JNI_OnLoad");
+    LOGI("onepiece JNI_OnLoad");
     JNIEnv *env;
     if ((*vm)->GetEnv(vm, (void**)&env, JNI_VERSION_1_6) != JNI_OK) {
         return JNI_ERR;
@@ -128,8 +130,8 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
     };
 
     // get the java class from JNI
-    gJavaClass = (*env)->FindClass(env, "com/shaddock/crsync/Crsync");
-    (*env)->NewGlobalRef(env, gJavaClass);
+    jclass crsyncClass = (*env)->FindClass(env, "com/shaddock/crsync/Crsync");
+    gJavaClass = (*env)->NewGlobalRef(env, crsyncClass);
     (*env)->RegisterNatives(env, gJavaClass, NativeMethods, ARRAY_COUNT(NativeMethods));
 
     // hook up java functions to string names and param
@@ -151,7 +153,7 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
 }
 
 void JNI_OnUnload(JavaVM* vm, void* InReserved) {
-    LOGI("JNI_OnUnload called");
+    LOGI("onepiece JNI_OnUnload");
     gJavaVM = NULL;
     JNIEnv *env =NULL;
     if( (*vm)->GetEnv(vm, (void**)&env, JNI_VERSION_1_6) == JNI_OK ) {

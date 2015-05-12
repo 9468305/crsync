@@ -50,9 +50,9 @@ public class Crsync {
     public static native int    JNI_onepiece_perform_updateres();
     public static native void   JNI_onepiece_cleanup();
 
-    public static void java_onepiece_xfer(String name, int percent) {
+    public static void java_onepiece_xfer(String hash, int percent) {
         if(null != mObserver) {
-            mObserver.onepiece_xfer(name, percent);
+            mObserver.onepiece_xfer(hash, percent);
         }
     }
 

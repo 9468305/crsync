@@ -23,12 +23,15 @@ public class CrsyncProvider extends ContentProvider {
     private static final int CODE_STATE = 0;
     /** URI matcher constant for {@link CrsyncConstants#URI_CONTENT} */
     private static final int CODE_CONTENT = 1;
+    /** URI matcher constant for {@link CrsyncConstants#URI_APP} */
+    private static final int CODE_APP = 2;
     /** URI matcher constant for {@link CrsyncConstants#URI_RES} */
-    private static final int CODE_RESOURCE = 2;
+    private static final int CODE_RESOURCE = 3;
 
     static {
         sURIMatcher.addURI(CrsyncConstants.URIAUTHORITY, CrsyncConstants.URIPATH_STATE, CODE_STATE);
         sURIMatcher.addURI(CrsyncConstants.URIAUTHORITY, CrsyncConstants.URIPATH_CONTENT, CODE_CONTENT);
+        sURIMatcher.addURI(CrsyncConstants.URIAUTHORITY, CrsyncConstants.URIPATH_APP, CODE_APP);
         sURIMatcher.addURI(CrsyncConstants.URIAUTHORITY, CrsyncConstants.URIPATH_RESOURCE, CODE_RESOURCE);
     }
 
@@ -47,15 +50,19 @@ public class CrsyncProvider extends ContentProvider {
     	CrsyncConstants.COLUMN_CONTENT_LOCALRES,
     };
 
+    private static final String[] CURSOR_COLUMN_APP = {
+        CrsyncConstants.COLUMN_APP_HASH,
+        CrsyncConstants.COLUMN_APP_PERCENT,
+    };
+
     private static final String[] CURSOR_COLUMN_RESOURCE = {
     	CrsyncConstants.COLUMN_RES_NAME,
         CrsyncConstants.COLUMN_RES_HASH,
     	CrsyncConstants.COLUMN_RES_PERCENT,
     };
 
-    private static final String SP_NAME = "sp_crsync";
-
-    private static SharedPreferences mSP = null;
+    //private static final String SP_NAME = "sp_crsync";
+    //private static SharedPreferences mSP = null;
 
     private static volatile int mAction = Crsync.Action_Idle;
     private static volatile int mCode = Crsync.Code_OK;
@@ -65,19 +72,16 @@ public class CrsyncProvider extends ContentProvider {
     private static volatile String mLocalApp = "";
     private static volatile String mLocalRes = "";
 
+    private static volatile String mAppHash = "";
+    private static volatile int mAppPercent = 0;
+
     private static Vector<CrsyncInfo.ResInfo> mRes = new Vector<CrsyncInfo.ResInfo>();
 
 	@Override
 	public boolean onCreate() {
 		logger.info("CrsyncProvider onCreate");
-		Context ctx = getContext();
-
-		//GetDownAssets.create(ctx);
-
-		//int versionCode = Helper.getVersionCode(ctx);
-
-		mSP = ctx.getApplicationContext().getSharedPreferences(SP_NAME, Context.MODE_PRIVATE);
-
+		//Context ctx = getContext();
+		//mSP = ctx.getApplicationContext().getSharedPreferences(SP_NAME, Context.MODE_PRIVATE);
 		startCrsyncService();
 		return true;
 	}
@@ -124,6 +128,13 @@ public class CrsyncProvider extends ContentProvider {
             c = mc;
 		    break;
 		}
+		case CODE_APP:
+		{
+		    MatrixCursor mc = new MatrixCursor(CURSOR_COLUMN_APP);
+		    mc.addRow( new Object[] {mAppHash, mAppPercent});
+		    c = mc;
+		    break;
+		}
 		case CODE_RESOURCE:
 		{
             MatrixCursor mc = new MatrixCursor(CURSOR_COLUMN_RESOURCE);
@@ -146,6 +157,7 @@ public class CrsyncProvider extends ContentProvider {
         switch (match) {
         case CODE_CONTENT:
         case CODE_STATE:
+        case CODE_APP:
             return TYPE_ITEM;
         case CODE_RESOURCE:
             return TYPE_DIR;
@@ -200,6 +212,11 @@ public class CrsyncProvider extends ContentProvider {
             mBaseUrl = values.getAsString(CrsyncConstants.COLUMN_CONTENT_BASEURL);
             mLocalApp = values.getAsString(CrsyncConstants.COLUMN_CONTENT_LOCALAPP);
             mLocalRes = values.getAsString(CrsyncConstants.COLUMN_CONTENT_LOCALRES);
+            notifyChange(uri);
+            return 1;
+        case CODE_APP:
+            mAppHash = values.getAsString(CrsyncConstants.COLUMN_APP_HASH);
+            mAppPercent = values.getAsInteger(CrsyncConstants.COLUMN_APP_PERCENT);
             notifyChange(uri);
             return 1;
         case CODE_RESOURCE:
