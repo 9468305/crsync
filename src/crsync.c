@@ -473,7 +473,7 @@ static size_t crsync_msum_curl_callback(void *contents, size_t size, size_t nmem
     }
 }
 
-static CURLcode crsync_msum_curl(crsync_handle_t *handle, rsum_t *sumItem, tpl_mmap_rec *recNew) {
+static CRSYNCcode crsync_msum_curl(crsync_handle_t *handle, rsum_t *sumItem, tpl_mmap_rec *recNew) {
     CURLcode    code = CURL_LAST;
     long        rangeFrom = sumItem->seq * handle->meta->block_sz;
     long        rangeTo = rangeFrom + handle->meta->block_sz - 1;
@@ -503,6 +503,10 @@ static CURLcode crsync_msum_curl(crsync_handle_t *handle, rsum_t *sumItem, tpl_m
                 rsum_strong_block(handle->curl_buffer, 0, handle->curl_buffer_offset, strong);
                 if(0 == memcmp(strong, sumItem->strong, STRONG_SUM_SIZE)) {
                     memcpy(recNew->text + rangeFrom, handle->curl_buffer, handle->curl_buffer_offset);
+                    int ret = msync(recNew->text + rangeFrom, handle->curl_buffer_offset, MS_SYNC);
+                    if(-1 == ret) {
+                        LOGE("msync failed\n");
+                    }
                     break;
                 }
             }
@@ -515,7 +519,7 @@ static CURLcode crsync_msum_curl(crsync_handle_t *handle, rsum_t *sumItem, tpl_m
 
     utstring_free(range);
     utstring_free(url);
-    return code;
+    return (code == CURLE_OK) ? CRSYNCE_OK : CRSYNCE_CURL_ERROR;
 }
 
 static CRSYNCcode crsync_msum_patch(crsync_handle_t *handle, rsum_t *sumItem, tpl_mmap_rec *recOld, tpl_mmap_rec *recNew, uint8_t *strong) {
@@ -524,13 +528,13 @@ static CRSYNCcode crsync_msum_patch(crsync_handle_t *handle, rsum_t *sumItem, tp
     if(0 != memcmp(strong, sumItem->strong, STRONG_SUM_SIZE)) {
         if( (sumItem->offset != -1) && (recOld->fd != -1) ) {
             memcpy(recNew->text + sumItem->seq * handle->meta->block_sz, recOld->text + sumItem->offset, handle->meta->block_sz);
+            int ret = msync(recNew->text + sumItem->seq * handle->meta->block_sz, handle->meta->block_sz, MS_SYNC);
+            if(-1 == ret) {
+                LOGE("msync failed\n");
+            }
         } else {
             code = crsync_msum_curl(handle, sumItem, recNew);
         }
-    }
-    int ret = msync(recNew->text,recNew->text_sz,MS_SYNC);
-    if(-1 == ret) {
-        LOGE("msync failed\n");
     }
     return code;
 }
@@ -728,10 +732,11 @@ CRSYNCcode crsync_easy_perform_patch(crsync_handle_t *handle) {
     } while (0);
     curl_easy_reset(handle->curl_handle);
 
-    int ret = msync(recNew.text,recNew.text_sz,MS_SYNC);
+    int ret = msync(recNew.text , recNew.text_sz, MS_SYNC);
     if(-1 == ret) {
         LOGE("msync failed\n");
     }
+
     tpl_unmap_file(&recNew);
     tpl_unmap_file(&recOld);
 
