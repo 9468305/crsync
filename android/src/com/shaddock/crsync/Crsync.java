@@ -16,7 +16,6 @@ public class Crsync {
     public static final int Code_Invalid_Opt    = 2;
     public static final int Code_File_Error     = 3;
     public static final int Code_CURL_Error     = 4;
-    public static final int Code_Action_Error   = 5;
     public static final int Code_BUG            = 100;
 
     public static final int OPT_MagnetID    = 0;

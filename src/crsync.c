@@ -121,15 +121,16 @@ static int crsync_curl_debug(CURL *handle, curl_infotype type, char *data, size_
 #endif
 void crsync_curl_setopt(CURL *curlhandle) {
 #if 0
-    curl_easy_setopt(curlhandle, CURLOPT_VERBOSE, 1);
+    curl_easy_setopt(curlhandle, CURLOPT_VERBOSE, 1L);
     curl_easy_setopt(curlhandle, CURLOPT_DEBUGFUNCTION, crsync_curl_debug);
 #endif
+    curl_easy_setopt(curlhandle, CURLOPT_NOSIGNAL, 1L);
     curl_easy_setopt(curlhandle, CURLOPT_PROTOCOLS, CURLPROTO_HTTP); /* http protocol only */
-    curl_easy_setopt(curlhandle, CURLOPT_FAILONERROR, 1); /* request failure on HTTP response >= 400 */
-    curl_easy_setopt(curlhandle, CURLOPT_AUTOREFERER, 1); /* allow auto referer */
-    curl_easy_setopt(curlhandle, CURLOPT_FOLLOWLOCATION, 1); /* allow follow location */
-    curl_easy_setopt(curlhandle, CURLOPT_MAXREDIRS, 5); /* allow redir 5 times */
-    curl_easy_setopt(curlhandle, CURLOPT_CONNECTTIMEOUT, 20); /* connection timeout 20s */
+    curl_easy_setopt(curlhandle, CURLOPT_FAILONERROR, 1L); /* request failure on HTTP response >= 400 */
+    curl_easy_setopt(curlhandle, CURLOPT_AUTOREFERER, 1L); /* allow auto referer */
+    curl_easy_setopt(curlhandle, CURLOPT_FOLLOWLOCATION, 1L); /* allow follow location */
+    curl_easy_setopt(curlhandle, CURLOPT_MAXREDIRS, 5L); /* allow redir 5 times */
+    curl_easy_setopt(curlhandle, CURLOPT_CONNECTTIMEOUT, 20L); /* connection timeout 20s */
 }
 
 CRSYNCcode crsync_tplfile_check(const char *filename, const char *sumfmt) {
@@ -178,10 +179,10 @@ static CRSYNCcode crsync_rsum_curl(crsync_handle_t *handle) {
         if(rsumFile) {
             crsync_curl_setopt(handle->curl_handle);
             curl_easy_setopt(handle->curl_handle, CURLOPT_URL, utstring_body(rsumUrl));
-            curl_easy_setopt(handle->curl_handle, CURLOPT_HTTPGET, 1);
+            curl_easy_setopt(handle->curl_handle, CURLOPT_HTTPGET, 1L);
             curl_easy_setopt(handle->curl_handle, CURLOPT_WRITEFUNCTION, NULL);
             curl_easy_setopt(handle->curl_handle, CURLOPT_WRITEDATA, (void *)rsumFile);
-            curl_easy_setopt(handle->curl_handle, CURLOPT_NOPROGRESS, 1);
+            curl_easy_setopt(handle->curl_handle, CURLOPT_NOPROGRESS, 1L);
             curl_easy_setopt(handle->curl_handle, CURLOPT_XFERINFOFUNCTION, NULL);
             curl_easy_setopt(handle->curl_handle, CURLOPT_XFERINFODATA, NULL);
 
@@ -490,8 +491,8 @@ static CURLcode crsync_msum_curl(crsync_handle_t *handle, rsum_t *sumItem, tpl_m
         curl_easy_setopt(handle->curl_handle, CURLOPT_WRITEFUNCTION, (void*)crsync_msum_curl_callback);
         curl_easy_setopt(handle->curl_handle, CURLOPT_WRITEDATA, (void *)handle);
         curl_easy_setopt(handle->curl_handle, CURLOPT_RANGE, utstring_body(range));
-        curl_easy_setopt(handle->curl_handle, CURLOPT_TIMEOUT, 20);
-        curl_easy_setopt(handle->curl_handle, CURLOPT_NOPROGRESS, 1);
+        curl_easy_setopt(handle->curl_handle, CURLOPT_TIMEOUT, 20L);
+        curl_easy_setopt(handle->curl_handle, CURLOPT_NOPROGRESS, 1L);
         curl_easy_setopt(handle->curl_handle, CURLOPT_XFERINFOFUNCTION, NULL);
         curl_easy_setopt(handle->curl_handle, CURLOPT_XFERINFODATA, NULL);
         handle->curl_buffer_offset = 0;

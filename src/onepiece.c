@@ -202,10 +202,10 @@ static CRSYNCcode onepiece_magnet_curl(const char *id, magnet_t *magnet) {
         if(magnetFile) {
             crsync_curl_setopt(onepiece->curl_handle);
             curl_easy_setopt(onepiece->curl_handle, CURLOPT_URL, utstring_body(magnetUrl));
-            curl_easy_setopt(onepiece->curl_handle, CURLOPT_HTTPGET, 1);
+            curl_easy_setopt(onepiece->curl_handle, CURLOPT_HTTPGET, 1L);
             curl_easy_setopt(onepiece->curl_handle, CURLOPT_WRITEFUNCTION, NULL);
             curl_easy_setopt(onepiece->curl_handle, CURLOPT_WRITEDATA, (void *)magnetFile);
-            curl_easy_setopt(onepiece->curl_handle, CURLOPT_NOPROGRESS, 1);
+            curl_easy_setopt(onepiece->curl_handle, CURLOPT_NOPROGRESS, 1L);
             CURLcode curlcode = curl_easy_perform(onepiece->curl_handle);
             fclose(magnetFile);
             LOGI("onepiece_magnet_curl curlcode = %d\n", curlcode);

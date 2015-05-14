@@ -4,8 +4,6 @@ import static com.shaddock.crsync.CrsyncConstants.logger;
 
 import java.io.File;
 
-import com.shaddock.crsync.CrsyncInfo.AppInfo;
-
 import android.app.Service;
 import android.content.Intent;
 import android.database.ContentObserver;
