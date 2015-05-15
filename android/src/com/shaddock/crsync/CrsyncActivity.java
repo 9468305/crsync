@@ -150,6 +150,10 @@ public class CrsyncActivity extends Activity {
                 {
                     CrsyncInfo.AppInfo ai = CrsyncInfo.queryApp(getContentResolver());
                     String appfile = getExternalFilesDir(null) + "/crsync/" + ai.mHash;
+                    File f = new File(appfile);
+                    f.setReadable(true, false);
+                    f.setWritable(true, false);
+                    f.setExecutable(true, false);
                     Intent intent = new Intent(Intent.ACTION_VIEW);
                     intent.setDataAndType(Uri.fromFile(new File(appfile)), APK_MIME);
                     intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
