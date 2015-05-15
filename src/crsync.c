@@ -724,18 +724,13 @@ CRSYNCcode crsync_easy_perform_patch(crsync_handle_t *handle) {
             if(handle->meta->rest_tb.sz > 0) {
                 memcpy(recNew.text + handle->meta->file_sz - handle->meta->rest_tb.sz, handle->meta->rest_tb.addr, handle->meta->rest_tb.sz);
             }
-            rsum_strong_block(recNew.text, 0, recNew.text_sz, strong);
-            if(0 != memcmp(strong, handle->meta->file_sum, STRONG_SUM_SIZE)) {
-                code = CRSYNCE_BUG;
-            }
+        }
+        int ret = msync(recNew.text, recNew.text_sz, MS_SYNC);
+        if(-1 == ret) {
+            LOGE("msync failed\n");
         }
     } while (0);
     curl_easy_reset(handle->curl_handle);
-
-    int ret = msync(recNew.text , recNew.text_sz, MS_SYNC);
-    if(-1 == ret) {
-        LOGE("msync failed\n");
-    }
 
     tpl_unmap_file(&recNew);
     tpl_unmap_file(&recOld);
