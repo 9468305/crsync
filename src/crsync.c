@@ -77,14 +77,18 @@ void rsum_strong_block(const uint8_t *p, uint32_t start, uint32_t block_sz, uint
     blake2b_final(&ctx, (uint8_t *)strong, STRONG_SUM_SIZE);
 }
 
-void rsum_strong_file(const char *file, uint8_t *strong) {
+int rsum_strong_file(const char *file, uint8_t *strong) {
+    int result = -1;
+    memset(strong, 0, STRONG_SUM_SIZE);
     tpl_mmap_rec rec = {-1, NULL, 0};
     if(0 == tpl_mmap_file(file, &rec)) {
-        rsum_strong_block(rec.text, 0, rec.text_sz, strong);
+        if(rec.text_sz > 0) {
+            rsum_strong_block(rec.text, 0, rec.text_sz, strong);
+            result = 0;
+        }
         tpl_unmap_file(&rec);
-    } else {
-        memset(strong, 0, STRONG_SUM_SIZE);
     }
+    return result;
 }
 
 UT_string* get_full_string(const char *base, const char *value, const char *suffix) {

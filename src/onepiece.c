@@ -22,11 +22,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 #include <unistd.h>
+#include <sys/stat.h>
 #include "onepiece.h"
 #include "log.h"
 
 static const int MAGNET_CURL_RETRY = 2;
 static const unsigned int MAGNET_SLEEP_RETRY = 1;
+static const int MAX_CURL_RETRY = 5;
+static const unsigned int SLEEP_CURL_RETRY = 5;
 
 CRSYNCcode onepiece_magnet_load(const char *magnetFilename, magnet_t *magnet) {
     LOGI("onepiece_magnet_load\n");
@@ -222,6 +225,7 @@ static CRSYNCcode onepiece_magnet_curl(const char *id, magnet_t *magnet) {
         }
         sleep(MAGNET_SLEEP_RETRY * (++retry));
     } while(retry < MAGNET_CURL_RETRY);
+    curl_easy_reset(onepiece->curl_handle);
 
     if(CRSYNCE_OK == code) {
         code = onepiece_magnet_load(utstring_body(magnetFilename), magnet);
@@ -232,7 +236,6 @@ static CRSYNCcode onepiece_magnet_curl(const char *id, magnet_t *magnet) {
     LOGI("onepiece_magnet_curl code = %d\n", code);
     return code;
 }
-
 
 static CRSYNCcode onepiece_magnet_query(const char *id, magnet_t *magnet) {
     LOGI("onepiece_magnet_query id = %s\n", id);
@@ -323,6 +326,69 @@ CRSYNCcode onepiece_perform_updateapp() {
     return code;
 }
 
+static curl_off_t localFileResumeSize = 0L;
+
+static int onepiece_updateres_curl_progress(void *clientp, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow) {
+    const char *hash = (const char*)clientp;
+    (void)ultotal;
+    (void)ulnow;
+    // dltotal dlnow only for current download process, exclude local resume size, so add it here
+    int percent = (dltotal > 0) ? ( (dlnow + localFileResumeSize) * 100 / dltotal) : 0;
+    onepiece->xfer(hash, percent);
+    return 0;
+}
+
+static CRSYNCcode onepiece_updateres_curl(const char *resname, const char *reshash) {
+    LOGI("onepiece_updateres_curl %s\n", resname);
+    CRSYNCcode code = CRSYNCE_CURL_ERROR;
+    UT_string *url = get_full_string(onepiece->baseUrl, reshash, NULL);
+    UT_string *filename = get_full_string(onepiece->localRes, resname, NULL);
+
+    int retry = 0;
+    do {
+        localFileResumeSize = 0L;
+        struct stat file_info;
+        if(stat(utstring_body(filename), &file_info) == 0) {
+            localFileResumeSize = file_info.st_size;
+        }
+        FILE *file = fopen(utstring_body(filename), "ab+");
+        if(file) {
+            crsync_curl_setopt(onepiece->curl_handle);
+            curl_easy_setopt(onepiece->curl_handle, CURLOPT_URL, utstring_body(url));
+            curl_easy_setopt(onepiece->curl_handle, CURLOPT_HTTPGET, 1L);
+            curl_easy_setopt(onepiece->curl_handle, CURLOPT_WRITEFUNCTION, NULL);
+            curl_easy_setopt(onepiece->curl_handle, CURLOPT_WRITEDATA, (void *)file);
+            curl_easy_setopt(onepiece->curl_handle, CURLOPT_NOPROGRESS, 0L);
+            curl_easy_setopt(onepiece->curl_handle, CURLOPT_XFERINFOFUNCTION, onepiece_updateres_curl_progress);
+            curl_easy_setopt(onepiece->curl_handle, CURLOPT_XFERINFODATA, (void*)reshash);
+            curl_easy_setopt(onepiece->curl_handle, CURLOPT_RESUME_FROM_LARGE, localFileResumeSize);
+
+            CURLcode curlcode = curl_easy_perform(onepiece->curl_handle);
+            fclose(file);
+            LOGI("onepiece_updateres_curl curlcode = %d\n", curlcode);
+            if( CURLE_OK == curlcode) {
+                code = CRSYNCE_OK;
+                break;
+            } else if(CURLE_WRITE_ERROR == curlcode) {
+                code = CRSYNCE_FILE_ERROR;
+                break;
+            } else {
+                code = CRSYNCE_CURL_ERROR;
+            }
+        } else {
+            code = CRSYNCE_FILE_ERROR;
+            break;
+        }
+        sleep(SLEEP_CURL_RETRY * (++retry));
+    } while(retry < MAX_CURL_RETRY);
+    curl_easy_reset(onepiece->curl_handle);
+
+    utstring_free(url);
+    utstring_free(filename);
+    LOGI("onepiece_updateres_curl code = %d\n", code);
+    return code;
+}
+
 CRSYNCcode onepiece_perform_updateres() {
     LOGI("onepiece_perform_updateres\n");
     CRSYNCcode code = onepiece_checkopt();
@@ -337,9 +403,14 @@ CRSYNCcode onepiece_perform_updateres() {
     char **p = NULL, **q = NULL;
     while ( (p=(char**)utarray_next(onepiece->magnet->resname,p)) && (q=(char**)utarray_next(onepiece->magnet->reshash,q)) ) {
         LOGI("updateres %s %s\n", *p, *q);
-        //1. compare old file to new file by strong hash blake2
         UT_string *localfile = get_full_string( onepiece->localRes, *p, NULL);
-        rsum_strong_file(utstring_body(localfile), strong);
+        //0. if old file not exist, curl download directly, then re-calc hash
+        if(-1 == rsum_strong_file(utstring_body(localfile), strong)) {
+            code = onepiece_updateres_curl(*p, *q);
+            if(CRSYNCE_OK != code) break;
+            rsum_strong_file(utstring_body(localfile), strong);
+        }
+        //1. compare old file to new file, by strong hash blake2
         utstring_clear(hash);
         for(int j=0; j < STRONG_SUM_SIZE; j++) {
             utstring_printf(hash, "%02x", strong[j] );

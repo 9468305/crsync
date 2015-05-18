@@ -96,7 +96,7 @@ int xfer_default(const char *hash, int percent);
 void rsum_weak_block(const uint8_t *data, uint32_t start, uint32_t block_sz, uint32_t *weak);
 void rsum_weak_rolling(const uint8_t *data, uint32_t start, uint32_t block_sz, uint32_t *weak);
 void rsum_strong_block(const uint8_t *p, uint32_t start, uint32_t block_sz, uint8_t *strong);
-void rsum_strong_file(const char *file, uint8_t *strong);
+int rsum_strong_file(const char *file, uint8_t *strong);
 
 CRSYNCcode crsync_rsum_generate(const char *filename, uint32_t blocksize, UT_string *hash);
 UT_string* get_full_string(const char *base, const char *value, const char *suffix);
