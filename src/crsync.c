@@ -203,7 +203,8 @@ static CRSYNCcode crsync_rsum_curl(crsync_handle_t *handle) {
             code = CRSYNCE_FILE_ERROR;
             break;
         }
-        sleep(SLEEP_CURL_RETRY * (++retry));
+        sleep(SLEEP_CURL_RETRY);
+        ++retry;
     } while(retry < MAX_CURL_RETRY);
     curl_easy_reset(handle->curl_handle);
 
@@ -467,7 +468,13 @@ static CRSYNCcode crsync_msum_load(crsync_handle_t *handle) {
 
 static size_t crsync_msum_curl_callback(void *contents, size_t size, size_t nmemb, void *userp) {
     size_t realsize = size * nmemb;
+    long response = 0L;
     crsync_handle_t *handle = (crsync_handle_t*)userp;
+    if(CURLE_OK == curl_easy_getinfo(handle->curl_handle, CURLINFO_RESPONSE_CODE, &response)) {
+        if(response != 206L) {
+            return 0; //httpserver mayge response 200 with origin data
+        }
+    }
     if( handle->curl_buffer_offset + realsize <= MAX_CURL_WRITESIZE ) {
         memcpy(handle->curl_buffer + handle->curl_buffer_offset, contents, realsize);
         handle->curl_buffer_offset += realsize;
@@ -518,7 +525,8 @@ static CRSYNCcode crsync_msum_curl(crsync_handle_t *handle, rsum_t *sumItem, tpl
             LOGI("crsync_msum_curl code = %d\n", code);
         }
         code = CURL_LAST;
-        sleep(SLEEP_CURL_RETRY * (++retry));
+        sleep(SLEEP_CURL_RETRY);
+        ++retry;
     } while(retry < MAX_CURL_RETRY);
 
     utstring_free(range);

@@ -22,6 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 #include <unistd.h>
+#include <fcntl.h>
 #include <sys/stat.h>
 #include "onepiece.h"
 #include "log.h"
@@ -379,7 +380,8 @@ static CRSYNCcode onepiece_updateres_curl(const char *resname, const char *resha
             code = CRSYNCE_FILE_ERROR;
             break;
         }
-        sleep(SLEEP_CURL_RETRY * (++retry));
+        sleep(SLEEP_CURL_RETRY);
+        ++retry;
     } while(retry < MAX_CURL_RETRY);
     curl_easy_reset(onepiece->curl_handle);
 
@@ -403,17 +405,31 @@ CRSYNCcode onepiece_perform_updateres() {
     char **p = NULL, **q = NULL;
     while ( (p=(char**)utarray_next(onepiece->magnet->resname,p)) && (q=(char**)utarray_next(onepiece->magnet->reshash,q)) ) {
         LOGI("updateres %s %s\n", *p, *q);
+        utstring_clear(hash);
         UT_string *localfile = get_full_string( onepiece->localRes, *p, NULL);
         //0. if old file not exist, curl download directly, then re-calc hash
-        if(-1 == rsum_strong_file(utstring_body(localfile), strong)) {
+        if( -1 == access( utstring_body(localfile), F_OK ) ) {
+            //download file
             code = onepiece_updateres_curl(*p, *q);
             if(CRSYNCE_OK != code) break;
+            //calc hash & string
             rsum_strong_file(utstring_body(localfile), strong);
-        }
-        //1. compare old file to new file, by strong hash blake2
-        utstring_clear(hash);
-        for(int j=0; j < STRONG_SUM_SIZE; j++) {
-            utstring_printf(hash, "%02x", strong[j] );
+            for(int j=0; j < STRONG_SUM_SIZE; j++) {
+                utstring_printf(hash, "%02x", strong[j] );
+            }
+            //create localCRC namehash
+            UT_string *file_hash = get_full_string(onepiece->localRes, *p, utstring_body(hash));
+            creat(utstring_body(file_hash), 700);
+            utstring_free(file_hash);
+        } else {
+            UT_string* file_hash = get_full_string(onepiece->localRes, *p, *q);
+            if(0 == access(utstring_body(file_hash), F_OK)) {
+                utstring_printf(hash, "%s", *q);
+            } else {
+                utstring_printf(hash, "%s", "emptyhash");
+                //TODO: maybe should calculate hash again; but this only happen for developer!
+            }
+            utstring_free(file_hash);
         }
         LOGI("localres hash = %s\n", utstring_body(hash));
         //2. skip update if hash is same
@@ -440,7 +456,12 @@ CRSYNCcode onepiece_perform_updateres() {
         utstring_free(oldfile);
         utstring_free(newfile);
         if(CRSYNCE_OK != code) break;
+        //create localCRC namehash
+        UT_string *file_hash = get_full_string(onepiece->localRes, *p, *q);
+        creat(utstring_body(file_hash), 700);
+        utstring_free(file_hash);
         onepiece->xfer(*q, 100);
+        //TODO: Currently lack of remove old file_hash; there will be many file_hash exist at device!
     }
 
     utstring_free(hash);
