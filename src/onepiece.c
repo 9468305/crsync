@@ -426,7 +426,7 @@ CRSYNCcode onepiece_perform_updateres() {
             if(0 == access(utstring_body(file_hash), F_OK)) {
                 utstring_printf(hash, "%s", *q);
             } else {
-                utstring_printf(hash, "%s", "emptyhash");
+                utstring_printf(hash, "%s", "0000");
                 //TODO: maybe should calculate hash again; but this only happen for developer!
             }
             utstring_free(file_hash);

@@ -36,6 +36,7 @@ static const char id[]="$Id: tpl.c 192 2009-04-24 10:35:30Z thanson $";
 #else
 #   include <io.h>
 #   define ftruncate(x,y) _chsize(x,y)
+#   define fsync(x) 0
 #endif
 #include <sys/types.h>  /* for 'open' */
 #include <sys/stat.h>   /* for 'open' */
@@ -1716,7 +1717,7 @@ static int tpl_serlen(tpl_node *r, tpl_node *n, void *dv, size_t *serlen) {
 TPL_API int tpl_mmap_output_file(const char *filename, size_t sz, void **text_out) {
     struct stat stat_buf;
     void *text;
-    int fd,perms;
+    int fd, perms;
 
 #ifndef _WIN32
     perms = S_IRUSR|S_IWUSR|S_IWGRP|S_IRGRP|S_IROTH;  /* ug+w o+r */
@@ -1740,7 +1741,12 @@ TPL_API int tpl_mmap_output_file(const char *filename, size_t sz, void **text_ou
     if( sz != (size_t)stat_buf.st_size ) {
         if (ftruncate(fd,sz) == -1) {
             close(fd);
-            tpl_hook.oops("ftruncate failed: %s\n", strerror(errno));
+            tpl_hook.oops("Couldn't ftruncate file %s: %s\n", filename, strerror(errno));
+            return -1;
+        }
+        if(fsync(fd) == -1) {
+            close(fd);
+            tpl_hook.oops("Couldn't fsync file %s: %s\n", filename, strerror(errno));
             return -1;
         }
     }

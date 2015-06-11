@@ -38,6 +38,8 @@ SOFTWARE.
 static const size_t MAX_CURL_WRITESIZE = 16*1024; /* curl write data buffer size */
 static const int MAX_CURL_RETRY = 5;
 static const unsigned int SLEEP_CURL_RETRY = 5;
+static const int MAX_PATCH_RETRY = 3;
+static const unsigned int SLEEP_PATCH_MSYNC = 1;
 
 int xfer_default(const char *hash, int percent) {
     (void)hash;
@@ -329,7 +331,7 @@ static CRSYNCcode crsync_msum_generate(crsync_handle_t *handle) {
     CRSYNCcode code = CRSYNCE_OK;
 
     tpl_mmap_rec    rec = {-1, NULL, 0};
-    uint32_t        weak = 0, i=0;
+    uint32_t        weak = 0, i = 0, sameCount = 0;
     uint8_t         strong[STRONG_SUM_SIZE] = {""};
     rsum_t          *sumItem = NULL, *sumIter = NULL, *sumTemp = NULL;
 
@@ -343,20 +345,24 @@ static CRSYNCcode crsync_msum_generate(crsync_handle_t *handle) {
                 rsum_strong_block(rec.text, i, handle->meta->block_sz, strong);
                 if (0 == memcmp(strong, sumItem->strong, STRONG_SUM_SIZE)) {
                     sumItem->offset = i;
+                    sameCount++;
                 }
                 HASH_ITER(hh, sumItem->sub, sumIter, sumTemp) {
                     if (0 == memcmp(strong, sumIter->strong, STRONG_SUM_SIZE)) {
                         sumIter->offset = i;
+                        sameCount++;
                     }
                 }
             }
-            if (i == rec.text_sz - handle->meta->block_sz) {
+            if (i >= rec.text_sz - handle->meta->block_sz) {
                 break;
             }
             rsum_weak_rolling(rec.text, i++, handle->meta->block_sz, &weak);
         }
         tpl_unmap_file(&rec);
     }
+    uint32_t totalCount = handle->meta->file_sz / handle->meta->block_sz;
+    LOGI("crsync_msum_generate total = %d, same = %d, miss = %d\n", totalCount, sameCount, totalCount-sameCount);
     LOGI("crsync_msum_generate code = %d\n", code);
     return code;
 }
@@ -413,12 +419,14 @@ static CRSYNCcode crsync_msum_save(crsync_handle_t *handle) {
 static CRSYNCcode crsync_msum_load(crsync_handle_t *handle) {
     LOGI("crsync_msum_load\n");
     CRSYNCcode  code = CRSYNCE_OK;
-    tpl_node    *tn;
-    rsum_t      *sumItem=NULL, *sumTemp=NULL;
+    tpl_node    *tn = NULL;
+    rsum_t      *sumItem = NULL, *sumTemp = NULL;
     uint32_t    weak=0;
     uint8_t     strong[STRONG_SUM_SIZE] = {0};
     uint32_t    seq;
     int32_t     offset;
+    uint32_t    blocks = 0;
+    uint32_t    sameCount = 0;
     UT_string   *msumFilename = get_full_string(handle->outputdir, handle->hash, MSUM_SUFFIX);
 
     crsync_sum_free(handle);
@@ -439,7 +447,7 @@ static CRSYNCcode crsync_msum_load(crsync_handle_t *handle) {
     if(!tpl_load(tn, TPL_FILE, utstring_body(msumFilename))) {
         tpl_unpack(tn, 0);
 
-        uint32_t blocks = handle->meta->file_sz / handle->meta->block_sz;
+        blocks = handle->meta->file_sz / handle->meta->block_sz;
         for (uint32_t i = 0; i < blocks; i++) {
             tpl_unpack(tn, 1);
 
@@ -449,6 +457,9 @@ static CRSYNCcode crsync_msum_load(crsync_handle_t *handle) {
             memcpy(sumItem->strong, strong, STRONG_SUM_SIZE);
             sumItem->offset = offset;
             sumItem->sub = NULL;
+            if(offset >= 0) {
+                sameCount++;
+            }
 
             HASH_FIND_INT(handle->sums, &weak, sumTemp);
             if (sumTemp == NULL) {
@@ -462,6 +473,8 @@ static CRSYNCcode crsync_msum_load(crsync_handle_t *handle) {
     tpl_free(tn);
 
     utstring_free(msumFilename);
+
+    LOGI("crsync_msum_load total = %d, same = %d, miss = %d\n", blocks, sameCount, blocks-sameCount);
     LOGI("crsync_msum_load code = %d\n", code);
     return code;
 }
@@ -488,7 +501,6 @@ static CRSYNCcode crsync_msum_curl(crsync_handle_t *handle, rsum_t *sumItem, tpl
     CURLcode    code = CURL_LAST;
     long        rangeFrom = sumItem->seq * handle->meta->block_sz;
     long        rangeTo = rangeFrom + handle->meta->block_sz - 1;
-    uint8_t     strong[STRONG_SUM_SIZE];
     UT_string   *range = NULL;
     utstring_new(range);
     utstring_printf(range, "%ld-%ld", rangeFrom, rangeTo);
@@ -511,15 +523,12 @@ static CRSYNCcode crsync_msum_curl(crsync_handle_t *handle, rsum_t *sumItem, tpl
         code = curl_easy_perform(handle->curl_handle);
         if(CURLE_OK == code) {
             if( handle->curl_buffer_offset == handle->meta->block_sz ) {
-                rsum_strong_block(handle->curl_buffer, 0, handle->curl_buffer_offset, strong);
-                if(0 == memcmp(strong, sumItem->strong, STRONG_SUM_SIZE)) {
-                    memcpy(recNew->text + rangeFrom, handle->curl_buffer, handle->curl_buffer_offset);
-                    int ret = msync(recNew->text + rangeFrom, handle->curl_buffer_offset, MS_SYNC);
-                    if(-1 == ret) {
-                        LOGE("msync failed\n");
-                    }
-                    break;
+                memcpy(recNew->text + rangeFrom, handle->curl_buffer, handle->curl_buffer_offset);
+                int ret = msync(recNew->text + rangeFrom, handle->curl_buffer_offset, MS_SYNC);
+                if(-1 == ret) {
+                    LOGE("msync failed\n");
                 }
+                break;
             }
         } else {
             LOGI("crsync_msum_curl code = %d\n", code);
@@ -696,65 +705,82 @@ CRSYNCcode crsync_easy_perform_patch(crsync_handle_t *handle) {
         LOGI("crsync_easy_perform_patch code = %d\n", code);
         return code;
     }
+    uint8_t strong[STRONG_SUM_SIZE];
     UT_string *newFilename = get_full_string(handle->outputdir, handle->hash, NULL);
-    tpl_mmap_rec    recOld = {-1, NULL, 0};
-    tpl_mmap_rec    recNew = {-1, NULL, 0};
 
+    int retry = 0;
     do {
-        //old file exist or not is OK
-        tpl_mmap_file(handle->fullFilename, &recOld);
-        //new file must be ready
-        recNew.fd = tpl_mmap_output_file(utstring_body(newFilename), handle->meta->file_sz, &recNew.text);
-        if( -1 == recNew.fd ) {
-            code = CRSYNCE_FILE_ERROR;
-            break;
-        }
-        recNew.text_sz = handle->meta->file_sz;
-        uint32_t blocks = handle->meta->file_sz / handle->meta->block_sz;
+        tpl_mmap_rec    recOld = {-1, NULL, 0};
+        tpl_mmap_rec    recNew = {-1, NULL, 0};
 
-        uint32_t count = 0;
-        uint8_t strong[STRONG_SUM_SIZE];
-        rsum_t *sumItem=NULL, *sumTemp=NULL, *sumIter=NULL, *sumTemp2=NULL;
-        HASH_ITER(hh, handle->sums, sumItem, sumTemp) {
-            code = crsync_msum_patch(handle, sumItem, &recOld, &recNew, strong);
-            handle->xfer(handle->hash, count++ * 100 / blocks );
-            if(CRSYNCE_OK != code) {
+        do {
+            //old file exist or not, both OK
+            tpl_mmap_file(handle->fullFilename, &recOld);
+            //new file must be ready
+            recNew.fd = tpl_mmap_output_file(utstring_body(newFilename), handle->meta->file_sz, &recNew.text);
+            if( -1 == recNew.fd ) {
+                code = CRSYNCE_FILE_ERROR;
                 break;
             }
-            HASH_ITER(hh, sumItem->sub, sumIter, sumTemp2 ) {
-                code = crsync_msum_patch(handle, sumIter, &recOld, &recNew, strong);
-                handle->xfer(handle->hash, count++ * 100 / blocks );
+            recNew.text_sz = handle->meta->file_sz;
+            uint32_t blocks = handle->meta->file_sz / handle->meta->block_sz;
+            uint32_t count = 0;
+            rsum_t *sumItem=NULL, *sumTemp=NULL, *sumIter=NULL, *sumTemp2=NULL;
+            HASH_ITER(hh, handle->sums, sumItem, sumTemp) {
+                code = crsync_msum_patch(handle, sumItem, &recOld, &recNew, strong);
+                int percent = count++ * 100 / blocks;
+                percent = (percent >= 100) ? 99 : percent;
+                handle->xfer(handle->hash, percent );//100 means done, but here still need do something.
+                if(CRSYNCE_OK != code) {
+                    break;
+                }
+                HASH_ITER(hh, sumItem->sub, sumIter, sumTemp2 ) {
+                    code = crsync_msum_patch(handle, sumIter, &recOld, &recNew, strong);
+                    int percent = count++ * 100 / blocks;
+                    percent = (percent >= 100) ? 99 : percent;
+                    handle->xfer(handle->hash, percent );//100 means done, but here still need do something.
+                    if(CRSYNCE_OK != code) {
+                        break;
+                    }
+                }
                 if(CRSYNCE_OK != code) {
                     break;
                 }
             }
-            if(CRSYNCE_OK != code) {
-                break;
+            if(CRSYNCE_OK == code) {
+                if(handle->meta->rest_tb.sz > 0) {
+                    void *dst = recNew.text + recNew.text_sz - handle->meta->rest_tb.sz;
+                    void *src = handle->meta->rest_tb.addr;
+                    memcpy(dst, src, handle->meta->rest_tb.sz);
+                }
             }
-        }
+            if(-1 == msync(recNew.text, recNew.text_sz, MS_SYNC)) {
+                LOGE("msync failed\n");
+            }
+        } while (0);
+        curl_easy_reset(handle->curl_handle);
+
+        tpl_unmap_file(&recNew);
+        tpl_unmap_file(&recOld);
+
+        //verify whole file again
         if(CRSYNCE_OK == code) {
-            if(handle->meta->rest_tb.sz > 0) {
-                memcpy(recNew.text + handle->meta->file_sz - handle->meta->rest_tb.sz, handle->meta->rest_tb.addr, handle->meta->rest_tb.sz);
+            sleep(SLEEP_PATCH_MSYNC);// wait 1s for file sync done
+            rsum_strong_file(utstring_body(newFilename), strong);
+            if(0 == memcmp(strong, handle->meta->file_sum, STRONG_SUM_SIZE)) {
+                //all done, delete temp files
+                UT_string *rsumFilename = get_full_string(handle->outputdir, handle->hash, RSUM_SUFFIX);
+                UT_string *msumFilename = get_full_string(handle->outputdir, handle->hash, MSUM_SUFFIX);
+                remove(utstring_body(rsumFilename));
+                remove(utstring_body(msumFilename));
+                utstring_free(rsumFilename);
+                utstring_free(msumFilename);
+                break; // patch success!
             }
         }
-        int ret = msync(recNew.text, recNew.text_sz, MS_SYNC);
-        if(-1 == ret) {
-            LOGE("msync failed\n");
-        }
-    } while (0);
-    curl_easy_reset(handle->curl_handle);
+        retry++;
+    } while(retry < MAX_PATCH_RETRY);
 
-    tpl_unmap_file(&recNew);
-    tpl_unmap_file(&recOld);
-
-    if(CRSYNCE_OK == code) {
-        UT_string *rsumFilename = get_full_string(handle->outputdir, handle->hash, RSUM_SUFFIX);
-        UT_string *msumFilename = get_full_string(handle->outputdir, handle->hash, MSUM_SUFFIX);
-        remove(utstring_body(rsumFilename));
-        remove(utstring_body(msumFilename));
-        utstring_free(rsumFilename);
-        utstring_free(msumFilename);
-    }
     utstring_free(newFilename);
     LOGI("crsync_easy_perform_patch code = %d\n", code);
     return code;

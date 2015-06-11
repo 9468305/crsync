@@ -33,7 +33,7 @@ static const char *cmd_onepiece = "onepiece";
 
 int showUsage() {
     LOGI("Usage:\n");
-    LOGI("crsync onepiecetool curr_id next_id appname appdir resdir outputdir blocksize\n");
+    LOGI("crsync onepiecetool curr_id next_id appfullname resdir outputdir blocksize\n");
     LOGI("Note:\n");
     LOGI("dir should end with '/'\n");
     LOGI("blocksize is better to be 2 - 2048, 4 - 4096, 8 - 8092, 16 - 16184\n");
