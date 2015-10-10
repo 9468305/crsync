@@ -132,15 +132,17 @@ public class CrsyncInfo {
     public static class ResInfo {
         public String mName = "";
         public String mHash = "";
+        public int mSize = 0;
         public int mPercent = 0;
         
         public void dump() {
             logger.info("####ResInfo name : " + mName);
             logger.info("####ResInfo hash : " + mHash);
-            logger.info("####ResInfo Percent : " + mPercent);
+            logger.info("####ResInfo size : " + mSize);
+            logger.info("####ResInfo percent : " + mPercent);
         }
     }
-    
+
     public static Vector<ResInfo> queryRes(ContentResolver cr) {
         Vector<ResInfo> infos = new Vector<ResInfo>();
         Cursor c = cr.query(CrsyncConstants.URI_RES, null, null, null, null);
@@ -148,12 +150,14 @@ public class CrsyncInfo {
 
             int nameColumn = c.getColumnIndex(CrsyncConstants.COLUMN_RES_NAME);
             int hashColumn = c.getColumnIndex(CrsyncConstants.COLUMN_RES_HASH);
+            int sizeColumn = c.getColumnIndex(CrsyncConstants.COLUMN_RES_SIZE);
             int percentColumn = c.getColumnIndex(CrsyncConstants.COLUMN_RES_PERCENT);
 
             for( ; !c.isAfterLast(); c.moveToNext()) {
                 ResInfo info = new ResInfo();
                 info.mName = c.getString(nameColumn);
                 info.mHash = c.getString(hashColumn);
+                info.mSize = c.getInt(sizeColumn);
                 info.mPercent = c.getInt(percentColumn);
                 infos.add(info);
             }
@@ -173,6 +177,7 @@ public class CrsyncInfo {
             ContentValues v = new ContentValues();
             v.put(CrsyncConstants.COLUMN_RES_NAME, infos[i].mName);
             v.put(CrsyncConstants.COLUMN_RES_HASH, infos[i].mHash);
+            v.put(CrsyncConstants.COLUMN_RES_SIZE, infos[i].mSize);
             v.put(CrsyncConstants.COLUMN_RES_PERCENT, infos[i].mPercent);
             values[i] = v;
         }
@@ -183,6 +188,7 @@ public class CrsyncInfo {
         ContentValues values = new ContentValues();
         values.put(CrsyncConstants.COLUMN_RES_NAME, info.mName);
         values.put(CrsyncConstants.COLUMN_RES_HASH, info.mHash);
+        values.put(CrsyncConstants.COLUMN_RES_SIZE, info.mSize);
         values.put(CrsyncConstants.COLUMN_RES_PERCENT, info.mPercent);
         cr.update(CrsyncConstants.URI_RES, values, null, null);
     }

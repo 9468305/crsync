@@ -30,28 +30,27 @@ extern "C" {
 
 #include "onepiece.h"
 
-typedef enum {
-    ONEPIECETOOLOPT_CURRID = 1,   /* current magnet info id */
-    ONEPIECETOOLOPT_NEXTID,       /* next magnet info id */
-    ONEPIECETOOLOPT_APP,          /* app full filename */
-    ONEPIECETOOLOPT_RESNAME,      /* resource name array */
-    ONEPIECETOOLOPT_RESDIR,       /* resource directory */
-    ONEPIECETOOLOPT_OUTPUT,       /* output directory */
-    ONEPIECETOOLOPT_BLOCKSIZE,    /* block size, default 2K */
-} ONEPIECETOOLoption;
+typedef struct resname_t {
+    char                *name;
+    struct resname_t    *next;
+} resname_t;
 
-typedef struct onepiecetool_handle_t onepiecetool_handle_t;
+void resname_free(resname_t *res);
 
-/* return: NULL for fail */
-onepiecetool_handle_t* onepiecetool_init();
+typedef struct onepiecetool_option_t {
+    char        *curr_id;       //current magnet info id
+    char        *next_id;       //next magnet info id
+    char        *app_name;      //app full filename
+    char        *res_dir;       //resource directory, end with '/'
+    resname_t   *res_list;      //resource file list
+    char        *output_dir;    //output directory
+    uint32_t    block_size;     //block size, default 8K
+} onepiecetool_option_t;
 
-/* return: only CRSYNCE_OK or CRSYNC_INVALID_OPT */
-CRSYNCcode onepiecetool_setopt(onepiecetool_handle_t *handle, ONEPIECETOOLoption opt, ...);
+onepiecetool_option_t* onepiecetool_option_malloc();
+void onepiecetool_option_free(onepiecetool_option_t *option);
 
-/* return CRSYNCcode (<=0) or CURLcode (>=0) */
-CRSYNCcode onepiecetool_perform(onepiecetool_handle_t *handle);
-
-void onepiecetool_cleanup(onepiecetool_handle_t *handle);
+CRSYNCcode onepiecetool_perform(onepiecetool_option_t *option);
 
 #if defined __cplusplus
     }

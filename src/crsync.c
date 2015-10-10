@@ -41,10 +41,11 @@ static const unsigned int SLEEP_CURL_RETRY = 5;
 static const int MAX_PATCH_RETRY = 3;
 static const unsigned int SLEEP_PATCH_MSYNC = 1;
 
+/*default empty xfer callback, do nothing and keep going on.*/
 int xfer_default(const char *hash, int percent) {
     (void)hash;
     (void)percent;
-    return 1;
+    return 0;
 }
 
 void rsum_weak_block(const uint8_t *data, uint32_t start, uint32_t block_sz, uint32_t *weak) {
@@ -562,10 +563,11 @@ static CRSYNCcode crsync_msum_patch(crsync_handle_t *handle, rsum_t *sumItem, tp
 
 CRSYNCcode crsync_global_init() {
     LOGI("crsync_global_init\n");
-    CRSYNCcode code = CRSYNCE_FAILED_INIT;
-    if(CURLE_OK == curl_global_init(CURL_GLOBAL_DEFAULT)) {
-        code = CRSYNCE_OK;
-    }
+    CRSYNCcode code = CRSYNCE_OK;
+    do {
+        CURLcode curlcode = curl_global_init(CURL_GLOBAL_DEFAULT);
+        code = (CURLE_OK == curlcode) ? CRSYNCE_OK : CRSYNCE_FAILED_INIT;
+    } while(0);
     LOGI("crsync_global_init code = %d\n", code);
     return code;
 }
@@ -678,7 +680,7 @@ CRSYNCcode crsync_easy_perform_match(crsync_handle_t *handle) {
         if(CRSYNCE_OK == crsync_tplfile_check(utstring_body(filename), MSUM_TPLMAP_FORMAT)) {
             code = crsync_msum_load(handle);
         } else { //generate msum from rsum
-            //if rsum file not exist, curl it.
+            //if rsum file not exist, download it by curl.
             utstring_free(filename);
             filename = get_full_string(handle->outputdir, handle->hash, RSUM_SUFFIX);
             if(CRSYNCE_OK != crsync_tplfile_check(utstring_body(filename), RSUM_TPLMAP_FORMAT)) {
@@ -707,9 +709,16 @@ CRSYNCcode crsync_easy_perform_patch(crsync_handle_t *handle) {
     }
     uint8_t strong[STRONG_SUM_SIZE];
     UT_string *newFilename = get_full_string(handle->outputdir, handle->hash, NULL);
+    int isCancel = 0;
 
     int retry = 0;
     do {
+        //check cancellation here, since perform_match doesn't check it.
+        isCancel = handle->xfer(handle->hash, 0);
+        if(isCancel) {
+            code = CRSYNCE_CANCEL;
+            break;
+        }
         tpl_mmap_rec    recOld = {-1, NULL, 0};
         tpl_mmap_rec    recNew = {-1, NULL, 0};
 
@@ -730,7 +739,10 @@ CRSYNCcode crsync_easy_perform_patch(crsync_handle_t *handle) {
                 code = crsync_msum_patch(handle, sumItem, &recOld, &recNew, strong);
                 int percent = count++ * 100 / blocks;
                 percent = (percent >= 100) ? 99 : percent;
-                handle->xfer(handle->hash, percent );//100 means done, but here still need do something.
+                isCancel = handle->xfer(handle->hash, percent);//100 means done, but here still need do something.
+                if(isCancel) {
+                    code = CRSYNCE_CANCEL;
+                }
                 if(CRSYNCE_OK != code) {
                     break;
                 }
@@ -738,7 +750,10 @@ CRSYNCcode crsync_easy_perform_patch(crsync_handle_t *handle) {
                     code = crsync_msum_patch(handle, sumIter, &recOld, &recNew, strong);
                     int percent = count++ * 100 / blocks;
                     percent = (percent >= 100) ? 99 : percent;
-                    handle->xfer(handle->hash, percent );//100 means done, but here still need do something.
+                    isCancel = handle->xfer(handle->hash, percent);//100 means done, but here still need do something.
+                    if(isCancel) {
+                        code = CRSYNCE_CANCEL;
+                    }
                     if(CRSYNCE_OK != code) {
                         break;
                     }
@@ -768,7 +783,7 @@ CRSYNCcode crsync_easy_perform_patch(crsync_handle_t *handle) {
             sleep(SLEEP_PATCH_MSYNC);// wait 1s for file sync done
             rsum_strong_file(utstring_body(newFilename), strong);
             if(0 == memcmp(strong, handle->meta->file_sum, STRONG_SUM_SIZE)) {
-                //all done, delete temp files
+                //patch done, delete temp files
                 UT_string *rsumFilename = get_full_string(handle->outputdir, handle->hash, RSUM_SUFFIX);
                 UT_string *msumFilename = get_full_string(handle->outputdir, handle->hash, MSUM_SUFFIX);
                 remove(utstring_body(rsumFilename));
@@ -777,6 +792,8 @@ CRSYNCcode crsync_easy_perform_patch(crsync_handle_t *handle) {
                 utstring_free(msumFilename);
                 break; // patch success!
             }
+        } else if(CRSYNCE_CANCEL == code) {
+            break; //patch cancelled by user
         }
         retry++;
     } while(retry < MAX_PATCH_RETRY);

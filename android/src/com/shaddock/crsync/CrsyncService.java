@@ -183,15 +183,17 @@ public class CrsyncService extends Service implements OnepieceObserver {
         int code = Crsync.JNI_onepiece_perform_query();
         if(Crsync.Code_OK == code) {
             CrsyncInfo.ContentInfo ci = CrsyncInfo.queryContent(getContentResolver());
-            String magnetString = Crsync.JNI_onepiece_getinfo(Crsync.INFO_Magnet);
+            String magnetString = Crsync.JNI_onepiece_getinfo_magnet();
             logger.info("INFO_Magnet = " + magnetString);
             Crsync.Magnet magnet = Crsync.Magnet.getValue(magnetString);
-            int size = magnet.resname.length;
+            int size = magnet.res_list.size();
             CrsyncInfo.ResInfo ri[] = new CrsyncInfo.ResInfo[size];
             for(int i=0; i < size; i++) {
                 CrsyncInfo.ResInfo r = new CrsyncInfo.ResInfo();
-                r.mName = magnet.resname[i];
-                r.mHash = magnet.reshash[i];
+                Crsync.Res res = magnet.res_list.get(i);
+                r.mName = res.name;
+                r.mHash = res.hash;
+                r.mSize = res.size;
                 r.mPercent = 0;
                 ri[i] = r;
             }
@@ -200,9 +202,9 @@ public class CrsyncService extends Service implements OnepieceObserver {
                 stateInfo.mAction = Crsync.Action_UpdateRes;
                 stateInfo.mCode = Crsync.Code_OK;
             } else {
-                mAppHash = magnet.apphash;
+                mAppHash = magnet.app_hash;
                 CrsyncInfo.AppInfo ai = new CrsyncInfo.AppInfo();
-                ai.mHash = magnet.apphash;
+                ai.mHash = magnet.app_hash;
                 CrsyncInfo.updateApp(getContentResolver(), ai);
                 stateInfo.mAction = Crsync.Action_UserConfirm;
                 stateInfo.mCode = Crsync.Code_OK;

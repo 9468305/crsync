@@ -32,23 +32,46 @@ static const unsigned int MAGNET_SLEEP_RETRY = 1;
 static const int MAX_CURL_RETRY = 5;
 static const unsigned int SLEEP_CURL_RETRY = 5;
 
-CRSYNCcode onepiece_magnet_load(const char *magnetFilename, magnet_t *magnet) {
+void res_free(res_t *res) {
+    res_t *elt, *tmp;
+    LL_FOREACH_SAFE(res,elt,tmp) {
+        LL_DELETE(res,elt);
+        free(elt->name);
+        free(elt->hash);
+        free(elt);
+    }
+}
+
+magnet_t* onepiece_magnet_malloc() {
+    magnet_t *m=calloc(1, sizeof(magnet_t));
+    return m;
+}
+
+void onepiece_magnet_free(magnet_t* m) {
+    free(m->curr_id);
+    free(m->next_id);
+    free(m->app_hash);
+    res_free(m->res_list);
+    free(m);
+}
+
+CRSYNCcode onepiece_magnet_load(const char *filename, magnet_t *magnet) {
     LOGI("onepiece_magnet_load\n");
     CRSYNCcode code = CRSYNCE_OK;
     char *resname = NULL, *reshash = NULL;
     tpl_node *tn = tpl_map(MAGNET_TPLMAP_FORMAT,
                  &magnet->curr_id,
                  &magnet->next_id,
-                 &magnet->apphash,
+                 &magnet->app_hash,
                  &resname,
                  &reshash);
-    if (0 == tpl_load(tn, TPL_FILE, magnetFilename) ) {
+    if (0 == tpl_load(tn, TPL_FILE, filename) ) {
         tpl_unpack(tn, 0);
         while (tpl_unpack(tn, 1) > 0) {
-            utarray_push_back(magnet->resname, &resname);
-            free(resname);
-            utarray_push_back(magnet->reshash, &reshash);
-            free(reshash);
+            res_t *res = calloc(1, sizeof(res_t));
+            res->name = resname;
+            res->hash = reshash;
+            LL_APPEND(magnet->res_list, res);
         }
     } else {
         code = CRSYNCE_FILE_ERROR;
@@ -58,28 +81,24 @@ CRSYNCcode onepiece_magnet_load(const char *magnetFilename, magnet_t *magnet) {
     return code;
 }
 
-CRSYNCcode onepiece_magnet_generate(const char *magnetFilename, magnet_t *magnet) {
-    CRSYNCcode code = CRSYNCE_OK;
-    char *resname = NULL, *reshash = NULL;
-    char **p = NULL, **q = NULL;
-
+CRSYNCcode onepiece_magnet_save(const char *filename, magnet_t *magnet) {
+    char *resname=NULL, *reshash=NULL;
     tpl_node *tn = tpl_map(MAGNET_TPLMAP_FORMAT,
                  &magnet->curr_id,
                  &magnet->next_id,
-                 &magnet->apphash,
+                 &magnet->app_hash,
                  &resname,
                  &reshash);
     tpl_pack(tn, 0);
-
-    while ( (p=(char**)utarray_next(magnet->resname,p)) && (q=(char**)utarray_next(magnet->reshash,q))) {
-        resname = *p;
-        reshash = *q;
+    res_t *elt=NULL;
+    LL_FOREACH(magnet->res_list,elt) {
+        resname = elt->name;
+        reshash = elt->hash;
         tpl_pack(tn, 1);
     }
-    int result = tpl_dump(tn, TPL_FILE, magnetFilename);
-    code = (-1 == result) ? CRSYNCE_FILE_ERROR : CRSYNCE_OK;
+    int result = tpl_dump(tn, TPL_FILE, filename);
     tpl_free(tn);
-    return code;
+    return (-1 == result) ? CRSYNCE_FILE_ERROR : CRSYNCE_OK;
 }
 
 typedef struct onepiece_t {
@@ -107,7 +126,7 @@ CRSYNCcode onepiece_init() {
         if(CRSYNCE_OK != code) break;
         onepiece = calloc(1, sizeof(onepiece_t));
         onepiece->xfer = xfer_default;
-        onepiece_magnet_new(onepiece->magnet);
+        onepiece->magnet = onepiece_magnet_malloc();
         onepiece->curl_handle = curl_easy_init();
         code = (NULL == onepiece->curl_handle) ? CRSYNCE_FAILED_INIT : CRSYNCE_OK;
         if(CRSYNCE_OK != code) break;
@@ -252,29 +271,12 @@ static CRSYNCcode onepiece_magnet_query(const char *id, magnet_t *magnet) {
     return code;
 }
 
-UT_string* onepiece_getinfo(ONEPIECEinfo info) {
-    LOGI("onepiece_getinfo %d\n", info);
-    UT_string *result = NULL;
-    utstring_new(result);
-    switch (info) {
-    case ONEPIECEINFO_QUERY:
-        if(onepiece && onepiece->magnet) {
-            utstring_printf(result, "%s;", onepiece->magnet->curr_id);
-            utstring_printf(result, "%s;", onepiece->magnet->next_id);
-            utstring_printf(result, "%s;", onepiece->magnet->apphash);
-            char **p = NULL, **q = NULL;
-            while ( (p=(char**)utarray_next(onepiece->magnet->resname,p)) && (q=(char**)utarray_next(onepiece->magnet->reshash,q)) ) {
-                utstring_printf(result, "%s;", *p);
-                utstring_printf(result, "%s;", *q);
-            }
-        }
-        break;
-    default:
-        LOGE("Unknown info\n");
-        break;
+magnet_t* onepiece_getinfo_magnet() {
+    if(onepiece) {
+        return onepiece->magnet;
+    } else {
+        return NULL;
     }
-    LOGI("onepiece_getinfo result : %s\n", utstring_body(result));
-    return result;
 }
 
 CRSYNCcode onepiece_perform_query() {
@@ -285,18 +287,114 @@ CRSYNCcode onepiece_perform_query() {
         return code;
     }
     const char *id = onepiece->start_id;
-    magnet_t *magnet = NULL;
-    onepiece_magnet_new(magnet);
+    magnet_t *magnet = onepiece_magnet_malloc();
     while( CRSYNCE_OK == onepiece_magnet_query(id, magnet) ) {
-        if(onepiece->magnet) {
-            onepiece_magnet_free(onepiece->magnet);
-        }
+        onepiece_magnet_free(onepiece->magnet);
         onepiece->magnet = magnet;
-        onepiece_magnet_new(magnet);
+        magnet = onepiece_magnet_malloc();
         id = onepiece->magnet->next_id;
     }
     code = (NULL == onepiece->magnet->curr_id) ? CRSYNCE_CURL_ERROR : CRSYNCE_OK;
+    onepiece_magnet_free(magnet);
     LOGI("onepiece_perform_query code = %d\n", code);
+    return code;
+}
+
+CRSYNCcode onepiece_perform_MatchApp() {
+    LOGI("onepiece_perform_MatchApp\n");
+    CRSYNCcode code = onepiece_checkopt();
+    if(CRSYNCE_OK != code) {
+        LOGE("onepiece_perform_MatchApp code = %d\n", code);
+        return code;
+    }
+    do {
+        //needn't compare old file to new file, since magnet said has new version.
+        crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_OUTPUTDIR, onepiece->localRes);
+        crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_FILE, onepiece->localApp);
+        crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_HASH, onepiece->magnet->app_hash);
+        crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_BASEURL, onepiece->baseUrl);
+        crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_XFER, (void*)onepiece->xfer);
+
+        code = crsync_easy_perform_match(onepiece->crsync_handle);
+        if(CRSYNCE_OK != code) break;
+    } while(0);
+
+    LOGI("onepiece_perform_MatchApp code = %d", code);
+    return code;
+}
+
+CRSYNCcode onepiece_perform_PatchApp() {
+    LOGI("onepiece_perform_PatchApp\n");
+    CRSYNCcode code = onepiece_checkopt();
+    if(CRSYNCE_OK != code) {
+        LOGE("onepiece_perform_updateapp code = %d\n", code);
+        return code;
+    }
+    do {
+        //needn't compare old file to new file, since magnet said has new version.
+        crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_OUTPUTDIR, onepiece->localRes);
+        crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_FILE, onepiece->localApp);
+        crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_HASH, onepiece->magnet->app_hash);
+        crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_BASEURL, onepiece->baseUrl);
+        crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_XFER, (void*)onepiece->xfer);
+
+        code = crsync_easy_perform_patch(onepiece->crsync_handle);
+        if(CRSYNCE_OK != code) break;
+        onepiece->xfer(onepiece->magnet->app_hash, 100);
+    } while(0);
+
+    LOGI("onepiece_perform_PatchApp code = %d", code);
+    return code;
+}
+
+CRSYNCcode onepiece_perform_MatchRes() {
+    LOGI("onepiece_perform_MatchRes\n");
+    CRSYNCcode code = onepiece_checkopt();
+    if(CRSYNCE_OK != code) {
+        LOGE("onepiece_perform_MatchRes code = %d\n", code);
+        return code;
+    }
+
+    UT_string *hash = NULL;
+    utstring_new(hash);
+
+    res_t *elt=NULL;
+    LL_FOREACH(onepiece->magnet->res_list, elt) {
+        LOGI("MatchRes %s %s %d\n", elt->name, elt->hash, elt->size);
+        utstring_clear(hash);
+        UT_string *localfile = get_full_string( onepiece->localRes, elt->name, NULL);
+        //0. if old file not exist, skip match
+        if( -1 == access( utstring_body(localfile), F_OK ) ) {
+            //do nothing
+        } else {
+            UT_string* file_hash = get_full_string(onepiece->localRes, elt->name, elt->hash);
+            if(0 == access(utstring_body(file_hash), F_OK)) {
+                utstring_printf(hash, "%s", elt->hash);
+            } else {
+                utstring_printf(hash, "%s", "0000");
+                //TODO: maybe should calculate hash again; but this only happen for developer!
+            }
+            utstring_free(file_hash);
+        }
+        LOGI("localres hash = %s\n", utstring_body(hash));
+        //2. skip update if hash is same
+        if(0 == strncmp(utstring_body(hash), elt->hash, strlen(elt->hash))) {
+            //onepiece->xfer(elt->hash, 100);
+            utstring_free(localfile);
+            continue;
+        }
+        crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_OUTPUTDIR, onepiece->localRes);
+        crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_FILE, utstring_body(localfile));
+        crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_HASH, elt->hash);
+        crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_BASEURL, onepiece->baseUrl);
+        crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_XFER, (void*)onepiece->xfer);
+
+        utstring_free(localfile);
+        code = crsync_easy_perform_match(onepiece->crsync_handle);
+        if(CRSYNCE_OK != code) break;
+    }
+    utstring_free(hash);
+    LOGI("onepiece_perform_MatchRes code = %d\n", code);
     return code;
 }
 
@@ -307,12 +405,11 @@ CRSYNCcode onepiece_perform_updateapp() {
         LOGE("onepiece_perform_updateapp code = %d\n", code);
         return code;
     }
-
     do {
         //needn't compare old file to new file, since magnet said has new version.
         crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_OUTPUTDIR, onepiece->localRes);
         crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_FILE, onepiece->localApp);
-        crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_HASH, onepiece->magnet->apphash);
+        crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_HASH, onepiece->magnet->app_hash);
         crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_BASEURL, onepiece->baseUrl);
         crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_XFER, (void*)onepiece->xfer);
 
@@ -320,7 +417,7 @@ CRSYNCcode onepiece_perform_updateapp() {
         if(CRSYNCE_OK != code) break;
         code = crsync_easy_perform_patch(onepiece->crsync_handle);
         if(CRSYNCE_OK != code) break;
-        onepiece->xfer(onepiece->magnet->apphash, 100);
+        onepiece->xfer(onepiece->magnet->app_hash, 100);
     } while(0);
 
     LOGI("onepiece_perform_updateapp code = %d", code);
@@ -335,8 +432,8 @@ static int onepiece_updateres_curl_progress(void *clientp, curl_off_t dltotal, c
     (void)ulnow;
     // dltotal dlnow only for current download process, exclude local resume size, so add it here
     int percent = (dltotal > 0) ? ( (dlnow + localFileResumeSize) * 100 / dltotal) : 0;
-    onepiece->xfer(hash, percent);
-    return 0;
+    int isCancel = onepiece->xfer(hash, percent);
+    return isCancel;
 }
 
 static CRSYNCcode onepiece_updateres_curl(const char *resname, const char *reshash) {
@@ -373,7 +470,11 @@ static CRSYNCcode onepiece_updateres_curl(const char *resname, const char *resha
             } else if(CURLE_WRITE_ERROR == curlcode) {
                 code = CRSYNCE_FILE_ERROR;
                 break;
-            } else {
+            } else if(CURLE_ABORTED_BY_CALLBACK == curlcode) {
+                code = CRSYNCE_CANCEL;
+                break;
+            }
+            else {
                 code = CRSYNCE_CURL_ERROR;
             }
         } else {
@@ -402,15 +503,16 @@ CRSYNCcode onepiece_perform_updateres() {
     uint8_t strong[STRONG_SUM_SIZE];
     UT_string *hash = NULL;
     utstring_new(hash);
-    char **p = NULL, **q = NULL;
-    while ( (p=(char**)utarray_next(onepiece->magnet->resname,p)) && (q=(char**)utarray_next(onepiece->magnet->reshash,q)) ) {
-        LOGI("updateres %s %s\n", *p, *q);
+
+    res_t *elt=NULL;
+    LL_FOREACH(onepiece->magnet->res_list, elt) {
+        LOGI("updateres %s %s %d\n", elt->name, elt->hash, elt->size);
         utstring_clear(hash);
-        UT_string *localfile = get_full_string( onepiece->localRes, *p, NULL);
+        UT_string *localfile = get_full_string( onepiece->localRes, elt->name, NULL);
         //0. if old file not exist, curl download directly, then re-calc hash
         if( -1 == access( utstring_body(localfile), F_OK ) ) {
             //download file
-            code = onepiece_updateres_curl(*p, *q);
+            code = onepiece_updateres_curl(elt->name, elt->hash);
             if(CRSYNCE_OK != code) break;
             //calc hash & string
             rsum_strong_file(utstring_body(localfile), strong);
@@ -418,13 +520,13 @@ CRSYNCcode onepiece_perform_updateres() {
                 utstring_printf(hash, "%02x", strong[j] );
             }
             //create localCRC namehash
-            UT_string *file_hash = get_full_string(onepiece->localRes, *p, utstring_body(hash));
+            UT_string *file_hash = get_full_string(onepiece->localRes, elt->name, utstring_body(hash));
             creat(utstring_body(file_hash), 700);
             utstring_free(file_hash);
         } else {
-            UT_string* file_hash = get_full_string(onepiece->localRes, *p, *q);
+            UT_string* file_hash = get_full_string(onepiece->localRes, elt->name, elt->hash);
             if(0 == access(utstring_body(file_hash), F_OK)) {
-                utstring_printf(hash, "%s", *q);
+                utstring_printf(hash, "%s", elt->hash);
             } else {
                 utstring_printf(hash, "%s", "0000");
                 //TODO: maybe should calculate hash again; but this only happen for developer!
@@ -433,14 +535,14 @@ CRSYNCcode onepiece_perform_updateres() {
         }
         LOGI("localres hash = %s\n", utstring_body(hash));
         //2. skip update if hash is same
-        if(0 == strncmp(utstring_body(hash), *q, strlen(*q))) {
-            onepiece->xfer(*q, 100);
+        if(0 == strncmp(utstring_body(hash), elt->hash, strlen(elt->hash))) {
+            onepiece->xfer(elt->hash, 100);
             utstring_free(localfile);
             continue;
         }
         crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_OUTPUTDIR, onepiece->localRes);
         crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_FILE, utstring_body(localfile));
-        crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_HASH, *q);
+        crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_HASH, elt->hash);
         crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_BASEURL, onepiece->baseUrl);
         crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_XFER, (void*)onepiece->xfer);
 
@@ -449,23 +551,100 @@ CRSYNCcode onepiece_perform_updateres() {
         if(CRSYNCE_OK != code) break;
         code = crsync_easy_perform_patch(onepiece->crsync_handle);
         if(CRSYNCE_OK != code) break;
-        UT_string *oldfile = get_full_string( onepiece->localRes, *p, NULL);
-        UT_string *newfile = get_full_string( onepiece->localRes, *q, NULL );
+        UT_string *oldfile = get_full_string( onepiece->localRes, elt->name, NULL);
+        UT_string *newfile = get_full_string( onepiece->localRes, elt->hash, NULL );
         remove( utstring_body(oldfile) );
         code = (0 == rename(utstring_body(newfile), utstring_body(oldfile))) ? CRSYNCE_OK : CRSYNCE_FILE_ERROR;
         utstring_free(oldfile);
         utstring_free(newfile);
         if(CRSYNCE_OK != code) break;
         //create localCRC namehash
-        UT_string *file_hash = get_full_string(onepiece->localRes, *p, *q);
+        UT_string *file_hash = get_full_string(onepiece->localRes, elt->name, elt->hash);
         creat(utstring_body(file_hash), 700);
         utstring_free(file_hash);
-        onepiece->xfer(*q, 100);
+        onepiece->xfer(elt->hash, 100);
         //TODO: Currently lack of remove old file_hash; there will be many file_hash exist at device!
     }
-
     utstring_free(hash);
     LOGI("onepiece_perform_updateres code = %d\n", code);
+    return code;
+}
+
+CRSYNCcode onepiece_perform_PatchRes() {
+    LOGI("onepiece_perform_PatchRes\n");
+    CRSYNCcode code = onepiece_checkopt();
+    if(CRSYNCE_OK != code) {
+        LOGE("onepiece_perform_PatchRes code = %d\n", code);
+        return code;
+    }
+
+    uint8_t strong[STRONG_SUM_SIZE];
+    UT_string *hash = NULL;
+    utstring_new(hash);
+
+    res_t *elt=NULL;
+    LL_FOREACH(onepiece->magnet->res_list, elt) {
+        LOGI("updateres %s %s %d\n", elt->name, elt->hash, elt->size);
+        utstring_clear(hash);
+        UT_string *localfile = get_full_string( onepiece->localRes, elt->name, NULL);
+        //0. if old file not exist, curl download directly, then re-calc hash
+        if( -1 == access( utstring_body(localfile), F_OK ) ) {
+            //download file
+            code = onepiece_updateres_curl(elt->name, elt->hash);
+            if(CRSYNCE_OK != code) break;
+            //calc hash & string
+            rsum_strong_file(utstring_body(localfile), strong);
+            for(int j=0; j < STRONG_SUM_SIZE; j++) {
+                utstring_printf(hash, "%02x", strong[j] );
+            }
+            //create localCRC namehash
+            UT_string *file_hash = get_full_string(onepiece->localRes, elt->name, utstring_body(hash));
+            creat(utstring_body(file_hash), 700);
+            utstring_free(file_hash);
+        } else {
+            UT_string* file_hash = get_full_string(onepiece->localRes, elt->name, elt->hash);
+            if(0 == access(utstring_body(file_hash), F_OK)) {
+                utstring_printf(hash, "%s", elt->hash);
+            } else {
+                utstring_printf(hash, "%s", "0000");
+                //TODO: maybe should calculate hash again; but this only happen for developer!
+            }
+            utstring_free(file_hash);
+        }
+        LOGI("localres hash = %s\n", utstring_body(hash));
+        //2. skip update if hash is same
+        if(0 == strncmp(utstring_body(hash), elt->hash, strlen(elt->hash))) {
+            onepiece->xfer(elt->hash, 100);
+            utstring_free(localfile);
+            continue;
+        }
+        crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_OUTPUTDIR, onepiece->localRes);
+        crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_FILE, utstring_body(localfile));
+        crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_HASH, elt->hash);
+        crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_BASEURL, onepiece->baseUrl);
+        crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_XFER, (void*)onepiece->xfer);
+
+        utstring_free(localfile);
+        code = crsync_easy_perform_match(onepiece->crsync_handle);
+        if(CRSYNCE_OK != code) break;
+        code = crsync_easy_perform_patch(onepiece->crsync_handle);
+        if(CRSYNCE_OK != code) break;
+        UT_string *oldfile = get_full_string( onepiece->localRes, elt->name, NULL);
+        UT_string *newfile = get_full_string( onepiece->localRes, elt->hash, NULL );
+        remove( utstring_body(oldfile) );
+        code = (0 == rename(utstring_body(newfile), utstring_body(oldfile))) ? CRSYNCE_OK : CRSYNCE_FILE_ERROR;
+        utstring_free(oldfile);
+        utstring_free(newfile);
+        if(CRSYNCE_OK != code) break;
+        //create localCRC namehash
+        UT_string *file_hash = get_full_string(onepiece->localRes, elt->name, elt->hash);
+        creat(utstring_body(file_hash), 700);
+        utstring_free(file_hash);
+        onepiece->xfer(elt->hash, 100);
+        //TODO: Currently lack of remove old file_hash; there will be many file_hash exist at device!
+    }
+    utstring_free(hash);
+    LOGI("onepiece_perform_PatchRes code = %d\n", code);
     return code;
 }
 

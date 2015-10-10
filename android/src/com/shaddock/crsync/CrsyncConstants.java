@@ -55,6 +55,7 @@ public class CrsyncConstants {
 
     public static final String COLUMN_RES_NAME = "res_name";
     public static final String COLUMN_RES_HASH = "res_hash";
+    public static final String COLUMN_RES_SIZE = "res_size";
     public static final String COLUMN_RES_PERCENT = "res_percent";
 
 }

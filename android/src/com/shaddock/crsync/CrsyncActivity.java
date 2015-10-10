@@ -83,7 +83,7 @@ public class CrsyncActivity extends Activity {
         switch (si.mAction) {
         case Crsync.Action_Idle:
             CrsyncInfo.ContentInfo ci = new CrsyncInfo.ContentInfo();
-            ci.mMagnet = "14015atc";
+            ci.mMagnet = "14023atc";
             ci.mBaseUrl = "http://dlied5.qq.com/wjzj/a/test8k/atc/";
             ci.mLocalApp = this.getApplicationInfo().sourceDir;
             ci.mLocalRes = this.getExternalFilesDir(null).getAbsolutePath() + "/crsync/";

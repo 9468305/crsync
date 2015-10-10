@@ -58,6 +58,7 @@ public class CrsyncProvider extends ContentProvider {
     private static final String[] CURSOR_COLUMN_RESOURCE = {
     	CrsyncConstants.COLUMN_RES_NAME,
         CrsyncConstants.COLUMN_RES_HASH,
+        CrsyncConstants.COLUMN_RES_SIZE,
     	CrsyncConstants.COLUMN_RES_PERCENT,
     };
 
@@ -139,7 +140,7 @@ public class CrsyncProvider extends ContentProvider {
 		{
             MatrixCursor mc = new MatrixCursor(CURSOR_COLUMN_RESOURCE);
             for(CrsyncInfo.ResInfo x : mRes) {
-                mc.addRow( new Object[] { x.mName, x.mHash, x.mPercent });
+                mc.addRow( new Object[] { x.mName, x.mHash, x.mSize, x.mPercent });
             }
             c = mc;
 		    break;
@@ -182,6 +183,7 @@ public class CrsyncProvider extends ContentProvider {
                 CrsyncInfo.ResInfo r = new CrsyncInfo.ResInfo();
                 r.mName = v.getAsString(CrsyncConstants.COLUMN_RES_NAME);
                 r.mHash = v.getAsString(CrsyncConstants.COLUMN_RES_HASH);
+                r.mSize = v.getAsInteger(CrsyncConstants.COLUMN_RES_SIZE);
                 r.mPercent = v.getAsInteger(CrsyncConstants.COLUMN_RES_PERCENT);
                 mRes.add(r);
             }
@@ -223,6 +225,7 @@ public class CrsyncProvider extends ContentProvider {
             CrsyncInfo.ResInfo r = new CrsyncInfo.ResInfo();
             r.mName = values.getAsString(CrsyncConstants.COLUMN_RES_NAME);
             r.mHash = values.getAsString(CrsyncConstants.COLUMN_RES_HASH);
+            r.mSize = values.getAsInteger(CrsyncConstants.COLUMN_RES_SIZE);
             r.mPercent = values.getAsInteger(CrsyncConstants.COLUMN_RES_PERCENT);
             for (CrsyncInfo.ResInfo x : mRes) {
                 if(x.mName.equalsIgnoreCase(r.mName) || x.mHash.equalsIgnoreCase(r.mHash)) {

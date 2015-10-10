@@ -33,32 +33,27 @@ extern "C" {
 #define MAGNET_SUFFIX ".magnet"
 #define MAGNET_TPLMAP_FORMAT "sssA(ss)"
 
+typedef struct res_t {
+    char            *name;
+    char            *hash;
+    uint32_t        size;
+    struct res_t    *next;
+} res_t;
+
+void res_free(res_t *res);
+
 typedef struct magnet_t {
-    char        *curr_id;   /* current magnet info id */
-    char        *next_id;   /* next magnet info id */
-    char        *apphash;   /* android apk hash */
-    UT_array    *resname;   /* resources name */
-    UT_array    *reshash;   /* resources hash */
+    char    *curr_id;   /* current magnet info id */
+    char    *next_id;   /* next magnet info id */
+    char    *app_hash;  /* android apk hash */
+    res_t   *res_list;  /* resource list */
 } magnet_t;
 
-#define onepiece_magnet_new(a) do {\
-    a=calloc(1, sizeof(magnet_t));\
-    utarray_new(a->resname,&ut_str_icd);\
-    utarray_new(a->reshash,&ut_str_icd);\
-} while(0)
+magnet_t* onepiece_magnet_malloc();
+void onepiece_magnet_free(magnet_t *m);
 
-#define onepiece_magnet_free(a) do {\
-    free(a->curr_id);\
-    free(a->next_id);\
-    free(a->apphash);\
-    utarray_free(a->resname);\
-    utarray_free(a->reshash);\
-    free(a);\
-    a=NULL;\
-} while(0)
-
-CRSYNCcode onepiece_magnet_load(const char *magnetFilename, magnet_t *magnet);
-CRSYNCcode onepiece_magnet_generate(const char *magnetFilename, magnet_t *magnet);
+CRSYNCcode onepiece_magnet_load(const char *filename, magnet_t *magnet);
+CRSYNCcode onepiece_magnet_save(const char *filename, magnet_t *magnet);
 
 typedef struct onepiece_t onepiece_t;
 
@@ -71,13 +66,17 @@ typedef enum {
 } ONEPIECEoption;
 
 typedef enum {
-    ONEPIECEINFO_QUERY = 0,
+    ONEPIECEINFO_MAGNET = 0,
 } ONEPIECEinfo;
 
 CRSYNCcode onepiece_init();
 CRSYNCcode onepiece_setopt(ONEPIECEoption opt, void *value);
-UT_string* onepiece_getinfo(ONEPIECEinfo info);
+magnet_t* onepiece_getinfo_magnet();
 CRSYNCcode onepiece_perform_query();
+CRSYNCcode onepiece_perform_MatchApp();
+CRSYNCcode onepiece_perform_PatchApp();
+CRSYNCcode onepiece_perform_MatchRes();
+CRSYNCcode onepiece_perform_PatchRes();
 CRSYNCcode onepiece_perform_updateapp();
 CRSYNCcode onepiece_perform_updateres();
 void onepiece_cleanup();

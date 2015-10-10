@@ -27,17 +27,39 @@ SOFTWARE.
 #include "onepiecetool.h"
 #include "log.h"
 
-#define Default_BLOCK_SIZE 8*1024 /*default block size to 8K*/
+static const uint32_t Default_BLOCK_SIZE = 8*1024; //default block size to 8K
 
-typedef struct onepiecetool_handle_t {
-    magnet_t    *magnet;    /* magnet info */
-    char        *app;    /* app */
-    char        *resdir;    /* islands directory */
-    char        *outputdir; /* output directory */
-    uint32_t    block_sz;   /* block size */
-} onepiecetool_handle_t;
+onepiecetool_option_t* onepiecetool_option_malloc() {
+    onepiecetool_option_t* op = calloc(1, sizeof(onepiecetool_option_t));
+    op->block_size = Default_BLOCK_SIZE;
+    return op;
+}
 
-static CRSYNCcode onepiecetool_movefile(const char *inputfile, const char *outputdir, const char *hash) {
+void resname_free(resname_t *res) {
+    resname_t *elt=NULL, *tmp=NULL;
+    LL_FOREACH_SAFE(res, elt, tmp) {
+        LL_DELETE(res, elt);
+        free(elt->name);
+        free(elt);
+    }
+}
+
+void onepiecetool_option_free(onepiecetool_option_t *option) {
+    if(option) {
+        free(option->curr_id);
+        free(option->next_id);
+        free(option->app_name);
+        free(option->res_dir);
+        resname_free(option->res_list);
+        free(option->output_dir);
+        free(option);
+    }
+}
+
+/* 1. copy input file to output dir with hashname
+   2. move input file's rsum file to output dir with hashname.rsum
+*/
+static CRSYNCcode util_movefile(const char *inputfile, const char *outputdir, const char *hash) {
     CRSYNCcode code = CRSYNCE_FILE_ERROR;
     UT_string *input = NULL;
     utstring_new(input);
@@ -45,10 +67,9 @@ static CRSYNCcode onepiecetool_movefile(const char *inputfile, const char *outpu
 
     UT_string *output = NULL;
     utstring_new(output);
+    utstring_printf(output, "%s%s", outputdir, hash);
 
     do {
-        //copy input file to output dir with hashname
-        utstring_printf(output, "%s%s", outputdir, hash);
         tpl_mmap_rec recin = {-1, NULL, 0};
         tpl_mmap_rec recout = {-1, NULL, 0};
         if(0 == tpl_mmap_file(inputfile, &recin)) {
@@ -62,7 +83,6 @@ static CRSYNCcode onepiecetool_movefile(const char *inputfile, const char *outpu
         }
         if(CRSYNCE_OK != code) break;
 
-        //move input file's rsum file to output dir with hashname.rsum
         utstring_printf(output, "%s", RSUM_SUFFIX);
         int i = rename(utstring_body(input), utstring_body(output));
         code = (0 == i) ? CRSYNCE_OK : CRSYNCE_FILE_ERROR;
@@ -73,84 +93,8 @@ static CRSYNCcode onepiecetool_movefile(const char *inputfile, const char *outpu
     return code;
 }
 
-onepiecetool_handle_t* onepiecetool_init() {
-    onepiecetool_handle_t *handle = calloc(1, sizeof(onepiecetool_handle_t));
-    onepiece_magnet_new(handle->magnet);
-    handle->block_sz = Default_BLOCK_SIZE;
-    return handle;
-}
-
-CRSYNCcode onepiecetool_setopt(onepiecetool_handle_t *handle, ONEPIECETOOLoption opt, ...) {
-    if(!handle) {
-        return CRSYNCE_INVALID_OPT;
-    }
-
-    CRSYNCcode code = CRSYNCE_OK;
-    va_list arg;
-    va_start(arg, opt);
-
-    switch (opt) {
-    case ONEPIECETOOLOPT_CURRID:
-        if(handle->magnet->curr_id) {
-            free(handle->magnet->curr_id);
-        }
-        handle->magnet->curr_id = strdup( va_arg(arg, const char*) );
-        break;
-    case ONEPIECETOOLOPT_NEXTID:
-        if(handle->magnet->next_id) {
-            free(handle->magnet->next_id);
-        }
-        handle->magnet->next_id = strdup( va_arg(arg, const char*) );
-        break;
-    case ONEPIECETOOLOPT_APP:
-        if(handle->app) {
-            free(handle->app);
-        }
-        handle->app = strdup( va_arg(arg, const char*) );
-        break;
-    case ONEPIECETOOLOPT_RESNAME:
-    {
-        const char *p = va_arg(arg, const char*);
-        utarray_push_back(handle->magnet->resname, &p);
-    }
-        break;
-    case ONEPIECETOOLOPT_RESDIR:
-        if(handle->resdir) {
-            free(handle->resdir);
-        }
-        handle->resdir = strdup( va_arg(arg, const char*) );
-        break;
-    case ONEPIECETOOLOPT_OUTPUT:
-        if(handle->outputdir) {
-            free(handle->outputdir);
-        }
-        handle->outputdir = strdup( va_arg(arg, const char*) );
-        break;
-    case ONEPIECETOOLOPT_BLOCKSIZE:
-        handle->block_sz = va_arg(arg, uint32_t);
-        break;
-    default:
-        code = CRSYNCE_INVALID_OPT;
-        break;
-    }
-    va_end(arg);
-    return code;
-}
-
-static CRSYNCcode onepiecetool_checkopt(onepiecetool_handle_t *handle) {
-    if( handle &&
-        handle->app &&
-        handle->resdir &&
-        handle->outputdir &&
-        handle->block_sz > 0 &&
-        handle->magnet->curr_id &&
-        handle->magnet->next_id ) {
-        return CRSYNCE_OK;
-    }
-    return CRSYNCE_INVALID_OPT;
-}
-
-CRSYNCcode onepiecetool_perform(onepiecetool_handle_t *handle) {
+CRSYNCcode onepiecetool_perform(onepiecetool_option_t *option) {
+    LOGI("onepiecetool_perform\n");
     CRSYNCcode code = CRSYNCE_OK;
 
     UT_string *input = NULL;
@@ -162,77 +106,73 @@ CRSYNCcode onepiecetool_perform(onepiecetool_handle_t *handle) {
     UT_string *hash = NULL;
     utstring_new(hash);
 
-    char **p = NULL;
+    LOGI("clean up %s\n", option->output_dir);
+    DIR *dirp = opendir(option->output_dir);
+    if(dirp) {
+        struct dirent *direntp = NULL;
+        while ((direntp = readdir(dirp)) != NULL) {
+            if(0 == strcmp(direntp->d_name, ".") ||
+               0 == strcmp(direntp->d_name, "..")) {
+                continue;
+            }
+            LOGD("remove %s\n", direntp->d_name);
+            utstring_clear(output);
+            utstring_printf(output, "%s%s", option->output_dir, direntp->d_name);
+            remove(utstring_body(output));
+        }
+        closedir(dirp);
+    } else {
+#ifndef _WIN32
+        mkdir(option->output_dir, S_IRUSR|S_IWUSR|S_IWGRP|S_IRGRP|S_IROTH);
+#else
+        mkdir(option->output_dir);
+#endif
+    }
+
+    magnet_t *magnet = onepiece_magnet_malloc();
+    magnet->curr_id = strdup(option->curr_id);
+    magnet->next_id = strdup(option->next_id);
 
     do {
-        code = onepiecetool_checkopt(handle);
+        LOGI("generate app rsum file\n");
+        LOGI("perform %s\n", option->app_name);
+        code = crsync_rsum_generate(option->app_name, option->block_size, hash);
+        if(CRSYNCE_OK != code) break;
+        magnet->app_hash = strdup(utstring_body(hash));
+        code = util_movefile(option->app_name, option->output_dir, utstring_body(hash));
         if(CRSYNCE_OK != code) break;
 
-        //empty output dir
-        DIR *dirp = NULL;
-        dirp = opendir(handle->outputdir);
-        if(dirp) {
-            struct dirent *direntp = NULL;
-            while ((direntp = readdir(dirp)) != NULL) {
-                if(0 == strcmp(direntp->d_name, ".") ||
-                   0 == strcmp(direntp->d_name, "..")) {
-                    continue;
-                }
-                LOGD("remove %s\n", direntp->d_name);
-                utstring_clear(output);
-                utstring_printf(output, "%s%s", handle->outputdir, direntp->d_name);
-                remove(utstring_body(output));
-            }
-            closedir(dirp);
-        } else {
-#ifndef _WIN32
-            mkdir(handle->outputdir, S_IRUSR|S_IWUSR|S_IWGRP|S_IRGRP|S_IROTH);
-#else
-            mkdir(handle->outputdir);
-#endif
-        }
-
-        //generate app rsum file
-        LOGI("perform app %s\n", handle->app);
-        code = crsync_rsum_generate(handle->app, handle->block_sz, hash);
-        if(CRSYNCE_OK != code) break;
-        handle->magnet->apphash = strdup(utstring_body(hash));
-        code = onepiecetool_movefile(handle->app, handle->outputdir, utstring_body(hash));
-        if(CRSYNCE_OK != code) break;
-
-        //generate base resource rsum file
-        p = NULL;
-        while ( (p=(char**)utarray_next(handle->magnet->resname,p))) {
-            LOGI("perform res %s\n", *p);
+        LOGI("generate resource rsum file\n");
+        resname_t *elt=NULL;
+        LL_FOREACH(option->res_list, elt) {
+            LOGI("perform %s\n", elt->name);
             utstring_clear(input);
-            utstring_printf(input, "%s%s", handle->resdir, *p);
-            code = crsync_rsum_generate(utstring_body(input), handle->block_sz, hash);
+            utstring_printf(input, "%s%s", option->res_dir, elt->name);
+            code = crsync_rsum_generate(utstring_body(input), option->block_size, hash);
             if(CRSYNCE_OK != code) break;
-            utarray_push_back(handle->magnet->reshash, &utstring_body(hash));
-            code = onepiecetool_movefile(utstring_body(input), handle->outputdir, utstring_body(hash));
+            struct stat file_info;
+            stat(utstring_body(input), &file_info);
+            code = util_movefile(utstring_body(input), option->output_dir, utstring_body(hash));
             if(CRSYNCE_OK != code) break;
+
+            res_t *res = calloc(1, sizeof(res_t));
+            res->name = strdup(elt->name);
+            res->hash = strdup(utstring_body(hash));
+            res->size = file_info.st_size;
+            LL_APPEND(magnet->res_list, res);
         }
         if(CRSYNCE_OK != code) break;
 
-        //generate magnet info file
+        LOGI("generate magnet file\n");
         utstring_clear(output);
-        utstring_printf(output, "%s%s%s", handle->outputdir, handle->magnet->curr_id, MAGNET_SUFFIX);
-        code = onepiece_magnet_generate(utstring_body(output), handle->magnet);
+        utstring_printf(output, "%s%s%s", option->output_dir, option->curr_id, MAGNET_SUFFIX);
+        code = onepiece_magnet_save(utstring_body(output), magnet);
     } while (0);
 
+    onepiece_magnet_free(magnet);
     utstring_free(input);
     utstring_free(output);
     utstring_free(hash);
-
+    LOGI("onepiecetool_perform code = %d\n", code);
     return code;
-}
-
-void onepiecetool_cleanup(onepiecetool_handle_t *handle) {
-    if(handle) {
-        onepiece_magnet_free(handle->magnet);
-        free(handle->app);
-        free(handle->resdir);
-        free(handle->outputdir);
-        free(handle);
-    }
 }

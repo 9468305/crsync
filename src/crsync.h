@@ -31,7 +31,7 @@ extern "C" {
 #include "crsyncver.h"         /* crsync version defines   */
 
 #include "uthash.h"
-#include "utarray.h"
+#include "utlist.h"
 #include "utstring.h"
 #include "tpl.h"
 #include "curl/curl.h"
@@ -74,10 +74,16 @@ typedef enum {
     CRSYNCE_INVALID_OPT,
     CRSYNCE_FILE_ERROR,
     CRSYNCE_CURL_ERROR,
+    CRSYNCE_CANCEL,
 
     CRSYNCE_BUG = 100,
 } CRSYNCcode;
 
+/*  transfer process callback
+    hash: current file hash name
+    percent: 0~100
+    return: 0 - go on; 1 - cancel
+*/
 typedef int (xfer_callback)(const char* hash, int percent);
 
 typedef struct crsync_handle_t {

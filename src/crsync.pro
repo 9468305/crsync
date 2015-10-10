@@ -5,10 +5,11 @@ CONFIG -= qt
 
 TARGET = crsync
 
-SOURCES += main.c \
+SOURCES += \
     crsync.c \
-    onepiece.c\
-    onepiecetool.c\
+    onepiece.c \
+    onepiecetool.c \
+    onepiece-main.c \
     ../extra/tpl.c \
     ../extra/win/mmap.c \
     ../extra/blake2b-ref.c
@@ -28,7 +29,7 @@ HEADERS += \
     ../extra/blake2-impl.h \
     ../extra/uthash.h \
     ../extra/utstring.h \
-    ../extra/utarray.h
+    ../extra/utlist.h
 
 DEFINES += CURL_STATICLIB
 LIBS += -L$${_PRO_FILE_PWD_}/../libcurl/lib/m32 -lcurl -lws2_32

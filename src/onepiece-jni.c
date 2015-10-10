@@ -21,6 +21,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
+#ifdef ANDROID
 #include <jni.h>
 #include <time.h>
 
@@ -40,36 +41,23 @@ static jmethodID GMethod_xfer = NULL;
 static JavaVM* gJavaVM = NULL;
 static jclass gJavaClass = NULL;
 static clock_t gClock = 0;
-/*
-static void perform_query_next() {
-    
-}
 
-static CRSYNCcode perform_updateapp() {
-    
-}
-
-static CRSYNCcode perform_updateres() {
-    CRSYNCcode code;
-    
-    
-    return code;
-}
-*/
-void onepiece_xfer(const char *hash, int percent) {
+int onepiece_xfer(const char *hash, int percent) {
     clock_t now = clock();
     long diff = (long)(now - gClock);
     if( diff < CLOCKS_PER_SEC && percent != 100) {
-        return;
+        return 0;
     }
     gClock = now;
 
     JNIEnv *env = NULL;
+    int isCancel = 0;
     if ((*gJavaVM)->GetEnv(gJavaVM, (void**)&env, JNI_VERSION_1_6) == JNI_OK) {
         jstring jname = (*env)->NewStringUTF( env, hash );
-        (*env)->CallStaticVoidMethod(env, gJavaClass, GMethod_xfer, jname, (jint)percent);
+        isCancel = (*env)->CallStaticIntMethod(env, gJavaClass, GMethod_xfer, jname, (jint)percent);
         (*env)->DeleteLocalRef(env, jname);
     }
+    return isCancel;
 }
 
 jint JNI_onepiece_init(JNIEnv *env, jclass clazz) {
@@ -84,8 +72,22 @@ jint JNI_onepiece_setopt(JNIEnv *env, jclass clazz, jint opt, jstring j_value) {
     return (jint)code;
 }
 
-jstring JNI_onepiece_getinfo(JNIEnv *env, jclass clazz, jint info) {
-    UT_string *result = onepiece_getinfo(info);
+jstring JNI_onepiece_getinfo_magnet(JNIEnv *env, jclass clazz) {
+    UT_string *result = NULL;
+    utstring_new(result);
+
+    magnet_t *m = onepiece_getinfo_magnet();
+    if(NULL != m) {
+        utstring_printf(result, "%s;", m->curr_id);
+        utstring_printf(result, "%s;", m->next_id);
+        utstring_printf(result, "%s;", m->app_hash);
+        res_t *elt=NULL;
+        LL_FOREACH(m->res_list, elt) {
+            utstring_printf(result, "%s;", elt->name);
+            utstring_printf(result, "%s;", elt->hash);
+            utstring_printf(result, "%d;", elt->size);
+        }
+    }
     jstring jinfo = (*env)->NewStringUTF( env, utstring_body(result) );
     utstring_free(result);
     return jinfo;
@@ -95,6 +97,26 @@ jint JNI_onepiece_perform_query(JNIEnv *env, jclass clazz) {
     return (jint)onepiece_perform_query();
 }
 
+jint JNI_onepiece_perform_MatchApp(JNIEnv *env, jclass clazz) {
+    return (jint)onepiece_perform_MatchApp();
+}
+
+jint JNI_onepiece_perform_PatchApp(JNIEnv *env, jclass clazz) {
+    gClock = clock();
+    onepiece_setopt(ONEPIECEOPT_XFER, (void*)onepiece_xfer);
+    return (jint)onepiece_perform_PatchApp();
+}
+
+jint JNI_onepiece_perform_MatchRes(JNIEnv *env, jclass clazz) {
+    return (jint)onepiece_perform_MatchRes();
+}
+
+jint JNI_onepiece_perform_PatchRes(JNIEnv *env, jclass clazz) {
+    gClock = clock();
+    onepiece_setopt(ONEPIECEOPT_XFER, (void*)onepiece_xfer);
+    return (jint)onepiece_perform_PatchRes();
+}
+/*
 jint JNI_onepiece_perform_updateapp(JNIEnv *env, jclass clazz) {
     gClock = clock();
     onepiece_setopt(ONEPIECEOPT_XFER, (void*)onepiece_xfer);
@@ -106,7 +128,7 @@ jint JNI_onepiece_perform_updateres(JNIEnv *env, jclass clazz) {
     onepiece_setopt(ONEPIECEOPT_XFER, (void*)onepiece_xfer);
     return (jint)onepiece_perform_updateres();
 }
-
+*/
 void JNI_onepiece_cleanup(JNIEnv *env, jclass clazz) {
     onepiece_cleanup();
 }
@@ -122,10 +144,12 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
     JNINativeMethod NativeMethods[] = {
         { "JNI_onepiece_init",                 "()I",                      (void*)JNI_onepiece_init               },
         { "JNI_onepiece_setopt",               "(ILjava/lang/String;)I",   (void*)JNI_onepiece_setopt             },
-        { "JNI_onepiece_getinfo",              "(I)Ljava/lang/String;",    (void*)JNI_onepiece_getinfo            },
+        { "JNI_onepiece_getinfo_magnet",       "()Ljava/lang/String;",     (void*)JNI_onepiece_getinfo_magnet     },
         { "JNI_onepiece_perform_query",        "()I",                      (void*)JNI_onepiece_perform_query      },
-        { "JNI_onepiece_perform_updateapp",    "()I",                      (void*)JNI_onepiece_perform_updateapp  },
-        { "JNI_onepiece_perform_updateres",    "()I",                      (void*)JNI_onepiece_perform_updateres  },
+        { "JNI_onepiece_perform_MatchApp",     "()I",                      (void*)JNI_onepiece_perform_MatchApp   },
+        { "JNI_onepiece_perform_PatchApp",     "()I",                      (void*)JNI_onepiece_perform_PatchApp   },
+        { "JNI_onepiece_perform_MatchRes",     "()I",                      (void*)JNI_onepiece_perform_MatchRes   },
+        { "JNI_onepiece_perform_PatchRes",     "()I",                      (void*)JNI_onepiece_perform_PatchRes   },
         { "JNI_onepiece_cleanup",              "()V",                      (void*)JNI_onepiece_cleanup            },
     };
 
@@ -136,7 +160,7 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
 
     // hook up java functions to string names and param
     JNIJavaMethods JavaMethods[] = {
-        { &GMethod_xfer, "java_onepiece_xfer", "(Ljava/lang/String;I)V" }, //public static void java_onepiece_xfer(String, int);
+        { &GMethod_xfer, "java_onepiece_xfer", "(Ljava/lang/String;I)I" }, //public static int java_onepiece_xfer(String, int);
     };
 
     int result = 1;
@@ -161,3 +185,4 @@ void JNI_OnUnload(JavaVM* vm, void* InReserved) {
         gJavaClass = NULL;
     }
 }
+#endif

@@ -1,5 +1,7 @@
 package com.shaddock.crsync;
 
+import java.util.Vector;
+
 public class Crsync {
 
     public static final int Action_Idle             = 0;
@@ -24,8 +26,6 @@ public class Crsync {
     public static final int OPT_LocalRes    = 3;
     public static final int OPT_Action      = 4;
 
-    public static final int INFO_Magnet     = 0;
-
     private static OnepieceObserver mObserver = null;
 
     public static void setObserver(OnepieceObserver ob) {
@@ -43,7 +43,7 @@ public class Crsync {
     //native crsync functions
     public static native int    JNI_onepiece_init();
     public static native int    JNI_onepiece_setopt(int opt, String value);
-    public static native String JNI_onepiece_getinfo(int info);
+    public static native String JNI_onepiece_getinfo_magnet();
     public static native int    JNI_onepiece_perform_query();
     public static native int    JNI_onepiece_perform_updateapp();
     public static native int    JNI_onepiece_perform_updateres();
@@ -55,35 +55,37 @@ public class Crsync {
         }
     }
 
+    public static class Res {
+        public String name = "";
+        public String hash = "";
+        public int size = 0;
+    }
+
     public static class Magnet {
         public String curr_id = "";
         public String next_id = "";
-        public String apphash = "";
-        public String[] resname = null;
-        public String[] reshash = null;
+        public String app_hash = "";
+        public Vector<Res> res_list = new Vector<Res>();
 
         public static Magnet getValue(String value) {
             String [] s = value.split(";");
             if(s.length < 3) {
                 return null;
             }
+            int i = 0;
             Magnet m = new Magnet();
-            m.curr_id = s[0];
-            m.next_id = s[1];
-            m.apphash = s[2];
-
-            int size = (s.length - 3)/2;
-            if(size == 0) {
-                return m;
-            }
-            m.resname = new String[size];
-            m.reshash = new String[size];
-            for(int i = 0; 3+i*2 < s.length; i++) {
-                m.resname[i] = s[3+i*2];
-                m.reshash[i] = s[4+i*2];
+            m.curr_id = s[i++];
+            m.next_id = s[i++];
+            m.app_hash = s[i++];
+            while(i<s.length) {
+                Res r = new Res();
+                r.name = s[i++];
+                r.hash = s[i++];
+                r.size = Integer.parseInt(s[i++]);
+                m.res_list.add(r);
             }
             return m;
         }
     }
-    
+
 }
