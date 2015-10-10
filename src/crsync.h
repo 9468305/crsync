@@ -28,6 +28,8 @@ SOFTWARE.
 extern "C" {
 #endif
 
+#include "crsyncver.h"         /* crsync version defines   */
+
 #include "uthash.h"
 #include "utarray.h"
 #include "utstring.h"

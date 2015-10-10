@@ -18,9 +18,10 @@ qtcAddDeployment()
 
 HEADERS += \
     crsync.h \
-    onepiece.h\
-    onepiecetool.h\
-    log.h\
+    crsyncver.h \
+    onepiece.h \
+    onepiecetool.h \
+    log.h \
     ../extra/tpl.h \
     ../extra/win/mman.h \
     ../extra/blake2.h \
