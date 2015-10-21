@@ -80,12 +80,15 @@ jstring JNI_onepiece_getinfo_magnet(JNIEnv *env, jclass clazz) {
     if(NULL != m) {
         utstring_printf(result, "%s;", m->curr_id);
         utstring_printf(result, "%s;", m->next_id);
-        utstring_printf(result, "%s;", m->app_hash);
+        utstring_printf(result, "%s;", m->app->hash);
+        utstring_printf(result, "%d;", m->app->size);
+        utstring_printf(result, "%d;", m->app->diff_size);
         res_t *elt=NULL;
         LL_FOREACH(m->res_list, elt) {
             utstring_printf(result, "%s;", elt->name);
             utstring_printf(result, "%s;", elt->hash);
             utstring_printf(result, "%d;", elt->size);
+            utstring_printf(result, "%d;", elt->diff_size);
         }
     }
     jstring jinfo = (*env)->NewStringUTF( env, utstring_body(result) );

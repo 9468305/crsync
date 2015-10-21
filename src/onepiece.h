@@ -37,6 +37,7 @@ typedef struct res_t {
     char            *name;
     char            *hash;
     uint32_t        size;
+    uint32_t        diff_size;
     struct res_t    *next;
 } res_t;
 
@@ -45,7 +46,7 @@ void res_free(res_t *res);
 typedef struct magnet_t {
     char    *curr_id;   /* current magnet info id */
     char    *next_id;   /* next magnet info id */
-    char    *app_hash;  /* android apk hash */
+    res_t   *app;       /* android apk hash */
     res_t   *res_list;  /* resource list */
 } magnet_t;
 

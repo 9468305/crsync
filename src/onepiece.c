@@ -50,7 +50,7 @@ magnet_t* onepiece_magnet_malloc() {
 void onepiece_magnet_free(magnet_t* m) {
     free(m->curr_id);
     free(m->next_id);
-    free(m->app_hash);
+    res_free(m->app);
     res_free(m->res_list);
     free(m);
 }
@@ -58,15 +58,18 @@ void onepiece_magnet_free(magnet_t* m) {
 CRSYNCcode onepiece_magnet_load(const char *filename, magnet_t *magnet) {
     LOGI("onepiece_magnet_load\n");
     CRSYNCcode code = CRSYNCE_OK;
-    char *resname = NULL, *reshash = NULL;
+    char *apphash = NULL, *resname = NULL, *reshash = NULL;
     tpl_node *tn = tpl_map(MAGNET_TPLMAP_FORMAT,
                  &magnet->curr_id,
                  &magnet->next_id,
-                 &magnet->app_hash,
+                 &apphash,
                  &resname,
                  &reshash);
     if (0 == tpl_load(tn, TPL_FILE, filename) ) {
         tpl_unpack(tn, 0);
+        res_t *app = calloc(1, sizeof(res_t));
+        app->hash = strdup(apphash);
+        LL_APPEND(magnet->app, app);
         while (tpl_unpack(tn, 1) > 0) {
             res_t *res = calloc(1, sizeof(res_t));
             res->name = resname;
@@ -86,7 +89,7 @@ CRSYNCcode onepiece_magnet_save(const char *filename, magnet_t *magnet) {
     tpl_node *tn = tpl_map(MAGNET_TPLMAP_FORMAT,
                  &magnet->curr_id,
                  &magnet->next_id,
-                 &magnet->app_hash,
+                 &magnet->app->hash,
                  &resname,
                  &reshash);
     tpl_pack(tn, 0);
@@ -311,12 +314,17 @@ CRSYNCcode onepiece_perform_MatchApp() {
         //needn't compare old file to new file, since magnet said has new version.
         crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_OUTPUTDIR, onepiece->localRes);
         crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_FILE, onepiece->localApp);
-        crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_HASH, onepiece->magnet->app_hash);
+        crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_HASH, onepiece->magnet->app->hash);
         crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_BASEURL, onepiece->baseUrl);
         crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_XFER, (void*)onepiece->xfer);
 
         code = crsync_easy_perform_match(onepiece->crsync_handle);
-        if(CRSYNCE_OK != code) break;
+        if(CRSYNCE_OK == code) {
+            onepiece->magnet->app->size = onepiece->crsync_handle->meta->file_sz;
+            onepiece->magnet->app->diff_size = onepiece->crsync_handle->meta->file_sz - onepiece->crsync_handle->meta->same_count * onepiece->crsync_handle->meta->block_sz;
+        } else {
+            break;
+        }
     } while(0);
 
     LOGI("onepiece_perform_MatchApp code = %d", code);
@@ -334,13 +342,13 @@ CRSYNCcode onepiece_perform_PatchApp() {
         //needn't compare old file to new file, since magnet said has new version.
         crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_OUTPUTDIR, onepiece->localRes);
         crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_FILE, onepiece->localApp);
-        crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_HASH, onepiece->magnet->app_hash);
+        crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_HASH, onepiece->magnet->app->hash);
         crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_BASEURL, onepiece->baseUrl);
         crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_XFER, (void*)onepiece->xfer);
 
         code = crsync_easy_perform_patch(onepiece->crsync_handle);
         if(CRSYNCE_OK != code) break;
-        onepiece->xfer(onepiece->magnet->app_hash, 100);
+        onepiece->xfer(onepiece->magnet->app->hash, 100);
     } while(0);
 
     LOGI("onepiece_perform_PatchApp code = %d", code);
@@ -355,6 +363,7 @@ CRSYNCcode onepiece_perform_MatchRes() {
         return code;
     }
 
+    uint8_t strong[STRONG_SUM_SIZE];
     UT_string *hash = NULL;
     utstring_new(hash);
 
@@ -371,15 +380,24 @@ CRSYNCcode onepiece_perform_MatchRes() {
             if(0 == access(utstring_body(file_hash), F_OK)) {
                 utstring_printf(hash, "%s", elt->hash);
             } else {
-                utstring_printf(hash, "%s", "0000");
-                //TODO: maybe should calculate hash again; but this only happen for developer!
+                //calc hash & string
+                rsum_strong_file(utstring_body(localfile), strong);
+                for(int j=0; j < STRONG_SUM_SIZE; j++) {
+                    utstring_printf(hash, "%02x", strong[j] );
+                }
+                //create localCRC namehash
+                UT_string *localfile_hash = get_full_string(onepiece->localRes, elt->name, utstring_body(hash));
+                creat(utstring_body(localfile_hash), 700);
+                utstring_free(localfile_hash);
             }
             utstring_free(file_hash);
         }
         LOGI("localres hash = %s\n", utstring_body(hash));
         //2. skip update if hash is same
         if(0 == strncmp(utstring_body(hash), elt->hash, strlen(elt->hash))) {
-            //onepiece->xfer(elt->hash, 100);
+            elt->size = 100; //TODO: here we do not know rsum meta file size, should add file size to magnet struct.
+            //TODO: here now only happens when development, since user should have hashcache before.
+            elt->diff_size = 0;
             utstring_free(localfile);
             continue;
         }
@@ -391,7 +409,12 @@ CRSYNCcode onepiece_perform_MatchRes() {
 
         utstring_free(localfile);
         code = crsync_easy_perform_match(onepiece->crsync_handle);
-        if(CRSYNCE_OK != code) break;
+        if(CRSYNCE_OK == code) {
+            elt->size = onepiece->crsync_handle->meta->file_sz;
+            elt->diff_size = onepiece->crsync_handle->meta->file_sz - onepiece->crsync_handle->meta->same_count * onepiece->crsync_handle->meta->block_sz;
+        } else {
+            break;
+        }
     }
     utstring_free(hash);
     LOGI("onepiece_perform_MatchRes code = %d\n", code);
@@ -409,7 +432,7 @@ CRSYNCcode onepiece_perform_updateapp() {
         //needn't compare old file to new file, since magnet said has new version.
         crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_OUTPUTDIR, onepiece->localRes);
         crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_FILE, onepiece->localApp);
-        crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_HASH, onepiece->magnet->app_hash);
+        crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_HASH, onepiece->magnet->app->hash);
         crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_BASEURL, onepiece->baseUrl);
         crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_XFER, (void*)onepiece->xfer);
 
@@ -417,7 +440,7 @@ CRSYNCcode onepiece_perform_updateapp() {
         if(CRSYNCE_OK != code) break;
         code = crsync_easy_perform_patch(onepiece->crsync_handle);
         if(CRSYNCE_OK != code) break;
-        onepiece->xfer(onepiece->magnet->app_hash, 100);
+        onepiece->xfer(onepiece->magnet->app->hash, 100);
     } while(0);
 
     LOGI("onepiece_perform_updateapp code = %d", code);
@@ -585,6 +608,11 @@ CRSYNCcode onepiece_perform_PatchRes() {
     res_t *elt=NULL;
     LL_FOREACH(onepiece->magnet->res_list, elt) {
         LOGI("updateres %s %s %d\n", elt->name, elt->hash, elt->size);
+        //skip when match result is 100% same
+        if(elt->diff_size == 0) {
+            onepiece->xfer(elt->hash, 100);
+            continue;
+        }
         utstring_clear(hash);
         UT_string *localfile = get_full_string( onepiece->localRes, elt->name, NULL);
         //0. if old file not exist, curl download directly, then re-calc hash
@@ -614,6 +642,7 @@ CRSYNCcode onepiece_perform_PatchRes() {
         LOGI("localres hash = %s\n", utstring_body(hash));
         //2. skip update if hash is same
         if(0 == strncmp(utstring_body(hash), elt->hash, strlen(elt->hash))) {
+            elt->diff_size = 0;
             onepiece->xfer(elt->hash, 100);
             utstring_free(localfile);
             continue;
@@ -640,6 +669,7 @@ CRSYNCcode onepiece_perform_PatchRes() {
         UT_string *file_hash = get_full_string(onepiece->localRes, elt->name, elt->hash);
         creat(utstring_body(file_hash), 700);
         utstring_free(file_hash);
+        elt->diff_size = 0;
         onepiece->xfer(elt->hash, 100);
         //TODO: Currently lack of remove old file_hash; there will be many file_hash exist at device!
     }

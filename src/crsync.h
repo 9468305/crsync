@@ -49,6 +49,7 @@ typedef struct rsum_meta_t{
     uint32_t    block_sz;                   /*block length*/
     uint8_t     file_sum[STRONG_SUM_SIZE];  /*file strong sum*/
     tpl_bin     rest_tb;                    /*rest data*/
+    uint32_t    same_count;                 /*same block count - memory usage*/
 } rsum_meta_t;
 
 typedef struct rsum_t {

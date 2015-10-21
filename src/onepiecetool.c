@@ -138,7 +138,9 @@ CRSYNCcode onepiecetool_perform(onepiecetool_option_t *option) {
         LOGI("perform %s\n", option->app_name);
         code = crsync_rsum_generate(option->app_name, option->block_size, hash);
         if(CRSYNCE_OK != code) break;
-        magnet->app_hash = strdup(utstring_body(hash));
+        res_t *app = calloc(1, sizeof(res_t));
+        app->hash = strdup(utstring_body(hash));
+        LL_APPEND(magnet->app, app);
         code = util_movefile(option->app_name, option->output_dir, utstring_body(hash));
         if(CRSYNCE_OK != code) break;
 

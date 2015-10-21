@@ -332,10 +332,11 @@ static CRSYNCcode crsync_msum_generate(crsync_handle_t *handle) {
     CRSYNCcode code = CRSYNCE_OK;
 
     tpl_mmap_rec    rec = {-1, NULL, 0};
-    uint32_t        weak = 0, i = 0, sameCount = 0;
+    uint32_t        weak = 0, i = 0;
     uint8_t         strong[STRONG_SUM_SIZE] = {""};
     rsum_t          *sumItem = NULL, *sumIter = NULL, *sumTemp = NULL;
 
+    handle->meta->same_count = 0;
     if ( 0 == tpl_mmap_file(handle->fullFilename, &rec) ) {
         rsum_weak_block(rec.text, 0, handle->meta->block_sz, &weak);
 
@@ -346,12 +347,12 @@ static CRSYNCcode crsync_msum_generate(crsync_handle_t *handle) {
                 rsum_strong_block(rec.text, i, handle->meta->block_sz, strong);
                 if (0 == memcmp(strong, sumItem->strong, STRONG_SUM_SIZE)) {
                     sumItem->offset = i;
-                    sameCount++;
+                    handle->meta->same_count++;
                 }
                 HASH_ITER(hh, sumItem->sub, sumIter, sumTemp) {
                     if (0 == memcmp(strong, sumIter->strong, STRONG_SUM_SIZE)) {
                         sumIter->offset = i;
-                        sameCount++;
+                        handle->meta->same_count++;
                     }
                 }
             }
@@ -363,7 +364,7 @@ static CRSYNCcode crsync_msum_generate(crsync_handle_t *handle) {
         tpl_unmap_file(&rec);
     }
     uint32_t totalCount = handle->meta->file_sz / handle->meta->block_sz;
-    LOGI("crsync_msum_generate total = %d, same = %d, miss = %d\n", totalCount, sameCount, totalCount-sameCount);
+    LOGI("crsync_msum_generate total = %d, same = %d, miss = %d\n", totalCount, handle->meta->same_count, totalCount - handle->meta->same_count);
     LOGI("crsync_msum_generate code = %d\n", code);
     return code;
 }
@@ -427,11 +428,11 @@ static CRSYNCcode crsync_msum_load(crsync_handle_t *handle) {
     uint32_t    seq;
     int32_t     offset;
     uint32_t    blocks = 0;
-    uint32_t    sameCount = 0;
     UT_string   *msumFilename = get_full_string(handle->outputdir, handle->hash, MSUM_SUFFIX);
 
     crsync_sum_free(handle);
     handle->meta = calloc(1, sizeof(rsum_meta_t));
+    handle->meta->same_count = 0;
 
     tn = tpl_map(MSUM_TPLMAP_FORMAT,
                  &handle->meta->file_sz,
@@ -459,7 +460,7 @@ static CRSYNCcode crsync_msum_load(crsync_handle_t *handle) {
             sumItem->offset = offset;
             sumItem->sub = NULL;
             if(offset >= 0) {
-                sameCount++;
+                handle->meta->same_count++;
             }
 
             HASH_FIND_INT(handle->sums, &weak, sumTemp);
@@ -475,7 +476,7 @@ static CRSYNCcode crsync_msum_load(crsync_handle_t *handle) {
 
     utstring_free(msumFilename);
 
-    LOGI("crsync_msum_load total = %d, same = %d, miss = %d\n", blocks, sameCount, blocks-sameCount);
+    LOGI("crsync_msum_load total = %d, same = %d, miss = %d\n", blocks, handle->meta->same_count, blocks-handle->meta->same_count);
     LOGI("crsync_msum_load code = %d\n", code);
     return code;
 }
