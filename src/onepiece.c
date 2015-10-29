@@ -322,8 +322,6 @@ CRSYNCcode onepiece_perform_MatchApp() {
         if(CRSYNCE_OK == code) {
             onepiece->magnet->app->size = onepiece->crsync_handle->meta->file_sz;
             onepiece->magnet->app->diff_size = onepiece->crsync_handle->meta->file_sz - onepiece->crsync_handle->meta->same_count * onepiece->crsync_handle->meta->block_sz;
-        } else {
-            break;
         }
     } while(0);
 
@@ -346,6 +344,9 @@ CRSYNCcode onepiece_perform_PatchApp() {
         crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_BASEURL, onepiece->baseUrl);
         crsync_easy_setopt(onepiece->crsync_handle, CRSYNCOPT_XFER, (void*)onepiece->xfer);
 
+        //call match to update msums to crsync_handle
+        code = crsync_easy_perform_match(onepiece->crsync_handle);
+        if(CRSYNCE_OK != code) break;
         code = crsync_easy_perform_patch(onepiece->crsync_handle);
         if(CRSYNCE_OK != code) break;
         onepiece->xfer(onepiece->magnet->app->hash, 100);
@@ -420,7 +421,7 @@ CRSYNCcode onepiece_perform_MatchRes() {
     LOGI("onepiece_perform_MatchRes code = %d\n", code);
     return code;
 }
-
+/*
 CRSYNCcode onepiece_perform_updateapp() {
     LOGI("onepiece_perform_updateapp\n");
     CRSYNCcode code = onepiece_checkopt();
@@ -445,7 +446,7 @@ CRSYNCcode onepiece_perform_updateapp() {
 
     LOGI("onepiece_perform_updateapp code = %d", code);
     return code;
-}
+}*/
 
 static curl_off_t localFileResumeSize = 0L;
 
@@ -514,7 +515,7 @@ static CRSYNCcode onepiece_updateres_curl(const char *resname, const char *resha
     LOGI("onepiece_updateres_curl code = %d\n", code);
     return code;
 }
-
+/*
 CRSYNCcode onepiece_perform_updateres() {
     LOGI("onepiece_perform_updateres\n");
     CRSYNCcode code = onepiece_checkopt();
@@ -591,7 +592,7 @@ CRSYNCcode onepiece_perform_updateres() {
     utstring_free(hash);
     LOGI("onepiece_perform_updateres code = %d\n", code);
     return code;
-}
+}*/
 
 CRSYNCcode onepiece_perform_PatchRes() {
     LOGI("onepiece_perform_PatchRes\n");

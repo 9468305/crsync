@@ -78,8 +78,8 @@ CRSYNCcode onepiece_perform_MatchApp();
 CRSYNCcode onepiece_perform_PatchApp();
 CRSYNCcode onepiece_perform_MatchRes();
 CRSYNCcode onepiece_perform_PatchRes();
-CRSYNCcode onepiece_perform_updateapp();
-CRSYNCcode onepiece_perform_updateres();
+//CRSYNCcode onepiece_perform_updateapp();
+//CRSYNCcode onepiece_perform_updateres();
 void onepiece_cleanup();
 
 #if defined __cplusplus

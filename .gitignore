@@ -5,6 +5,7 @@
 *.elf
 *.d
 src/obj/
+src/libs/
 
 # Precompiled Headers
 *.gch
