@@ -42,9 +42,10 @@ static const int MAX_PATCH_RETRY = 3;
 static const unsigned int SLEEP_PATCH_MSYNC = 1;
 
 /*default empty xfer callback, do nothing and keep going on.*/
-int xfer_default(const char *hash, int percent) {
+int xfer_default(const char *hash, int percent, double speed) {
     (void)hash;
     (void)percent;
+    (void)speed;
     return 0;
 }
 
@@ -499,8 +500,9 @@ static size_t crsync_msum_curl_callback(void *contents, size_t size, size_t nmem
     }
 }
 
-static CRSYNCcode crsync_msum_curl(crsync_handle_t *handle, rsum_t *sumItem, tpl_mmap_rec *recNew) {
+static CRSYNCcode crsync_msum_curl(crsync_handle_t *handle, rsum_t *sumItem, tpl_mmap_rec *recNew, double *speed) {
     CURLcode    code = CURL_LAST;
+    *speed = 0;
     long        rangeFrom = sumItem->seq * handle->meta->block_sz;
     long        rangeTo = rangeFrom + handle->meta->block_sz - 1;
     UT_string   *range = NULL;
@@ -524,6 +526,10 @@ static CRSYNCcode crsync_msum_curl(crsync_handle_t *handle, rsum_t *sumItem, tpl
 
         code = curl_easy_perform(handle->curl_handle);
         if(CURLE_OK == code) {
+            CURLcode curlCode = curl_easy_getinfo(handle->curl_handle, CURLINFO_SPEED_DOWNLOAD, speed);
+            if(curlCode != CURLE_OK || *speed <= 0) {
+                *speed = 0;
+            }
             if( handle->curl_buffer_offset == handle->meta->block_sz ) {
                 memcpy(recNew->text + rangeFrom, handle->curl_buffer, handle->curl_buffer_offset);
                 int ret = msync(recNew->text + rangeFrom, handle->curl_buffer_offset, MS_SYNC);
@@ -545,8 +551,9 @@ static CRSYNCcode crsync_msum_curl(crsync_handle_t *handle, rsum_t *sumItem, tpl
     return (code == CURLE_OK) ? CRSYNCE_OK : CRSYNCE_CURL_ERROR;
 }
 
-static CRSYNCcode crsync_msum_patch(crsync_handle_t *handle, rsum_t *sumItem, tpl_mmap_rec *recOld, tpl_mmap_rec *recNew, uint8_t *strong) {
+static CRSYNCcode crsync_msum_patch(crsync_handle_t *handle, rsum_t *sumItem, tpl_mmap_rec *recOld, tpl_mmap_rec *recNew, uint8_t *strong, double *speed) {
     CRSYNCcode code = CRSYNCE_OK;
+    *speed = 0;
     rsum_strong_block(recNew->text, sumItem->seq * handle->meta->block_sz, handle->meta->block_sz, strong);
     if(0 != memcmp(strong, sumItem->strong, STRONG_SUM_SIZE)) {
         if( (sumItem->offset != -1) && (recOld->fd != -1) ) {
@@ -556,7 +563,7 @@ static CRSYNCcode crsync_msum_patch(crsync_handle_t *handle, rsum_t *sumItem, tp
                 LOGE("msync failed\n");
             }
         } else {
-            code = crsync_msum_curl(handle, sumItem, recNew);
+            code = crsync_msum_curl(handle, sumItem, recNew, speed);
         }
     }
     return code;
@@ -715,7 +722,7 @@ CRSYNCcode crsync_easy_perform_patch(crsync_handle_t *handle) {
     int retry = 0;
     do {
         //check cancellation here, since perform_match doesn't check it.
-        isCancel = handle->xfer(handle->hash, 0);
+        isCancel = handle->xfer(handle->hash, 0, 0);
         if(isCancel) {
             code = CRSYNCE_CANCEL;
             break;
@@ -735,12 +742,13 @@ CRSYNCcode crsync_easy_perform_patch(crsync_handle_t *handle) {
             recNew.text_sz = handle->meta->file_sz;
             uint32_t blocks = handle->meta->file_sz / handle->meta->block_sz;
             uint32_t count = 0;
+            double speed = 0;
             rsum_t *sumItem=NULL, *sumTemp=NULL, *sumIter=NULL, *sumTemp2=NULL;
             HASH_ITER(hh, handle->sums, sumItem, sumTemp) {
-                code = crsync_msum_patch(handle, sumItem, &recOld, &recNew, strong);
+                code = crsync_msum_patch(handle, sumItem, &recOld, &recNew, strong, &speed);
                 int percent = count++ * 100 / blocks;
                 percent = (percent >= 100) ? 99 : percent;
-                isCancel = handle->xfer(handle->hash, percent);//100 means done, but here still need do something.
+                isCancel = handle->xfer(handle->hash, percent, speed);//100 means done, but here still need do something.
                 if(isCancel) {
                     code = CRSYNCE_CANCEL;
                 }
@@ -748,10 +756,10 @@ CRSYNCcode crsync_easy_perform_patch(crsync_handle_t *handle) {
                     break;
                 }
                 HASH_ITER(hh, sumItem->sub, sumIter, sumTemp2 ) {
-                    code = crsync_msum_patch(handle, sumIter, &recOld, &recNew, strong);
+                    code = crsync_msum_patch(handle, sumIter, &recOld, &recNew, strong, &speed);
                     int percent = count++ * 100 / blocks;
                     percent = (percent >= 100) ? 99 : percent;
-                    isCancel = handle->xfer(handle->hash, percent);//100 means done, but here still need do something.
+                    isCancel = handle->xfer(handle->hash, percent, speed);//100 means done, but here still need do something.
                     if(isCancel) {
                         code = CRSYNCE_CANCEL;
                     }

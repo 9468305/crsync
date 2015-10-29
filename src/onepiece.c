@@ -349,7 +349,7 @@ CRSYNCcode onepiece_perform_PatchApp() {
         if(CRSYNCE_OK != code) break;
         code = crsync_easy_perform_patch(onepiece->crsync_handle);
         if(CRSYNCE_OK != code) break;
-        onepiece->xfer(onepiece->magnet->app->hash, 100);
+        onepiece->xfer(onepiece->magnet->app->hash, 100, 0);
     } while(0);
 
     LOGI("onepiece_perform_PatchApp code = %d", code);
@@ -456,7 +456,12 @@ static int onepiece_updateres_curl_progress(void *clientp, curl_off_t dltotal, c
     (void)ulnow;
     // dltotal dlnow only for current download process, exclude local resume size, so add it here
     int percent = (dltotal > 0) ? ( (dlnow + localFileResumeSize) * 100 / dltotal) : 0;
-    int isCancel = onepiece->xfer(hash, percent);
+    double speed = 0;
+    CURLcode curlCode = curl_easy_getinfo(onepiece->curl_handle, CURLINFO_SPEED_DOWNLOAD, &speed);
+    if(curlCode != CURLE_OK || speed <= 0) {
+        speed = 0;
+    }
+    int isCancel = onepiece->xfer(hash, percent, speed);
     return isCancel;
 }
 
@@ -611,7 +616,7 @@ CRSYNCcode onepiece_perform_PatchRes() {
         LOGI("updateres %s %s %d\n", elt->name, elt->hash, elt->size);
         //skip when match result is 100% same
         if(elt->diff_size == 0) {
-            onepiece->xfer(elt->hash, 100);
+            onepiece->xfer(elt->hash, 100, 0);
             continue;
         }
         utstring_clear(hash);
@@ -644,7 +649,7 @@ CRSYNCcode onepiece_perform_PatchRes() {
         //2. skip update if hash is same
         if(0 == strncmp(utstring_body(hash), elt->hash, strlen(elt->hash))) {
             elt->diff_size = 0;
-            onepiece->xfer(elt->hash, 100);
+            onepiece->xfer(elt->hash, 100, 0);
             utstring_free(localfile);
             continue;
         }
@@ -671,7 +676,7 @@ CRSYNCcode onepiece_perform_PatchRes() {
         creat(utstring_body(file_hash), 700);
         utstring_free(file_hash);
         elt->diff_size = 0;
-        onepiece->xfer(elt->hash, 100);
+        onepiece->xfer(elt->hash, 100, 0);
         //TODO: Currently lack of remove old file_hash; there will be many file_hash exist at device!
     }
     utstring_free(hash);

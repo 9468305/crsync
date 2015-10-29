@@ -42,7 +42,7 @@ static JavaVM* gJavaVM = NULL;
 static jclass gJavaClass = NULL;
 static clock_t gClock = 0;
 
-int onepiece_xfer(const char *hash, int percent) {
+int onepiece_xfer(const char *hash, int percent, double speed) {
     clock_t now = clock();
     long diff = (long)(now - gClock);
     if( diff < CLOCKS_PER_SEC && percent != 100) {
@@ -54,7 +54,8 @@ int onepiece_xfer(const char *hash, int percent) {
     int isCancel = 0;
     if ((*gJavaVM)->GetEnv(gJavaVM, (void**)&env, JNI_VERSION_1_6) == JNI_OK) {
         jstring jname = (*env)->NewStringUTF( env, hash );
-        isCancel = (*env)->CallStaticIntMethod(env, gJavaClass, GMethod_xfer, jname, (jint)percent);
+        jlong speedKiB = (jlong)(speed/1024);
+        isCancel = (*env)->CallStaticIntMethod(env, gJavaClass, GMethod_xfer, jname, (jint)percent, speedKiB);
         (*env)->DeleteLocalRef(env, jname);
     }
     return isCancel;
@@ -119,19 +120,7 @@ jint JNI_onepiece_perform_PatchRes(JNIEnv *env, jclass clazz) {
     onepiece_setopt(ONEPIECEOPT_XFER, (void*)onepiece_xfer);
     return (jint)onepiece_perform_PatchRes();
 }
-/*
-jint JNI_onepiece_perform_updateapp(JNIEnv *env, jclass clazz) {
-    gClock = clock();
-    onepiece_setopt(ONEPIECEOPT_XFER, (void*)onepiece_xfer);
-    return (jint)onepiece_perform_updateapp();
-}
 
-jint JNI_onepiece_perform_updateres(JNIEnv *env, jclass clazz) {
-    gClock = clock();
-    onepiece_setopt(ONEPIECEOPT_XFER, (void*)onepiece_xfer);
-    return (jint)onepiece_perform_updateres();
-}
-*/
 void JNI_onepiece_cleanup(JNIEnv *env, jclass clazz) {
     onepiece_cleanup();
 }
@@ -163,7 +152,7 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
 
     // hook up java functions to string names and param
     JNIJavaMethods JavaMethods[] = {
-        { &GMethod_xfer, "java_onepiece_xfer", "(Ljava/lang/String;I)I" }, //public static int java_onepiece_xfer(String, int);
+        { &GMethod_xfer, "java_onepiece_xfer", "(Ljava/lang/String;IJ)I" }, //public static int java_onepiece_xfer(String, int, long);
     };
 
     int result = 1;

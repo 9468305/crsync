@@ -81,11 +81,13 @@ typedef enum {
 } CRSYNCcode;
 
 /*  transfer process callback
+ *  params:
     hash: current file hash name
     percent: 0~100
+    speed: %0.3f bytes/second
     return: 0 - go on; 1 - cancel
 */
-typedef int (xfer_callback)(const char* hash, int percent);
+typedef int (xfer_callback)(const char* hash, int percent, double speed);
 
 typedef struct crsync_handle_t {
     rsum_meta_t     *meta;              /* file meta info */
@@ -100,7 +102,7 @@ typedef struct crsync_handle_t {
     xfer_callback   *xfer;              /* progress callback hook */
 } crsync_handle_t;
 
-int xfer_default(const char *hash, int percent);
+int xfer_default(const char *hash, int percent, double speed);
 
 void rsum_weak_block(const uint8_t *data, uint32_t start, uint32_t block_sz, uint32_t *weak);
 void rsum_weak_rolling(const uint8_t *data, uint32_t start, uint32_t block_sz, uint32_t *weak);
