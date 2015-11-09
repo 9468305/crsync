@@ -32,6 +32,8 @@ static const unsigned int MAGNET_SLEEP_RETRY = 1;
 static const int MAX_CURL_RETRY = 5;
 static const unsigned int SLEEP_CURL_RETRY = 5;
 
+static int isNeverUpdate = 0; // auto update = 0; never update = 1;
+
 void res_free(res_t *res) {
     res_t *elt, *tmp;
     LL_FOREACH_SAFE(res,elt,tmp) {
@@ -128,6 +130,7 @@ CRSYNCcode onepiece_init() {
         code = crsync_global_init();
         if(CRSYNCE_OK != code) break;
         onepiece = calloc(1, sizeof(onepiece_t));
+        isNeverUpdate = 0;
         onepiece->xfer = xfer_default;
         onepiece->magnet = onepiece_magnet_malloc();
         onepiece->curl_handle = curl_easy_init();
@@ -188,6 +191,13 @@ CRSYNCcode onepiece_setopt(ONEPIECEoption opt, void *value) {
                 free(onepiece->localRes);
             }
             onepiece->localRes = strdup( (const char*)value );
+            break;
+        case ONEPIECEOPT_NEVERUPDATE:
+            if(0 == strncmp((const char*)value, "1", 1)) {
+                isNeverUpdate = 1;
+            } else {
+                isNeverUpdate = 0;
+            }
             break;
         case ONEPIECEOPT_XFER:
             onepiece->xfer = (xfer_callback*)value;
@@ -291,6 +301,18 @@ CRSYNCcode onepiece_perform_query() {
     }
     const char *id = onepiece->start_id;
     magnet_t *magnet = onepiece_magnet_malloc();
+    
+    //temp implement from boss!
+    if(isNeverUpdate == 1) {
+        if(CRSYNCE_OK == onepiece_magnet_query(id, magnet)) {
+            onepiece_magnet_free(onepiece->magnet);
+            onepiece->magnet = magnet;
+        }
+        code = (NULL == onepiece->magnet->curr_id) ? CRSYNCE_CURL_ERROR : CRSYNCE_OK;
+        LOGI("onepiece_perform_query code = %d\n", code);
+        return code;
+    }
+
     while( CRSYNCE_OK == onepiece_magnet_query(id, magnet) ) {
         onepiece_magnet_free(onepiece->magnet);
         onepiece->magnet = magnet;
