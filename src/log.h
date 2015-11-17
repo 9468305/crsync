@@ -41,10 +41,10 @@ extern "C" {
 #       define LOGE(fmt, ...)  __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, "[%s]: " fmt, __func__, ##__VA_ARGS__)
 #   else
 #       include <stdio.h>
-#       define LOGD(...)  printf(__VA_ARGS__)
-#       define LOGI(...)  printf(__VA_ARGS__)
-#       define LOGW(...)  printf(__VA_ARGS__)
-#       define LOGE(...)  printf(__VA_ARGS__)
+#       define LOGD(fmt, ...)  printf("D [%s]: " fmt, __func__, ##__VA_ARGS__)
+#       define LOGI(fmt, ...)  printf("I [%s]: " fmt, __func__, ##__VA_ARGS__)
+#       define LOGW(fmt, ...)  printf("W [%s]: " fmt, __func__, ##__VA_ARGS__)
+#       define LOGE(fmt, ...)  printf("E [%s]: " fmt, __func__, ##__VA_ARGS__)
 #   endif
 
 #else

@@ -28,6 +28,8 @@ SOFTWARE.
 #   include <sys/mman.h>   /* mmap */
 #endif
 #include <unistd.h>
+#include <errno.h>
+#include <time.h>
 
 #include "crsync.h"
 #include "blake2.h"
@@ -38,8 +40,6 @@ SOFTWARE.
 static const size_t MAX_CURL_WRITESIZE = 16*1024; /* curl write data buffer size */
 static const int MAX_CURL_RETRY = 5;
 static const unsigned int SLEEP_CURL_RETRY = 5;
-static const int MAX_PATCH_RETRY = 3;
-static const unsigned int SLEEP_PATCH_MSYNC = 1;
 
 /*default empty xfer callback, do nothing and keep going on.*/
 int xfer_default(const char *hash, int percent, double speed) {
@@ -532,11 +532,7 @@ static CRSYNCcode crsync_msum_curl(crsync_handle_t *handle, rsum_t *sumItem, tpl
             }
             if( handle->curl_buffer_offset == handle->meta->block_sz ) {
                 memcpy(recNew->text + rangeFrom, handle->curl_buffer, handle->curl_buffer_offset);
-                int ret = msync(recNew->text + rangeFrom, handle->curl_buffer_offset, MS_SYNC);
-                if(-1 == ret) {
-                    LOGE("msync failed\n");
-                }
-                break;
+                break;//success
             }
         } else {
             LOGI("crsync_msum_curl code = %d\n", code);
@@ -558,10 +554,6 @@ static CRSYNCcode crsync_msum_patch(crsync_handle_t *handle, rsum_t *sumItem, tp
     if(0 != memcmp(strong, sumItem->strong, STRONG_SUM_SIZE)) {
         if( (sumItem->offset != -1) && (recOld->fd != -1) ) {
             memcpy(recNew->text + sumItem->seq * handle->meta->block_sz, recOld->text + sumItem->offset, handle->meta->block_sz);
-            int ret = msync(recNew->text + sumItem->seq * handle->meta->block_sz, handle->meta->block_sz, MS_SYNC);
-            if(-1 == ret) {
-                LOGE("msync failed\n");
-            }
         } else {
             code = crsync_msum_curl(handle, sumItem, recNew, speed);
         }
@@ -675,6 +667,7 @@ static CRSYNCcode crsync_checkopt(crsync_handle_t *handle) {
 
 CRSYNCcode crsync_easy_perform_match(crsync_handle_t *handle) {
     LOGI("crsync_easy_perform_match\n");
+    clock_t clockStart = clock();
     CRSYNCcode code = crsync_checkopt(handle);
     if(CRSYNCE_OK != code){
         LOGI("crsync_easy_perform_match code = %d\n", code);
@@ -704,7 +697,9 @@ CRSYNCcode crsync_easy_perform_match(crsync_handle_t *handle) {
     } while(0);
     utstring_free(filename);
 
-    LOGI("crsync_easy_perform_match code = %d\n", code);
+    clock_t clockEnd = clock();
+    double timeCost = (double)(clockEnd - clockStart)/CLOCKS_PER_SEC;
+    LOGI("crsync_easy_perform_match code = %d time = %f seconds\n", code, timeCost);
     return code;
 }
 
@@ -719,7 +714,6 @@ CRSYNCcode crsync_easy_perform_patch(crsync_handle_t *handle) {
     UT_string *newFilename = get_full_string(handle->outputdir, handle->hash, NULL);
     int isCancel = 0;
 
-    int retry = 0;
     do {
         //check cancellation here, since perform_match doesn't check it.
         isCancel = handle->xfer(handle->hash, 0, 0);
@@ -778,18 +772,16 @@ CRSYNCcode crsync_easy_perform_patch(crsync_handle_t *handle) {
                     memcpy(dst, src, handle->meta->rest_tb.sz);
                 }
             }
-            if(-1 == msync(recNew.text, recNew.text_sz, MS_SYNC)) {
-                LOGE("msync failed\n");
-            }
         } while (0);
         curl_easy_reset(handle->curl_handle);
-
+        if(-1 == msync(recNew.text, recNew.text_sz, MS_SYNC)) {
+            LOGE("msync failed %s\n", strerror(errno));
+        }
         tpl_unmap_file(&recNew);
         tpl_unmap_file(&recOld);
 
         //verify whole file again
         if(CRSYNCE_OK == code) {
-            sleep(SLEEP_PATCH_MSYNC);// wait 1s for file sync done
             rsum_strong_file(utstring_body(newFilename), strong);
             if(0 == memcmp(strong, handle->meta->file_sum, STRONG_SUM_SIZE)) {
                 //patch done, delete temp files
@@ -804,8 +796,7 @@ CRSYNCcode crsync_easy_perform_patch(crsync_handle_t *handle) {
         } else if(CRSYNCE_CANCEL == code) {
             break; //patch cancelled by user
         }
-        retry++;
-    } while(retry < MAX_PATCH_RETRY);
+    } while(0);
 
     utstring_free(newFilename);
     LOGI("crsync_easy_perform_patch code = %d\n", code);
