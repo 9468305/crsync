@@ -36,9 +36,9 @@ extern "C" {
 #       include <android/log.h>
 #       define LOG_TAG "crsync_ndk"
 #       define LOGD(fmt, ...)  __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "[%s]: " fmt, __func__, ##__VA_ARGS__)
-#       define LOGI(fmt, ...)  __android_log_print(ANDROID_LOG_INFO,  LOG_TAG, "[%s]: " fmt, __FUNCTION__, ##__VA_ARGS__)
-#       define LOGW(fmt, ...)  __android_log_print(ANDROID_LOG_WARN,  LOG_TAG, "[%s]: " fmt, __FUNCTION__, ##__VA_ARGS__)
-#       define LOGE(fmt, ...)  __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, "[%s]: " fmt, __FUNCTION__, ##__VA_ARGS__)
+#       define LOGI(fmt, ...)  __android_log_print(ANDROID_LOG_INFO,  LOG_TAG, "[%s]: " fmt, __func__, ##__VA_ARGS__)
+#       define LOGW(fmt, ...)  __android_log_print(ANDROID_LOG_WARN,  LOG_TAG, "[%s]: " fmt, __func__, ##__VA_ARGS__)
+#       define LOGE(fmt, ...)  __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, "[%s]: " fmt, __func__, ##__VA_ARGS__)
 #   else
 #       include <stdio.h>
 #       define LOGD(...)  printf(__VA_ARGS__)
