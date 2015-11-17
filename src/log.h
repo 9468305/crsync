@@ -34,19 +34,17 @@ extern "C" {
 
 #   if defined ANDROID
 #       include <android/log.h>
-#       define LOG "crsync"
-#       define LOGD(...)  __android_log_print(ANDROID_LOG_DEBUG, LOG, __VA_ARGS__)
-#       define LOGI(...)  __android_log_print(ANDROID_LOG_INFO, LOG, __VA_ARGS__)
-#       define LOGW(...)  __android_log_print(ANDROID_LOG_WARN, LOG, __VA_ARGS__)
-#       define LOGE(...)  __android_log_print(ANDROID_LOG_ERROR, LOG, __VA_ARGS__)
-#       define LOGF(...)  __android_log_print(ANDROID_LOG_FATAL, LOG, __VA_ARGS__)
+#       define LOG_TAG "crsync_ndk"
+#       define LOGD(fmt, ...)  __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "[%s]: " fmt, __func__, ##__VA_ARGS__)
+#       define LOGI(fmt, ...)  __android_log_print(ANDROID_LOG_INFO,  LOG_TAG, "[%s]: " fmt, __FUNCTION__, ##__VA_ARGS__)
+#       define LOGW(fmt, ...)  __android_log_print(ANDROID_LOG_WARN,  LOG_TAG, "[%s]: " fmt, __FUNCTION__, ##__VA_ARGS__)
+#       define LOGE(fmt, ...)  __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, "[%s]: " fmt, __FUNCTION__, ##__VA_ARGS__)
 #   else
 #       include <stdio.h>
 #       define LOGD(...)  printf(__VA_ARGS__)
 #       define LOGI(...)  printf(__VA_ARGS__)
 #       define LOGW(...)  printf(__VA_ARGS__)
 #       define LOGE(...)  printf(__VA_ARGS__)
-#       define LOGF(...)  printf(__VA_ARGS__)
 #   endif
 
 #else
@@ -55,7 +53,6 @@ extern "C" {
 #   define LOGI(...)
 #   define LOGW(...)
 #   define LOGE(...)
-#   define LOGF(...)
 
 #endif
 
