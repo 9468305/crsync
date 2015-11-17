@@ -14,4 +14,8 @@ LOCAL_C_INCLUDES += ../extra
 LOCAL_STATIC_LIBRARIES := curl
 LOCAL_CFLAGS += -DCURL_STATICLIB -std=c99
 LOCAL_LDLIBS := -lc -lz -llog
+
+LOCAL_CFLAGS += -fopenmp
+LOCAL_LDFLAGS += -fopenmp
+
 include $(BUILD_SHARED_LIBRARY)

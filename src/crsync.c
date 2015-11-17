@@ -30,6 +30,7 @@ SOFTWARE.
 #include <unistd.h>
 #include <errno.h>
 #include <time.h>
+#include <omp.h>
 
 #include "crsync.h"
 #include "blake2.h"
@@ -40,6 +41,7 @@ SOFTWARE.
 static const size_t MAX_CURL_WRITESIZE = 16*1024; /* curl write data buffer size */
 static const int MAX_CURL_RETRY = 5;
 static const unsigned int SLEEP_CURL_RETRY = 5;
+static const int CRSYNC_PARALLEL_NUM = 8;
 
 /*default empty xfer callback, do nothing and keep going on.*/
 int xfer_default(const char *hash, int percent, double speed) {
@@ -333,12 +335,48 @@ static CRSYNCcode crsync_msum_generate(crsync_handle_t *handle) {
     CRSYNCcode code = CRSYNCE_OK;
 
     tpl_mmap_rec    rec = {-1, NULL, 0};
-    uint32_t        weak = 0, i = 0;
-    uint8_t         strong[STRONG_SUM_SIZE] = {""};
-    rsum_t          *sumItem = NULL, *sumIter = NULL, *sumTemp = NULL;
+    //uint32_t        i = 0;
 
     handle->meta->same_count = 0;
+    //TODO: fixbug - when rec.text_sz too small;
     if ( 0 == tpl_mmap_file(handle->fullFilename, &rec) ) {
+        uint32_t parallelMemSize = (rec.text_sz + CRSYNC_PARALLEL_NUM - 1) / CRSYNC_PARALLEL_NUM;
+        uint32_t rollEndTotal = rec.text_sz - handle->meta->block_sz;
+        #pragma omp parallel for
+        for(int i=0; i<CRSYNC_PARALLEL_NUM; i++) {
+            uint32_t rollStart = i * parallelMemSize;
+            uint32_t rollEnd = rollStart + parallelMemSize - handle->meta->block_sz;
+            rollEnd = rollEnd < rollEndTotal ? rollEnd : rollEndTotal;
+            uint32_t weak = 0;
+            uint8_t strong[STRONG_SUM_SIZE] = {""};
+            uint32_t i = rollStart;
+            rsum_t *sumItem = NULL, *sumIter = NULL, *sumTemp = NULL;
+            rsum_weak_block(rec.text, i, handle->meta->block_sz, &weak);
+            while(1) {
+                HASH_FIND_INT( handle->sums, &weak, sumItem );
+                if(sumItem) {
+                    rsum_strong_block(rec.text, i, handle->meta->block_sz, strong);
+                    if (0 == memcmp(strong, sumItem->strong, STRONG_SUM_SIZE)) {
+                        sumItem->offset = i;
+                        handle->meta->same_count++;
+                    }
+                    HASH_ITER(hh, sumItem->sub, sumIter, sumTemp) {
+                        if (0 == memcmp(strong, sumIter->strong, STRONG_SUM_SIZE)) {
+                            sumIter->offset = i;
+                            handle->meta->same_count++;
+                        }
+                    }
+                }
+                if (i > rollEnd) {
+                    break;
+                }
+                rsum_weak_rolling(rec.text, i++, handle->meta->block_sz, &weak);
+            }
+        }
+
+
+
+        /*
         rsum_weak_block(rec.text, 0, handle->meta->block_sz, &weak);
 
         while (1) {
@@ -361,7 +399,7 @@ static CRSYNCcode crsync_msum_generate(crsync_handle_t *handle) {
                 break;
             }
             rsum_weak_rolling(rec.text, i++, handle->meta->block_sz, &weak);
-        }
+        }*/
         tpl_unmap_file(&rec);
     }
     uint32_t totalCount = handle->meta->file_sz / handle->meta->block_sz;
