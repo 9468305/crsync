@@ -16,7 +16,7 @@
 
 #include <stdint.h>
 
-#define NATIVE_LITTLE_ENDIAN
+#define NATIVE_LITTLE_ENDIAN 1
 
 static inline uint32_t load32( const void *src )
 {

@@ -45,13 +45,13 @@ static const uint8_t blake2b_sigma[12][16] =
 
 static inline int blake2b_set_lastnode( blake2b_state *S )
 {
-  S->f[1] = ~0ULL;
+  S->f[1] = -1;
   return 0;
 }
 
 static inline int blake2b_clear_lastnode( blake2b_state *S )
 {
-  S->f[1] = 0ULL;
+  S->f[1] = 0;
   return 0;
 }
 
@@ -60,7 +60,7 @@ static inline int blake2b_set_lastblock( blake2b_state *S )
 {
   if( S->last_node ) blake2b_set_lastnode( S );
 
-  S->f[0] = ~0ULL;
+  S->f[0] = -1;
   return 0;
 }
 
@@ -68,7 +68,7 @@ static inline int blake2b_clear_lastblock( blake2b_state *S )
 {
   if( S->last_node ) blake2b_clear_lastnode( S );
 
-  S->f[0] = 0ULL;
+  S->f[0] = 0;
   return 0;
 }
 
@@ -341,11 +341,15 @@ int blake2b( uint8_t *out, const void *in, const void *key, const uint8_t outlen
   blake2b_state S[1];
 
   /* Verify parameters */
-  if ( NULL == in ) return -1;
+  if ( NULL == in && inlen > 0 ) return -1;
 
   if ( NULL == out ) return -1;
 
-  if( NULL == key ) keylen = 0;
+  if( NULL == key && keylen > 0 ) return -1;
+
+  if( !outlen || outlen > BLAKE2B_OUTBYTES ) return -1;
+
+  if( keylen > BLAKE2B_KEYBYTES ) return -1;
 
   if( keylen > 0 )
   {
@@ -360,6 +364,13 @@ int blake2b( uint8_t *out, const void *in, const void *key, const uint8_t outlen
   blake2b_final( S, out, outlen );
   return 0;
 }
+
+#if defined(SUPERCOP)
+int crypto_hash( unsigned char *out, unsigned char *in, unsigned long long inlen )
+{
+  return blake2b( out, in, NULL, BLAKE2B_OUTBYTES, inlen, 0 );
+}
+#endif
 
 #if defined(BLAKE2B_SELFTEST)
 #include <string.h>
