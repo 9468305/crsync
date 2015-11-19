@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <sys/stat.h>
 
 #if defined(_OPENMP)
 #include <omp.h>
@@ -257,7 +258,68 @@ int blake2sp( uint8_t *out, const void *in, const void *key, uint8_t outlen, uin
   return blake2s_final( FS, out, outlen );
 }
 
+int blake2sp_file( const char *filename, uint8_t *out, uint8_t outlen )
+{
+  memset(out, 0, outlen);
+  static const size_t buf_len = 8*1024;
+  struct stat st;
+  if(stat(filename, &st) != 0 || !S_ISREG(st.st_mode)) return -1; // file not exist or not regular file
+  if(st.st_size == 0) return 0; // empty file
+  const size_t parallel_size = (st.st_size + PARALLELISM_DEGREE - 1) / PARALLELISM_DEGREE;
 
+  uint8_t hash[PARALLELISM_DEGREE][BLAKE2S_OUTBYTES];
+  blake2s_state S[PARALLELISM_DEGREE][1];
+  blake2s_state FS[1];
+
+  for( size_t i = 0; i < PARALLELISM_DEGREE; ++i )
+    if( blake2sp_init_leaf( S[i], outlen, 0, i ) < 0 ) return -1;
+
+  S[PARALLELISM_DEGREE - 1]->last_node = 1; // mark last node
+
+#if defined(_OPENMP)
+  #pragma omp parallel shared(S,hash), num_threads(PARALLELISM_DEGREE)
+#else
+
+  for( size_t id__ = 0; id__ < PARALLELISM_DEGREE; ++id__ )
+#endif
+  {
+#if defined(_OPENMP)
+    size_t id__ = omp_get_thread_num();
+#endif
+    FILE *file = fopen(filename, "rb");
+    if(file)
+    {
+      size_t read_pos = id__ * parallel_size;
+      size_t read_len = (id__ == PARALLELISM_DEGREE-1) ? (st.st_size - read_pos) : (parallel_size);
+      uint8_t *buf = malloc(buf_len);
+
+      fseek(file, read_pos, SEEK_SET);
+      while( read_len >= buf_len )
+      {
+        fread(buf, buf_len, 1, file);
+        blake2s_update( S[id__], buf, buf_len);
+        read_len -= buf_len;
+      }
+
+      if(read_len > 0)
+      {
+        fread(buf, read_len, 1, file);
+        blake2s_update( S[id__], buf, read_len);
+      }
+
+      blake2s_final( S[id__], hash[id__], BLAKE2S_OUTBYTES );
+      free(buf);
+      fclose(file);
+    }
+  }
+
+  if( blake2sp_init_root( FS, outlen, 0 ) < 0 ) return -1;
+  FS->last_node = 1;
+  for( size_t i = 0; i < PARALLELISM_DEGREE; ++i )
+    blake2s_update( FS, hash[i], BLAKE2S_OUTBYTES );
+
+  return blake2s_final( FS, out, outlen );
+}
 
 #if defined(BLAKE2SP_SELFTEST)
 #include <string.h>
