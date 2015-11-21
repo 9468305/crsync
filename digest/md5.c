@@ -37,6 +37,7 @@
 
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/stat.h>
 #if defined(_OPENMP)
 #   include <omp.h>
@@ -306,7 +307,7 @@ void MD5_Data(const void *data, unsigned long size, unsigned char *result)
 }
 
 static const size_t buflen = 8*1024;
-static const size_t minlen = 1024*1024;
+static const long minlen = 1024*1024;
 
 void MD5_File(const char *filename, unsigned char *result)
 {
@@ -338,7 +339,7 @@ void MD5_File_Parallel( const char *filename, unsigned char *result )
     if(st.st_size < minlen) return MD5_File(filename, result);
     const size_t parallel_size = (st.st_size + MD5_PARALLELISM_DEGREE - 1) / MD5_PARALLELISM_DEGREE;
 
-    uint8_t sum[MD5_PARALLELISM_DEGREE][MD5_OUTBYTES];
+    unsigned char sum[MD5_PARALLELISM_DEGREE][MD5_OUTBYTES];
     MD5_CTX S[MD5_PARALLELISM_DEGREE][1];
 
 #if defined(_OPENMP)
@@ -356,7 +357,7 @@ void MD5_File_Parallel( const char *filename, unsigned char *result )
             MD5_Init(S[id__]);
             size_t read_pos = id__ * parallel_size;
             size_t read_len = (id__ == MD5_PARALLELISM_DEGREE-1) ? (st.st_size - read_pos) : (parallel_size);
-            uint8_t *buf = malloc(buflen);
+            unsigned char *buf = malloc(buflen);
 
             fseek(file, read_pos, SEEK_SET);
             while(read_len >= buflen)

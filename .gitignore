@@ -4,6 +4,7 @@
 *.obj
 *.elf
 *.d
+digest/m32/
 src/obj/
 src/libs/
 
