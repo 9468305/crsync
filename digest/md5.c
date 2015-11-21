@@ -40,7 +40,7 @@
 #include <sys/stat.h>
 #if defined(_OPENMP)
 #   include <omp.h>
-#   define MD5_PARALLELISM_DEGREE 8
+#   define MD5_PARALLELISM_DEGREE 4
 #endif
 
 #include "md5.h"

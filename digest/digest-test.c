@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <time.h>
+#include <sys/timeb.h>
 
 #include "blake2.h"
 #include "md5.h"
@@ -9,7 +10,8 @@
 #define buflen 8*1024
 
 int tests(const char *filename) {
-    clock_t start = clock();
+    struct timeb start, end;
+    ftime(&start);
     FILE *file = NULL;
 
     if ( (file = fopen(filename, "rb")) == NULL ) {
@@ -17,7 +19,7 @@ int tests(const char *filename) {
     }
 
     uint8_t *buf = malloc(buflen);
-    uint8_t *sum = malloc(BLAKE2S_OUTBYTES);
+    uint8_t sum[BLAKE2S_OUTBYTES];
     blake2s_state S;
     blake2s_init( &S, BLAKE2S_OUTBYTES );
     size_t length = 0;
@@ -26,21 +28,20 @@ int tests(const char *filename) {
     }
     blake2s_final( &S, sum, BLAKE2S_OUTBYTES );
 
-    clock_t end = clock();
-    double time = (double)(end - start) / CLOCKS_PER_SEC;
+    ftime(&end);
+    double time = (1000.0 * difftime(end.time, start.time) + end.millitm - start.millitm) / 1000;
     printf("blake2s time = %f seconds\n", time);
-    for(int i=0; i<BLAKE2S_OUTBYTES; i++) {
+    for(int i=0; i<BLAKE2S_OUTBYTES; i++)
         printf("%02x", sum[i]);
-    }
     printf("\n");
-    free(sum);
     free(buf);
     fclose(file);
     return 0;
 }
 
 int testsp(const char *filename) {
-    clock_t start = clock();
+    struct timeb start, end;
+    ftime(&start);
     FILE *file = NULL;
 
     if ( (file = fopen(filename, "rb")) == NULL ) {
@@ -48,7 +49,7 @@ int testsp(const char *filename) {
     }
 
     uint8_t *buf = malloc(buflen);
-    uint8_t *sum = malloc(BLAKE2S_OUTBYTES);
+    uint8_t sum[BLAKE2S_OUTBYTES];
     blake2sp_state S;
     blake2sp_init( &S, BLAKE2S_OUTBYTES );
     size_t length = 0;
@@ -57,51 +58,51 @@ int testsp(const char *filename) {
     }
     blake2sp_final( &S, sum, BLAKE2S_OUTBYTES );
 
-    clock_t end = clock();
-    double time = (double)(end - start) / CLOCKS_PER_SEC;
+    ftime(&end);
+    double time = (1000.0 * difftime(end.time, start.time) + end.millitm - start.millitm) / 1000;
     printf("blake2sp time = %f seconds\n", time);
-    for(int i=0; i<BLAKE2S_OUTBYTES; i++) {
+    for(int i=0; i<BLAKE2S_OUTBYTES; i++)
         printf("%02x", sum[i]);
-    }
     printf("\n");
-    free(sum);
     free(buf);
     fclose(file);
     return 0;
 }
 
 void testblake2sp_file(const char *filename) {
-    clock_t start = clock();
+    struct timeb start, end;
+    ftime(&start);
     uint8_t sum[BLAKE2S_OUTBYTES];
     blake2sp_file(filename, sum, BLAKE2S_OUTBYTES);
-    clock_t end = clock();
-    double time = (double)(end - start) / CLOCKS_PER_SEC;
+    ftime(&end);
+    double time = (1000.0 * difftime(end.time, start.time) + end.millitm - start.millitm) / 1000;
     printf("blake2sp_file time = %f seconds\n", time);
     for(int i=0; i<BLAKE2S_OUTBYTES; i++)
         printf("%02x", sum[i]);
     printf("\n");
 }
 
-void testMD5(const char *filename, int isP) {
-    clock_t start = clock();
-    uint8_t md5sum[MD5_OUTBYTES];
-    if(isP == 0)
-        MD5_File(filename, md5sum);
+void testMD5(const char *filename, int isParallel) {
+    struct timeb start, end;
+    ftime(&start);
+    uint8_t sum[MD5_OUTBYTES];
+    if(isParallel == 0)
+        MD5_File(filename, sum);
     else
-        MD5_File_Parallel(filename, md5sum);
-    clock_t end = clock();
-    double time = (double)(end - start) / CLOCKS_PER_SEC;
-    if(isP == 0)
+        MD5_File_Parallel(filename, sum);
+    ftime(&end);
+    double time = (1000.0 * difftime(end.time, start.time) + end.millitm - start.millitm) / 1000;
+    if(isParallel == 0)
         printf("md5 time = %f seconds\n", time);
     else
         printf("md5p time = %f seconds\n", time);
     for (int j = 0; j < MD5_OUTBYTES; j++)
-        printf("%02x", md5sum[j]);
+        printf("%02x", sum[j]);
     printf("\n");
 }
 
 int main( int argc, char **argv ) {
-    const char *filename = "/sdcard/smalltest.bin";//"/sdcard/test.obb";
+    const char *filename = "/sdcard/test.obb";
     tests(filename);
     //testsp(filename);
     testblake2sp_file(filename);
