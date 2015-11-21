@@ -32,15 +32,36 @@ extern "C" {
 
 #if CRSYNC_DEBUG
 
+#include "utstring.h"
+#include "utlist.h"
+
+typedef struct log_t {
+    char *content;
+    struct log_t *next;
+} log_t;
+
+void log_append(const char *s);
+
+#define LOG_APPEND(fmt, ...)  do{\
+                        __android_log_print(ANDROID_LOG_INFO,  LOG_TAG, "[%s]: " fmt, __func__, ##__VA_ARGS__);\
+                        UT_string *s;\
+                        utstring_new(s);\
+                        utstring_printf(s, "I [%s]: " fmt, __func__, ##__VA_ARGS__);\
+                        log_append(utstring_body(s));\
+                        utstring_free(s);\
+                    } while(0);
+
 #   if defined ANDROID
 #       include <android/log.h>
 #       define LOG_TAG "crsync_ndk"
+#       define LOG_FILE "/sdcard/crsync_ndk.log"
 #       define LOGD(fmt, ...)  __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "[%s]: " fmt, __func__, ##__VA_ARGS__)
-#       define LOGI(fmt, ...)  __android_log_print(ANDROID_LOG_INFO,  LOG_TAG, "[%s]: " fmt, __func__, ##__VA_ARGS__)
+#       define LOGI(fmt, ...)   LOG_APPEND(fmt, ##__VA_ARGS__)
 #       define LOGW(fmt, ...)  __android_log_print(ANDROID_LOG_WARN,  LOG_TAG, "[%s]: " fmt, __func__, ##__VA_ARGS__)
 #       define LOGE(fmt, ...)  __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, "[%s]: " fmt, __func__, ##__VA_ARGS__)
 #   else
 #       include <stdio.h>
+#       define LOG_FILE "crsync_core.log"
 #       define LOGD(fmt, ...)  printf("D [%s]: " fmt, __func__, ##__VA_ARGS__)
 #       define LOGI(fmt, ...)  printf("I [%s]: " fmt, __func__, ##__VA_ARGS__)
 #       define LOGW(fmt, ...)  printf("W [%s]: " fmt, __func__, ##__VA_ARGS__)
@@ -54,7 +75,10 @@ extern "C" {
 #   define LOGW(...)
 #   define LOGE(...)
 
-#endif
+#endif //CRSYNC_DEBUG
+
+//Dump log to file
+void logdump();
 
 #if defined __cplusplus
     }

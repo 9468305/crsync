@@ -26,6 +26,8 @@
 #ifndef _MD5_H
 #define _MD5_H
 
+#define MD5_OUTBYTES 16
+
 /* Any 32-bit or wider unsigned integer data type will do */
 typedef unsigned int MD5_u32plus;
 
@@ -36,8 +38,13 @@ typedef struct {
 	MD5_u32plus block[16];
 } MD5_CTX;
 
-extern void MD5_Init(MD5_CTX *ctx);
-extern void MD5_Update(MD5_CTX *ctx, const void *data, unsigned long size);
-extern void MD5_Final(unsigned char *result, MD5_CTX *ctx);
+void MD5_Init(MD5_CTX *ctx);
+void MD5_Update(MD5_CTX *ctx, const void *data, unsigned long size);
+void MD5_Final(MD5_CTX *ctx, unsigned char *result);
+
+/* Author: chenqi, <9468305@gmail.com> */
+void MD5_Data(const void *data, unsigned long size, unsigned char *result);
+void MD5_File(const char *filename, unsigned char *result);
+void MD5_File_Parallel(const char *filename, unsigned char *result);
 
 #endif

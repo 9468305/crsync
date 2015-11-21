@@ -23,7 +23,7 @@
 #include "blake2.h"
 #include "blake2-impl.h"
 
-#define PARALLELISM_DEGREE 4
+#define PARALLELISM_DEGREE 8
 
 static inline int blake2sp_init_leaf( blake2s_state *S, uint8_t outlen, uint8_t keylen, uint64_t offset )
 {

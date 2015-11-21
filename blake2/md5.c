@@ -36,6 +36,12 @@
  */
 
 #include <string.h>
+#include <stdio.h>
+#include <sys/stat.h>
+#if defined(_OPENMP)
+#   include <omp.h>
+#   define MD5_PARALLELISM_DEGREE 8
+#endif
 
 #include "md5.h"
 
@@ -240,7 +246,7 @@ void MD5_Update(MD5_CTX *ctx, const void *data, unsigned long size)
 	memcpy(ctx->buffer, data, size);
 }
 
-void MD5_Final(unsigned char *result, MD5_CTX *ctx)
+void MD5_Final(MD5_CTX *ctx, unsigned char *result)
 {
 	unsigned long used, available;
 
@@ -289,4 +295,93 @@ void MD5_Final(unsigned char *result, MD5_CTX *ctx)
 	result[15] = ctx->d >> 24;
 
 	memset(ctx, 0, sizeof(*ctx));
+}
+
+void MD5_Data(const void *data, unsigned long size, unsigned char *result)
+{
+    MD5_CTX ctx;
+    MD5_Init(&ctx);
+    MD5_Update(&ctx, data, size);
+    MD5_Final(&ctx, result);
+}
+
+static const size_t buflen = 8*1024;
+static const size_t minlen = 1024*1024;
+
+void MD5_File(const char *filename, unsigned char *result)
+{
+    memset(result, 0, MD5_OUTBYTES);
+    struct stat st;
+    if(stat(filename, &st) != 0 || !S_ISREG(st.st_mode)) return; // file not exist or not regular file
+    if(st.st_size == 0) return; // empty file
+    FILE *f = fopen(filename, "rb");
+    if(f)
+    {
+        unsigned char *buf = malloc(buflen);
+        MD5_CTX ctx;
+        MD5_Init(&ctx);
+        int i;
+        while ((i = fread(buf, 1, buflen, f)) > 0)
+            MD5_Update(&ctx, buf, i);
+        MD5_Final(&ctx, result);
+        free(buf);
+        fclose(f);
+    }
+}
+
+void MD5_File_Parallel( const char *filename, unsigned char *result )
+{
+    memset(result, 0, MD5_OUTBYTES);
+    struct stat st;
+    if(stat(filename, &st) != 0 || !S_ISREG(st.st_mode)) return; // file not exist or not regular file
+    if(st.st_size == 0) return; // empty file
+    if(st.st_size < minlen) return MD5_File(filename, result);
+    const size_t parallel_size = (st.st_size + MD5_PARALLELISM_DEGREE - 1) / MD5_PARALLELISM_DEGREE;
+
+    uint8_t sum[MD5_PARALLELISM_DEGREE][MD5_OUTBYTES];
+    MD5_CTX S[MD5_PARALLELISM_DEGREE][1];
+
+#if defined(_OPENMP)
+    #pragma omp parallel shared(S), num_threads(MD5_PARALLELISM_DEGREE)
+#else
+    for( size_t id__ = 0; id__ < MD5_PARALLELISM_DEGREE; ++id__ )
+#endif
+    {
+#if defined(_OPENMP)
+        size_t id__ = omp_get_thread_num();
+#endif
+        FILE *file = fopen(filename, "rb");
+        if(file)
+        {
+            MD5_Init(S[id__]);
+            size_t read_pos = id__ * parallel_size;
+            size_t read_len = (id__ == MD5_PARALLELISM_DEGREE-1) ? (st.st_size - read_pos) : (parallel_size);
+            uint8_t *buf = malloc(buflen);
+
+            fseek(file, read_pos, SEEK_SET);
+            while(read_len >= buflen)
+            {
+                fread(buf, buflen, 1, file);
+                MD5_Update( S[id__], buf, buflen);
+                read_len -= buflen;
+            }
+
+            if(read_len > 0)
+            {
+                fread(buf, read_len, 1, file);
+                MD5_Update( S[id__], buf, read_len);
+            }
+
+            MD5_Final( S[id__], sum[id__]);
+            free(buf);
+            fclose(file);
+        }//end of if(file)
+    }//end of for(MD5_PARALLELISM_DEGREE)
+
+    MD5_CTX FS[1];
+    MD5_Init(FS);
+    for( size_t i = 0; i < MD5_PARALLELISM_DEGREE; ++i )
+        MD5_Update( FS, sum[i], MD5_OUTBYTES );
+
+    MD5_Final( FS, result );
 }

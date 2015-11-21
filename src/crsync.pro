@@ -12,7 +12,8 @@ SOURCES += \
     onepiece-main.c \
     ../extra/tpl.c \
     ../extra/win/mmap.c \
-    ../extra/blake2b-ref.c
+    ../extra/blake2b-ref.c \
+    log.c
 
 include(deployment.pri)
 qtcAddDeployment()

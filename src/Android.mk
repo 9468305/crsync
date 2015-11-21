@@ -14,7 +14,7 @@ include $(PREBUILT_STATIC_LIBRARY)
 
 include $(CLEAR_VARS)
 LOCAL_MODULE := crsync
-LOCAL_SRC_FILES := crsync.c onepiece.c onepiece-jni.c ../extra/tpl.c
+LOCAL_SRC_FILES := crsync.c onepiece.c log.c onepiece-jni.c ../extra/tpl.c
 LOCAL_C_INCLUDES += ../extra
 LOCAL_STATIC_LIBRARIES := curl blake2
 LOCAL_CFLAGS += -DCURL_STATICLIB -std=c99 -fopenmp
