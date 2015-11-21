@@ -8,8 +8,8 @@ include $(PREBUILT_STATIC_LIBRARY)
 
 include $(CLEAR_VARS)
 LOCAL_MODULE := blake2
-LOCAL_SRC_FILES := $(LOCAL_PATH)/../blake2/obj/local/$(TARGET_ARCH_ABI)/libblake2.a
-LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/../blake2
+LOCAL_SRC_FILES := $(LOCAL_PATH)/../digest/obj/local/$(TARGET_ARCH_ABI)/libblake2.a
+LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/../digest
 include $(PREBUILT_STATIC_LIBRARY)
 
 include $(CLEAR_VARS)
