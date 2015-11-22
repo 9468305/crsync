@@ -13,3 +13,11 @@ a C library of Client-side rsync over HTTP via curl
 + 客户端使用libcurl下载资源，断点续传。
 + 客户端计算文件版本差异，增量下载差异内容并合并到本地。
 + 轻量级版本控制策略组件。
+
+## Android Build
+1. Run `digest/digest-build.cmd`, output `digest/obj/local/TARGET_ARCH_ABI/libdigest.a`.
+2. Run `src/crsync-build.cmd`, output `src/libs/TARGET_ARCH_ABI/libcrsync.so`.
+
+## Qt MinGW Build
+1. build `digest/digest.pro`, output `digest/m32/libdigest.a`.
+2. build `src/crsync.pro`, output `src/m32/crsync.exe`
