@@ -39,5 +39,7 @@ INCLUDEPATH += $${_PRO_FILE_PWD_}/../extra/
 QMAKE_CFLAGS += -O3 -std=c99 -fopenmp
 QMAKE_LFLAGS += -static -static-libgcc -fopenmp
 
+win32:RC_FILE = crsync.rc
+
 include(deployment.pri)
 qtcAddDeployment()

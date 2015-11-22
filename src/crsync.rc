@@ -1,0 +1,63 @@
+/*
+The MIT License (MIT)
+
+Copyright (c) 2015 chenqi
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+#include <winver.h>
+#include "crsyncver.h"
+
+#define RC_VERSION  CRSYNC_VERSION_MAJOR, CRSYNC_VERSION_MINOR, CRSYNC_VERSION_PATCH, 0
+
+VS_VERSION_INFO VERSIONINFO
+  FILEVERSION     RC_VERSION
+  PRODUCTVERSION  RC_VERSION
+  FILEFLAGSMASK   VS_FFI_FILEFLAGSMASK
+#if defined(DEBUGBUILD) || defined(_DEBUG)
+  FILEFLAGS VS_FF_DEBUG
+#else
+  FILEFLAGS 0
+#endif
+  FILEOS      VOS__WINDOWS32
+  FILETYPE    VFT_APP
+  FILESUBTYPE VFT2_UNKNOWN
+
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904b0"
+    BEGIN
+      VALUE "CompanyName",      "chenqi, https://github.com/9468305/\0"
+      VALUE "FileDescription",  "Crsync Application\0"
+      VALUE "FileVersion",      CRSYNC_VERSION "\0"
+      VALUE "InternalName",     "crsync\0"
+      VALUE "OriginalFilename", "crsync.exe\0"
+      VALUE "ProductName",      "The Crsync Application\0"
+      VALUE "ProductVersion",   CRSYNC_VERSION "\0"
+      VALUE "LegalCopyright",   "© " CRSYNC_COPYRIGHT "\0"
+      VALUE "License",          "https://github.com/9468305/crsync/blob/master/LICENSE\0"
+    END
+  END
+
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x409, 1200
+  END
+END
