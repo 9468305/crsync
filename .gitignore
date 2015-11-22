@@ -5,6 +5,7 @@
 *.elf
 *.d
 digest/m32/
+digest/obj/
 src/obj/
 src/libs/
 
@@ -25,3 +26,10 @@ src/libs/
 
 # User files
 *.user
+
+# Android Project files
+android/.project
+android/.classpath
+android/.settings/
+android/bin/
+android/gen/
