@@ -30,8 +30,7 @@ HEADERS += \
     ../extra/utlist.h
 
 INCLUDEPATH += $${_PRO_FILE_PWD_}/../digest
-Debug: LIBS += -L$${_PRO_FILE_PWD_}/../digest/m32/debug -ldigest
-Release: LIBS += -L$${_PRO_FILE_PWD_}/../digest/m32/release -ldigest
+LIBS += -L$${_PRO_FILE_PWD_}/../digest/m32 -ldigest
 
 DEFINES += CURL_STATICLIB
 LIBS += -L$${_PRO_FILE_PWD_}/../libcurl/lib/m32 -lcurl -lws2_32

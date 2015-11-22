@@ -4,6 +4,9 @@
 *.obj
 *.elf
 *.d
+digest/Makefile
+digest/Makefile.Debug
+digest/Makefile.Release
 digest/m32/
 digest/obj/
 src/obj/
