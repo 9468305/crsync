@@ -9,6 +9,10 @@ digest/Makefile.Debug
 digest/Makefile.Release
 digest/m32/
 digest/obj/
+src/Makefile
+src/Makefile.Debug
+src/Makefile.Release
+src/m32/
 src/obj/
 src/libs/
 
