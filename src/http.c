@@ -71,34 +71,68 @@ static void HTTP_curl_setopt(CURL *curl) {
     curl_easy_setopt(curl, CURLOPT_TIMEOUT, 20L);
 }
 
+static const char *response200 = "HTTP/1.0 200 OK";
+static const char *response200_1 = "HTTP/1.1 200 OK";
+static const size_t responselen = 15; //as above strlen
+
+static size_t header_callback(void *data, size_t size, size_t nmemb, void *userp)
+{
+    (void)userp;
+    size_t realSize = size * nmemb;
+    size_t minSize = realSize < responselen ? realSize : responselen;
+    if( 0 == strncasecmp((const char*)data, response200, minSize) ||
+        0 == strncasecmp((const char*)data, response200_1, minSize) ) {
+        LOGE("range response 200\n");
+        return 0;
+    }
+    return realSize;
+}
+
+CRScode HTTP_Range(const char *url, const char *range, void *callback, void *data) {
+    if(!url || !range || !callback) {
+        LOGE("%d\n", CRS_PARAM_ERROR);
+        return CRS_PARAM_ERROR;
+    }
+
+    CURL *curl = curl_easy_init();
+    if(!curl) {
+        LOGE("%d\n", CRS_HTTP_ERROR);
+        return CRS_HTTP_ERROR;
+    }
+
+    CRScode code = CRS_OK;
+
+    HTTP_curl_setopt(curl);
+    curl_easy_setopt(curl, CURLOPT_URL, url);
+    curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L);
+    curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, (void*)header_callback);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, callback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, data);
+    curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 1L);
+    curl_easy_setopt(curl, CURLOPT_RANGE, range);
+
+    CURLcode curlcode = curl_easy_perform(curl);
+    curl_easy_reset(curl);
+    switch(curlcode) {
+    case CURLE_OK:
+        code = CRS_OK;
+        break;
+    default:
+        code = CRS_HTTP_ERROR;
+        LOGE("curlcode %d\n", curlcode);
+        break;
+    }
+
+    curl_easy_cleanup(curl);
+    return code;
+}
+/*
 typedef struct datacache_t {
     CURL *curl;
     unsigned char *buf;
     size_t len;
     size_t pos;
 } datacache_t;
-
-static size_t HTTP_writedata_func(void *data, size_t size, size_t nmemb, void *userp)
-{
-    datacache_t *cache = (datacache_t*)userp;
-    long response = 0L;
-    CURLcode code = curl_easy_getinfo(cache->curl, CURLINFO_RESPONSE_CODE, &response);
-    if(code != CURLE_OK) {
-        return 0;
-    }
-    if(response != 206L) {
-        return 0;// HTTPServer maybe response 200 with origin offset data
-    }
-
-    size_t realSize = size * nmemb;
-    if(cache->pos + realSize <= cache->len) {
-        memcpy(cache->buf + cache->pos, data, realSize);
-        cache->pos += realSize;
-        return realSize;
-    } else {
-        return 0;
-    }
-}
 
 CRScode HTTP_Data(const char *url, const char *range, unsigned char *out, unsigned int outlen, int retry) {
     if(!url || !out) {
@@ -151,7 +185,7 @@ CRScode HTTP_Data(const char *url, const char *range, unsigned char *out, unsign
     curl_easy_cleanup(curl);
     return code;
 }
-
+*/
 static const char *TEMP_FILE_EXT = ".curl";
 
 typedef struct filecache_t {

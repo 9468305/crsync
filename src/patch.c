@@ -81,12 +81,76 @@ static CRScode Patch_match(const char *srcFilename, const char *dstFilename,
     return code;
 }
 
+//continuous blocks, used for reduce http range frequency
+typedef struct combineblock_t {
+    size_t pos; //block start position
+    size_t got; //data fwrite size, used for HTTP retry
+    size_t len; //block length
+} combineblock_t;
+
+static uint32_t Patch_missCombine(const diffResult_t *dr, combineblock_t *cb, uint32_t blockSize) {
+    uint32_t combineNum = 0;
+    int missNum = dr->totalNum - dr->matchNum;
+    if(missNum == 0) {
+        LOGW("missNum is Zero, should not be here!\n");
+        return combineNum;
+    }
+    if(missNum < 0) {
+        LOGE("WTF: matchNum %d bigger than totalNum %d\n", dr->matchNum, dr->totalNum);
+        return combineNum;
+    }
+    int i;
+    uint32_t j;
+    for(i=0; i<dr->totalNum; ++i) {
+        if(dr->offsets[i] < 0) {
+            for(j=0; j < combineNum; ++j) {
+                if(cb[j].pos + cb[j].len == i * blockSize) {
+                    cb[j].len += blockSize;
+                    break;
+                }
+            }
+            if(j == combineNum) {
+                cb[combineNum].pos = i*blockSize;
+                cb[combineNum].len = blockSize;
+                ++combineNum;
+            }
+        }
+    }
+    LOGI("combineblocks Num = %d\n", combineNum);
+    return combineNum;
+}
+
+typedef struct rangedata_t {
+    combineblock_t *cb;
+    FILE *file;
+} rangedata_t;
+
+static size_t Range_callback(void *data, size_t size, size_t nmemb, void *userp) {
+    rangedata_t *rd = (rangedata_t*)userp;
+
+    size_t realSize = size * nmemb;
+#pragma omp critical (fileio)
+{
+    fseek(rd->file, rd->cb->pos + rd->cb->got, SEEK_SET);
+    fwrite(data, size, nmemb, rd->file);
+    rd->cb->got += realSize;
+}
+    //TODO callback to user for isCancel
+    return realSize;
+}
+
 static CRScode Patch_miss(const char *filename, const char *url,
                           const filedigest_t *fd, const diffResult_t *dr) {
     LOGI("begin\n");
     if(!filename || !fd || !dr) {
         LOGE("end %d\n", CRS_PARAM_ERROR);
         return CRS_PARAM_ERROR;
+    }
+
+    int missNum = dr->totalNum - dr->matchNum;
+    if(missNum == 0) {
+        LOGI("no miss blocks\n");
+        return CRS_OK;
     }
 
     FILE *f = fopen(filename, "rb+");
@@ -96,9 +160,43 @@ static CRScode Patch_miss(const char *filename, const char *url,
         return CRS_FILE_ERROR;
     }
 
+    //combine continuous blocks, no more than missNum
+    combineblock_t *cb = calloc(1, sizeof(combineblock_t) * missNum );
+    uint32_t cbNum = Patch_missCombine(dr, cb, fd->blockSize);
+
     CRScode code = CRS_OK;
 #pragma omp parallel for
-    for(int i=0; i< dr->totalNum; ++i) {
+    for(uint32_t i=0; i< cbNum; ++i) {
+        rangedata_t rd;
+        rd.cb = &cb[i];
+        rd.file = f;
+        int retry = 3;
+        char range[32];
+        long rangeFrom;
+        long rangeTo;
+        while(retry-- > 0) {
+            rangeFrom = cb[i].pos + cb[i].got;
+            rangeTo = cb[i].pos + cb[i].len - 1;
+            snprintf(range, 32, "%ld-%ld", rangeFrom, rangeTo);
+            CRScode reqCode = HTTP_Range(url, range, (void*)Range_callback, &rd);
+            if(reqCode == CRS_OK) {
+                break;
+            }
+            /* TODO
+            if(user cancel) break;
+            */
+        }
+    }//end of (omp parallel for)
+
+
+
+
+
+    free(cb);
+/*
+///////////////////////////////////////////////////////////////////////////////////////////////
+#pragma omp parallel for
+    for(int i=0; i<dr->totalNum; ++i) {
         if(dr->offsets[i] < 0) {
             long rangeFrom = i * fd->blockSize;
             long rangeTo = rangeFrom + fd->blockSize - 1;
@@ -125,8 +223,9 @@ static CRScode Patch_miss(const char *filename, const char *url,
             }
             free(buf);
         }
-    }
-
+    }//end of (omp parallel for)
+///////////////////////////////////////////////////////////////////////////////////////////////
+*/
     fclose(f);
     return code;
 }
@@ -191,9 +290,6 @@ CRScode Patch_perform(const char *srcFilename, const char *dstFilename, const ch
 
     } while (0);
 
-    LOGD("end %d\n", code);
     LOGI("end %d\n", code);
-    LOGW("end %d\n", code);
-    LOGE("end %d\n", code);
     return code;
 }

@@ -31,7 +31,11 @@ void HTTP_global_cleanup();
 
 typedef int (HTTP_callback)(const char *url, long bytes);
 
-CRScode HTTP_Data(const char *url, const char *range, unsigned char *out, unsigned int outlen, int retry);
+//callback should be int (Range_callback)(void *data, size_t size, size_t nmemb, void *userp);
+CRScode HTTP_Range(const char *url, const char *range, void *callback, void *data);
+
+//CRScode HTTP_Data(const char *url, const char *range, unsigned char *out, unsigned int outlen, int retry);
+
 CRScode HTTP_File(const char *url, const char *filename, int retry, HTTP_callback *notify);
 
 #endif // CRS_HTTP_H

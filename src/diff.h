@@ -31,8 +31,9 @@ SOFTWARE.
 
 typedef struct diffResult_t {
     int32_t totalNum; //should be filedigest_t.fileSize / filedigest_t.blockSize;
-    int32_t matchNum; //calc from offsets array
-    int32_t *offsets; //match offset inside of old file; (default) missing == -1;
+    int32_t matchNum; //calc from filedigest_t.offsets, compare to source file
+    int32_t cacheNum; //dst file already got
+    int32_t *offsets; //performed result, -1(default) miss, -2 cache, >=0 offset at source file;
 } diffResult_t;
 
 diffResult_t* diffResult_malloc();

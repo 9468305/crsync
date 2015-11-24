@@ -69,6 +69,7 @@ void diffResult_dump(diffResult_t *dr) {
     if(dr){
         LOGI("totalNum = %d\n", dr->totalNum);
         LOGI("matchNum = %d\n", dr->matchNum);
+        LOGI("missNum = %d\n", dr->totalNum - dr->matchNum);
     } else {
         LOGI("none\n");
     }
