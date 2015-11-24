@@ -28,57 +28,61 @@ SOFTWARE.
 extern "C" {
 #endif
 
+#include <stdio.h>
+#include <stdlib.h>
+
+void log_append(char *s);
+void log_dump();
+
+void log_timestamp(char *ts);
+
+#define LOG_TIME_STRING_SIZE 20
+
+#define LOG_TIME \
+    char ts[LOG_TIME_STRING_SIZE];\
+    log_timestamp(ts);
+
+#if defined ANDROID
+#include <android/log.h>
+#   define LOG_TAG "crsync_core"
+#   define LEVEL_D ANDROID_LOG_DEBUG
+#   define LEVEL_I ANDROID_LOG_INFO
+#   define LEVEL_W ANDROID_LOG_WARN
+#   define LEVEL_E ANDROID_LOG_ERROR
+#   define LOG_PRINT(level, fmt, ...)  __android_log_print(level, LOG_TAG, "[%s]: " fmt, __func__, ##__VA_ARGS__)
+#else
+#   define LEVEL_D 'D'
+#   define LEVEL_I 'I'
+#   define LEVEL_W 'W'
+#   define LEVEL_E 'E'
+#   define LOG_PRINT(level, fmt, ...)  printf("%s %c [%s]: " fmt, ts, level, __func__, ##__VA_ARGS__)
+#endif
+
+#define LOG_FILE(level, fmt, ...) \
+    char *s=malloc(256);\
+    snprintf(s, 256, "%s %c [%s]: " fmt, ts, level, __func__, ##__VA_ARGS__);\
+    log_append(s);
+
+#define LOG_OUTPUT(level, fmt, ...) \
+    do{\
+        LOG_TIME\
+        LOG_PRINT(level, fmt, ##__VA_ARGS__);\
+        LOG_FILE(level, fmt, ##__VA_ARGS__);\
+    } while(0)
+
 #define CRSYNC_DEBUG 1
 
 #if CRSYNC_DEBUG
-
-#include "utstring.h"
-#include "utlist.h"
-
-typedef struct log_t {
-    char *content;
-    struct log_t *next;
-} log_t;
-
-void log_append(const char *s);
-
-#define LOG_APPEND(fmt, ...)  do{\
-                        __android_log_print(ANDROID_LOG_INFO,  LOG_TAG, "[%s]: " fmt, __func__, ##__VA_ARGS__);\
-                        UT_string *s;\
-                        utstring_new(s);\
-                        utstring_printf(s, "I [%s]: " fmt, __func__, ##__VA_ARGS__);\
-                        log_append(utstring_body(s));\
-                        utstring_free(s);\
-                    } while(0);
-
-#   if defined ANDROID
-#       include <android/log.h>
-#       define LOG_TAG "crsync_ndk"
-#       define LOG_FILE "/sdcard/crsync_ndk.log"
-#       define LOGD(fmt, ...)  __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "[%s]: " fmt, __func__, ##__VA_ARGS__)
-#       define LOGI(fmt, ...)   LOG_APPEND(fmt, ##__VA_ARGS__)
-#       define LOGW(fmt, ...)  __android_log_print(ANDROID_LOG_WARN,  LOG_TAG, "[%s]: " fmt, __func__, ##__VA_ARGS__)
-#       define LOGE(fmt, ...)  __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, "[%s]: " fmt, __func__, ##__VA_ARGS__)
-#   else
-#       include <stdio.h>
-#       define LOG_FILE "crsync_core.log"
-#       define LOGD(fmt, ...)  printf("D [%s]: " fmt, __func__, ##__VA_ARGS__)
-#       define LOGI(fmt, ...)  printf("I [%s]: " fmt, __func__, ##__VA_ARGS__)
-#       define LOGW(fmt, ...)  printf("W [%s]: " fmt, __func__, ##__VA_ARGS__)
-#       define LOGE(fmt, ...)  printf("E [%s]: " fmt, __func__, ##__VA_ARGS__)
-#   endif
-
+#   define LOGD(fmt, ...)  LOG_OUTPUT(LEVEL_D, fmt, ##__VA_ARGS__)
+#   define LOGI(fmt, ...)  LOG_OUTPUT(LEVEL_I, fmt, ##__VA_ARGS__)
+#   define LOGW(fmt, ...)  LOG_OUTPUT(LEVEL_W, fmt, ##__VA_ARGS__)
+#   define LOGE(fmt, ...)  LOG_OUTPUT(LEVEL_E, fmt, ##__VA_ARGS__)
 #else
-
 #   define LOGD(...)
 #   define LOGI(...)
 #   define LOGW(...)
 #   define LOGE(...)
-
 #endif //CRSYNC_DEBUG
-
-//Dump log to file
-void logdump();
 
 #if defined __cplusplus
     }

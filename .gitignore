@@ -12,6 +12,8 @@ digest/obj/
 src/Makefile
 src/Makefile.Debug
 src/Makefile.Release
+src/object_script.crsync.Debug
+src/object_script.crsync.Release
 src/m32/
 src/obj/
 src/libs/

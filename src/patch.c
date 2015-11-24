@@ -47,7 +47,7 @@ static CRScode Patch_match(const char *srcFilename, const char *dstFilename,
         return CRS_FILE_ERROR;
     }
 
-    FILE *f2 = fopen(dstFilename, "wb");
+    FILE *f2 = fopen(dstFilename, "rb+");
     if(!f2){
         LOGE("dest file fopen error %s\n", strerror(errno));
         fclose(f1);
@@ -89,7 +89,7 @@ static CRScode Patch_miss(const char *filename, const char *url,
         return CRS_PARAM_ERROR;
     }
 
-    FILE *f = fopen(filename, "rwb");
+    FILE *f = fopen(filename, "rb+");
     if(!f){
         LOGE("fopen error %s\n", strerror(errno));
         LOGE("%s\n", filename);
@@ -191,6 +191,9 @@ CRScode Patch_perform(const char *srcFilename, const char *dstFilename, const ch
 
     } while (0);
 
+    LOGD("end %d\n", code);
     LOGI("end %d\n", code);
+    LOGW("end %d\n", code);
+    LOGE("end %d\n", code);
     return code;
 }

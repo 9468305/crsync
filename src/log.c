@@ -21,25 +21,64 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
+#include <time.h>
+
 #include "log.h"
+#include "utlist.h"
 
-#if CRSYNC_DEBUG
-static log_t *log_head = NULL;
 
-void log_append(const char *s) {
-    log_t *log = calloc(sizeof(log_t), 1);
-    log->content = strdup(s);
-    LL_APPEND(log_head, log);
+void log_timestamp(char *ts) {
+    time_t t;
+    time(&t);
+#if defined ANDROID
+    struct tm tmv;
+    localtime_r(&t, &tmv);
+    strftime(ts, sizeof ts, "%Y%m%d %H:%M:%S", &tmv);
+#else
+    struct tm *tmv = localtime(&t);
+    strftime(ts, LOG_TIME_STRING_SIZE, "%Y%m%d %H:%M:%S", tmv);
+#endif
 }
 
-void logdump() {
-    FILE *f = fopen(LOG_FILE, "a");
+#if CRSYNC_DEBUG
+
+typedef struct log_t {
+    char *str;
+    struct log_t *next;
+} log_t;
+
+static log_t *log_head = NULL;
+
+static const unsigned int LOG_MAX_SIZE = 256;
+
+void log_append(char *s) {
+    log_t *log = malloc(sizeof(log_t));
+    log->str = s;
+    log->next = NULL;
+    LL_APPEND(log_head, log);
+    unsigned int count = 0;
+    log_t *elt=NULL;
+    LL_COUNT(log_head, elt, count);
+    if( count >= LOG_MAX_SIZE ) {
+        log_dump();
+    }
+}
+
+void log_dump() {
+
+#if defined ANDROID
+#   define LOG_FILENAME "/sdcard/crsync_core.log"
+#else
+#   define LOG_FILENAME "crsync_core.log"
+#endif
+
+    FILE *f = fopen(LOG_FILENAME, "a");
     if(f) {
         log_t *elt, *tmp;
         LL_FOREACH_SAFE(log_head,elt,tmp) {
             LL_DELETE(log_head,elt);
-            fputs(elt->content, f);
-            free(elt->content);
+            fputs(elt->str, f);
+            free(elt->str);
             free(elt);
         }
         log_head = NULL;
@@ -48,5 +87,9 @@ void logdump() {
 }
 
 #else
-void logdump();
+void log_append(char *s){
+    free(s);
+}
+
+void logdump(){}
 #endif //CRSYNC_DEBUG

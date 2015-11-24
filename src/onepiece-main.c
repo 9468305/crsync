@@ -180,7 +180,9 @@ int main_digest(int argc, char **argv) {
     const char *dstFilename = argv[c++];
     uint32_t blockSize = atoi(argv[c++]) * 1024;
 
-    return crs_perform_digest(srcFilename, dstFilename, blockSize);
+    CRScode code = crs_perform_digest(srcFilename, dstFilename, blockSize);
+    log_dump();
+    return code;
 }
 
 int main_diff(int argc, char **argv) {
@@ -208,6 +210,7 @@ int main_diff(int argc, char **argv) {
     filedigest_free(fd);
     diffResult_free(dr);
     HTTP_global_cleanup();
+    log_dump();
     return code;
 }
 
@@ -233,12 +236,13 @@ int main_update(int argc, char **argv) {
     code = crs_perform_update(srcFilename, dstFilename, digestUrl, url);
 
     HTTP_global_cleanup();
+    log_dump();
     return code;
 }
 
 int main(int argc, char **argv) {
     for(int i=0; i<argc; i++) {
-        LOGI("argv %d\n%s\n", i, argv[i]);
+        LOGI("argv %d %s\n", i, argv[i]);
     }
 
     if(argc < 2) {

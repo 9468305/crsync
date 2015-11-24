@@ -101,15 +101,14 @@ static size_t HTTP_writedata_func(void *data, size_t size, size_t nmemb, void *u
 }
 
 CRScode HTTP_Data(const char *url, const char *range, unsigned char *out, unsigned int outlen, int retry) {
-    LOGI("begin\n");
     if(!url || !out) {
-        LOGE("end %d\n", CRS_PARAM_ERROR);
+        LOGE("%d\n", CRS_PARAM_ERROR);
         return CRS_PARAM_ERROR;
     }
 
     CURL *curl = curl_easy_init();
-    if(curl == NULL) {
-        LOGE("end %d\n", CRS_HTTP_ERROR);
+    if(!curl) {
+        LOGE("%d\n", CRS_HTTP_ERROR);
         return CRS_HTTP_ERROR;
     }
 
@@ -131,7 +130,6 @@ CRScode HTTP_Data(const char *url, const char *range, unsigned char *out, unsign
 
         CURLcode curlcode = curl_easy_perform(curl);
         curl_easy_reset(curl);
-        LOGI("curlcode %d\n", curlcode);
         switch(curlcode) {
         case CURLE_OK:
             code = CRS_OK;
@@ -145,12 +143,12 @@ CRScode HTTP_Data(const char *url, const char *range, unsigned char *out, unsign
         }
         if(code == CRS_OK) {
             break;
+        } else {
+            LOGI("curlcode %d\n", curlcode);
         }
     }//end of while(retry)
 
     curl_easy_cleanup(curl);
-
-    LOGI("end %d\n", code);
     return code;
 }
 
@@ -175,15 +173,14 @@ static size_t HTTP_writefile_func(void *ptr, size_t size, size_t nmemb, void *us
 }
 
 CRScode HTTP_File(const char *url, const char *filename, int retry, HTTP_callback *cb) {
-    LOGI("begin\n");
     if(!url || !filename) {
-        LOGE("end %d\n", CRS_PARAM_ERROR);
+        LOGE("%d\n", CRS_PARAM_ERROR);
         return CRS_PARAM_ERROR;
     }
 
     CURL *curl = curl_easy_init();
     if(!curl) {
-        LOGE("end %d\n", CRS_INIT_ERROR);
+        LOGE("%d\n", CRS_INIT_ERROR);
         return CRS_INIT_ERROR;
     }
 
@@ -222,7 +219,6 @@ CRScode HTTP_File(const char *url, const char *filename, int retry, HTTP_callbac
         CURLcode curlcode = curl_easy_perform(curl);
         curl_easy_reset(curl);
         fclose(f);
-        LOGI("curlcode %d\n", curlcode);
         switch(curlcode) {
         case CURLE_OK:
             code = CRS_OK;
@@ -232,6 +228,7 @@ CRScode HTTP_File(const char *url, const char *filename, int retry, HTTP_callbac
             break;
         default:
             code = CRS_HTTP_ERROR;
+            LOGI("curlcode %d\n", curlcode);
             break;
         }
 
@@ -252,6 +249,5 @@ CRScode HTTP_File(const char *url, const char *filename, int retry, HTTP_callbac
     curl_easy_cleanup(curl);
 
     free(tf);
-    LOGI("end %d\n", code);
     return code;
 }
