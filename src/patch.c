@@ -81,6 +81,39 @@ static CRScode Patch_match(const char *srcFilename, const char *dstFilename,
     return code;
 }
 
+static CRScode Patch_cache(const char *filename, const filedigest_t *fd, diffResult_t *dr) {
+    if(!filename || !fd || !dr) {
+        LOGE("end %d\n", CRS_PARAM_ERROR);
+        return CRS_PARAM_ERROR;
+    }
+    FILE *f = fopen(filename, "rb+");
+    if(!f){
+        LOGE("dest file fopen error %s\n", strerror(errno));
+        return CRS_FILE_ERROR;
+    }
+    CRScode code = CRS_OK;
+    uint8_t *buf = malloc(fd->blockSize);
+    uint8_t hash[CRS_STRONG_DIGEST_SIZE];
+
+    for(int i=0; i<dr->totalNum; ++i) {
+        if(dr->offsets[i] == -1) {
+            fseek(f, i*fd->blockSize, SEEK_SET);
+            fread(buf, 1, fd->blockSize, f);
+
+            Digest_CalcStrong_Data(buf, fd->blockSize, hash);
+            if(0 == memcmp(hash, fd->blockDigest[i].strong, CRS_STRONG_DIGEST_SIZE)) {
+                dr->offsets[i] = -2;
+                dr->cacheNum++;
+            }
+        }
+    }
+    free(buf);
+    diffResult_dump(dr);
+
+    fclose(f);
+    return code;
+}
+
 //continuous blocks, used for reduce http range frequency
 typedef struct combineblock_t {
     size_t pos; //block start position
@@ -90,9 +123,9 @@ typedef struct combineblock_t {
 
 static uint32_t Patch_missCombine(const diffResult_t *dr, combineblock_t *cb, uint32_t blockSize) {
     uint32_t combineNum = 0;
-    int missNum = dr->totalNum - dr->matchNum;
+    int missNum = dr->totalNum - dr->matchNum - dr->cacheNum;
     if(missNum == 0) {
-        LOGW("missNum is Zero, should not be here!\n");
+        LOGW("missNum is Zero, maybe cache done!\n");
         return combineNum;
     }
     if(missNum < 0) {
@@ -102,7 +135,7 @@ static uint32_t Patch_missCombine(const diffResult_t *dr, combineblock_t *cb, ui
     int i;
     uint32_t j;
     for(i=0; i<dr->totalNum; ++i) {
-        if(dr->offsets[i] < 0) {
+        if(dr->offsets[i] == -1) {
             for(j=0; j < combineNum; ++j) {
                 if(cb[j].pos + cb[j].len == i * blockSize) {
                     cb[j].len += blockSize;
@@ -127,7 +160,6 @@ typedef struct rangedata_t {
 
 static size_t Range_callback(void *data, size_t size, size_t nmemb, void *userp) {
     rangedata_t *rd = (rangedata_t*)userp;
-
     size_t realSize = size * nmemb;
 #pragma omp critical (fileio)
 {
@@ -147,15 +179,15 @@ static CRScode Patch_miss(const char *filename, const char *url,
         return CRS_PARAM_ERROR;
     }
 
-    int missNum = dr->totalNum - dr->matchNum;
+    int missNum = dr->totalNum - dr->matchNum - dr->cacheNum;
     if(missNum == 0) {
-        LOGI("no miss blocks\n");
+        LOGI("end missblocks = 0\n");
         return CRS_OK;
     }
 
     FILE *f = fopen(filename, "rb+");
     if(!f){
-        LOGE("fopen error %s\n", strerror(errno));
+        LOGE("end fopen error %s\n", strerror(errno));
         LOGE("%s\n", filename);
         return CRS_FILE_ERROR;
     }
@@ -188,50 +220,14 @@ static CRScode Patch_miss(const char *filename, const char *url,
         }
     }//end of (omp parallel for)
 
-
-
-
-
     free(cb);
-/*
-///////////////////////////////////////////////////////////////////////////////////////////////
-#pragma omp parallel for
-    for(int i=0; i<dr->totalNum; ++i) {
-        if(dr->offsets[i] < 0) {
-            long rangeFrom = i * fd->blockSize;
-            long rangeTo = rangeFrom + fd->blockSize - 1;
-            char range[32];
-            snprintf(range, 32, "%ld-%ld", rangeFrom, rangeTo);
-            unsigned char *buf = malloc(fd->blockSize);
-            unsigned char strong[CRS_STRONG_DIGEST_SIZE];
-
-#pragma omp critical (fileio)
-{
-            fseek(f, i* fd->blockSize, SEEK_SET);
-            fread(buf, 1, fd->blockSize, f);
-}
-            Digest_CalcStrong_Data(buf, fd->blockSize, strong);
-            if(0 != memcmp(strong, fd->blockDigest[i].strong, CRS_STRONG_DIGEST_SIZE)) {
-                code = HTTP_Data(url, range, buf, fd->blockSize, 5);
-                if(code == CRS_OK) {
-#pragma omp critical (fileio)
-{
-                    fseek(f, i*fd->blockSize, SEEK_SET);
-                    fwrite(buf, 1, fd->blockSize, f);
-}
-                }
-            }
-            free(buf);
-        }
-    }//end of (omp parallel for)
-///////////////////////////////////////////////////////////////////////////////////////////////
-*/
     fclose(f);
+    LOGI("end %d\n", code);
     return code;
 }
 
 CRScode Patch_perform(const char *srcFilename, const char *dstFilename, const char *url,
-                      const filedigest_t *fd, const diffResult_t *dr) {
+                      const filedigest_t *fd, diffResult_t *dr) {
     LOGI("begin\n");
 
     if(!srcFilename || !dstFilename || !url || !fd || !dr) {
@@ -242,7 +238,7 @@ CRScode Patch_perform(const char *srcFilename, const char *dstFilename, const ch
     CRScode code = CRS_OK;
     do {
         if(0 != access(srcFilename, F_OK)) {
-            LOGE("source file not exist %s\n", strerror(errno));
+            LOGE("src file not exist %s\n", strerror(errno));
             LOGE("%s\n", srcFilename);
             code = CRS_FILE_ERROR;
             break;
@@ -252,7 +248,7 @@ CRScode Patch_perform(const char *srcFilename, const char *dstFilename, const ch
             if(f) {
                 fclose(f);
             } else {
-                LOGE("dest file create fail %s\n", strerror(errno));
+                LOGE("dst file create fail %s\n", strerror(errno));
                 LOGE("%s\n", dstFilename);
                 code = CRS_FILE_ERROR;
                 break;
@@ -260,7 +256,7 @@ CRScode Patch_perform(const char *srcFilename, const char *dstFilename, const ch
         }
         struct stat st;
         if(stat(dstFilename, &st) != 0) {
-            LOGE("dest file stat fail %s\n", strerror(errno));
+            LOGE("dst file stat fail %s\n", strerror(errno));
             LOGE("%s\n", dstFilename);
             code = CRS_FILE_ERROR;
             break;
@@ -275,11 +271,14 @@ CRScode Patch_perform(const char *srcFilename, const char *dstFilename, const ch
 
         //Patch_match Blocks
         code = Patch_match(srcFilename, dstFilename, fd, dr);
-        UTIL_IF_BREAK(code != CRS_OK);
+        if(code != CRS_OK) break;
+
+        code = Patch_cache(dstFilename, fd, dr);
+        if(code != CRS_OK) break;
 
         //Patch_miss Blocks
         code = Patch_miss(dstFilename, url, fd, dr);
-        UTIL_IF_BREAK(code != CRS_OK);
+        if(code != CRS_OK) break;
 
         uint8_t hash[CRS_STRONG_DIGEST_SIZE];
         Digest_CalcStrong_File(dstFilename, hash);

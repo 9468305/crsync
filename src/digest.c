@@ -89,11 +89,11 @@ void filedigest_free(filedigest_t* fd) {
 void filedigest_dump(const filedigest_t* fd) {
     if(fd) {
         LOGI("fileSize = %d\n", fd->fileSize);
-        LOGI("blockSize = %dKiB\n", fd->blockSize/1024);
+        LOGI("blockSize = %d KiB\n", fd->blockSize/1024);
         char *hashString = Util_HexToString(fd->fileDigest, CRS_STRONG_DIGEST_SIZE);
         LOGI("fileDigest = %s\n", hashString);
         free(hashString);
-        LOGI("restSize = %d\n", fd->fileSize % fd->blockSize);
+        LOGI("restSize = %d Bytes\n", fd->fileSize % fd->blockSize);
     } else {
         LOGI("none\n");
     }

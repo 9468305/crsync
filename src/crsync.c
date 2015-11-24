@@ -907,11 +907,11 @@ CRScode crs_perform_diff(const char *srcFilename, const char *dstFilename, const
     do {
         if(0 != Digest_checkfile(digestFilename)) {
             code = HTTP_File(url, digestFilename, 5, NULL);
-            UTIL_IF_BREAK(code != CRS_OK);
+            if(code != CRS_OK) break;
         }
 
         code = Digest_Load(digestFilename, fd);
-        UTIL_IF_BREAK(code != CRS_OK);
+        if(code != CRS_OK) break;
         code = Diff_perform(srcFilename, fd, dr);
     } while(0);
 
@@ -945,7 +945,7 @@ CRScode crs_perform_update(const char *srcFilename, const char *dstFilename, con
         code = crs_perform_diff(srcFilename, dstFilename, digestUrl, fd, dr);
         filedigest_dump((const filedigest_t*)fd);
         diffResult_dump(dr);
-        UTIL_IF_BREAK(code != CRS_OK);
+        if(code != CRS_OK) break;
 
         code = crs_perform_patch(srcFilename, dstFilename, url, fd, dr);
     } while(0);
@@ -953,5 +953,6 @@ CRScode crs_perform_update(const char *srcFilename, const char *dstFilename, con
     filedigest_free(fd);
     diffResult_free(dr);
 
+    LOGI("end %d\n", code);
     return code;
 }

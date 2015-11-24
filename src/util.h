@@ -24,8 +24,6 @@ SOFTWARE.
 #ifndef CRS_UTIL_H
 #define CRS_UTIL_H
 
-#define UTIL_IF_BREAK(x) if(x) break
-
 char* Util_HexToString(const unsigned char *in, const unsigned int inlen);
 
 char* Util_strcat(const char* s1, const char *s2);

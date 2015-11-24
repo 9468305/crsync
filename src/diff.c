@@ -69,14 +69,15 @@ void diffResult_dump(diffResult_t *dr) {
     if(dr){
         LOGI("totalNum = %d\n", dr->totalNum);
         LOGI("matchNum = %d\n", dr->matchNum);
-        LOGI("missNum = %d\n", dr->totalNum - dr->matchNum);
+        LOGI("cacheNum = %d\n", dr->cacheNum);
+        LOGI("missNum = %d\n", dr->totalNum - dr->matchNum - dr->cacheNum);
     } else {
         LOGI("none\n");
     }
 }
 
-static void Diff_hash(const filedigest_t *fd, diffHash_t **dh) {
-
+static diffHash_t* Diff_hash(const filedigest_t *fd) {
+    diffHash_t *dh = NULL;
     diffHash_t *item = NULL, *temp = NULL;
     uint32_t blockNum = fd->fileSize / fd->blockSize;
 
@@ -87,13 +88,14 @@ static void Diff_hash(const filedigest_t *fd, diffHash_t **dh) {
         item->seq = i;
         item->strong = fd->blockDigest[i].strong;
 
-        HASH_FIND_INT(*dh, &item->weak, temp);
+        HASH_FIND_INT(dh, &item->weak, temp);
         if (!temp) {
-            HASH_ADD_INT( *dh, weak, item );
+            HASH_ADD_INT( dh, weak, item );
         } else {
             HASH_ADD_INT( temp->sub, seq, item );
         }
     }
+    return dh;
 }
 
 
@@ -102,6 +104,7 @@ static void Diff_hash(const filedigest_t *fd, diffHash_t **dh) {
 static void Diff_match(const char *filename, const filedigest_t *fd, const diffHash_t **dh, diffResult_t *dr) {
     dr->totalNum = fd->fileSize / fd->blockSize;
     dr->matchNum = 0;
+    dr->cacheNum = 0;
     dr->offsets = malloc(dr->totalNum * sizeof(int32_t));
     memset(dr->offsets, -1, dr->totalNum * sizeof(int32_t));
 
@@ -244,9 +247,7 @@ CRScode Diff_perform(const char *filename, const filedigest_t *fd, diffResult_t 
     }
 
     CRScode code = CRS_OK;
-    diffHash_t *dh = NULL;
-
-    Diff_hash(fd, &dh);
+    diffHash_t *dh = Diff_hash(fd);
 
     Diff_match(filename, fd, (const diffHash_t **)&dh, dr);
 
