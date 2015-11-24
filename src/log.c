@@ -91,5 +91,5 @@ void log_append(char *s){
     free(s);
 }
 
-void logdump(){}
+void log_dump(){}
 #endif //CRSYNC_DEBUG
