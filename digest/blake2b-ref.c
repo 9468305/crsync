@@ -14,6 +14,8 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <sys/stat.h>
 
 #include "blake2.h"
 #include "blake2-impl.h"
@@ -363,6 +365,33 @@ int blake2b( uint8_t *out, const void *in, const void *key, const uint8_t outlen
   blake2b_update( S, ( const uint8_t * )in, inlen );
   blake2b_final( S, out, outlen );
   return 0;
+}
+
+static const size_t buflen = 8*1024;
+
+int blake2b_File(const char *filename, uint8_t *out, const uint8_t outlen)
+{
+    memset(out, 0, outlen);
+    struct stat st;
+    if(stat(filename, &st)!=0 || !S_ISREG(st.st_mode) || st.st_size==0) {
+        // file not exist || not regular file || empty file
+        return -1;
+    }
+    FILE *f = fopen(filename, "rb");
+    if(f)
+    {
+        unsigned char *buf = malloc(buflen);
+        blake2b_state ctx;
+        blake2b_init(&ctx, outlen);
+        int i;
+        while ((i = fread(buf, 1, buflen, f)) > 0)
+            blake2b_update(&ctx, buf, i);
+        blake2b_final(&ctx, out, outlen);
+        free(buf);
+        fclose(f);
+        return 0;
+    }
+    return -1;
 }
 
 #if defined(SUPERCOP)

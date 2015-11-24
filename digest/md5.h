@@ -44,7 +44,7 @@ void MD5_Final(MD5_CTX *ctx, unsigned char *result);
 
 /* Author: chenqi, <9468305@gmail.com> */
 void MD5_Data(const void *data, unsigned long size, unsigned char *result);
-void MD5_File(const char *filename, unsigned char *result);
-void MD5_File_Parallel(const char *filename, unsigned char *result);
+int MD5_File(const char *filename, unsigned char *result);
+int MD5_File_Parallel(const char *filename, unsigned char *result);
 
 #endif

@@ -28,13 +28,16 @@ SOFTWARE.
 #   include <sys/mman.h>   /* mmap */
 #endif
 #include <unistd.h>
+#include <sys/stat.h>
 #include <errno.h>
 #include <time.h>
 #include <omp.h>
 
 #include "crsync.h"
+#include "http.h"
 #include "blake2.h"
 #include "log.h"
+#include "util.h"
 
 #define NEW_SUFFIX ".new"
 
@@ -860,4 +863,95 @@ void crsync_easy_cleanup(crsync_handle_t *handle) {
 void crsync_global_cleanup() {
     LOGI("crsync_global_cleanup\n");
     curl_global_cleanup();
+}
+
+CRScode crs_perform_digest(const char *srcFilename, const char *dstFilename, uint32_t blockSize) {
+    LOGI("begin\n");
+    if(srcFilename == NULL || dstFilename == NULL) {
+        LOGE("end %d\n", CRS_PARAM_ERROR);
+        return CRS_PARAM_ERROR;
+    }
+    CRScode code = CRS_OK;
+    filedigest_t *fd = filedigest_malloc();
+
+    code = Digest_Perform(srcFilename, blockSize, fd);
+    if(code != CRS_OK) {
+        LOGE("end %d\n", code);
+        filedigest_free(fd);
+        return code;
+    }
+
+    code = Digest_Save(dstFilename, fd);
+
+    filedigest_free(fd);
+
+    LOGI("end %d\n", code);
+    return code;
+}
+
+static const char *DIGEST_EXT = ".dig";
+
+CRScode crs_perform_diff(const char *srcFilename, const char *dstFilename, const char *url,
+                         filedigest_t *fd, diffResult_t *dr) {
+    LOGI("begin\n");
+
+    if(!srcFilename || !dstFilename || !url || !fd || !dr) {
+        LOGE("end %d\n", CRS_PARAM_ERROR);
+        return CRS_PARAM_ERROR;
+    }
+
+    CRScode code = CRS_OK;
+    char *digestFilename = Util_strcat(dstFilename, DIGEST_EXT);
+    LOGI("digestFilename = %s\n", digestFilename);
+
+    do {
+        if(0 != Digest_checkfile(digestFilename)) {
+            code = HTTP_File(url, digestFilename, 5, NULL);
+            UTIL_IF_BREAK(code != CRS_OK);
+        }
+
+        code = Digest_Load(digestFilename, fd);
+        UTIL_IF_BREAK(code != CRS_OK);
+        code = Diff_perform(srcFilename, fd, dr);
+    } while(0);
+
+    free(digestFilename);
+    LOGI("end %d\n", code);
+    return code;
+}
+
+CRScode crs_perform_patch(const char *srcFilename, const char *dstFilename, const char *url,
+                         filedigest_t *fd, diffResult_t *dr) {
+    LOGI("begin\n");
+    CRScode code = CRS_OK;
+    code = Patch_perform(srcFilename, dstFilename, url, fd, dr);
+    LOGI("end %d\n", code);
+    return code;
+}
+
+CRScode crs_perform_update(const char *srcFilename, const char *dstFilename, const char *digestUrl, const char *url) {
+    LOGI("begin\n");
+
+    if(!srcFilename || !dstFilename || !url) {
+        LOGE("end %d\n", CRS_PARAM_ERROR);
+        return CRS_PARAM_ERROR;
+    }
+
+    CRScode code = CRS_OK;
+
+    filedigest_t *fd = filedigest_malloc();
+    diffResult_t *dr = diffResult_malloc();
+    do {
+        code = crs_perform_diff(srcFilename, dstFilename, digestUrl, fd, dr);
+        filedigest_dump((const filedigest_t*)fd);
+        diffResult_dump(dr);
+        UTIL_IF_BREAK(code != CRS_OK);
+
+        code = crs_perform_patch(srcFilename, dstFilename, url, fd, dr);
+    } while(0);
+
+    filedigest_free(fd);
+    diffResult_free(dr);
+
+    return code;
 }

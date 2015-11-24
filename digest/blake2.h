@@ -137,6 +137,8 @@ extern "C" {
   int blake2sp( uint8_t *out, const void *in, const void *key, const uint8_t outlen, const uint64_t inlen, uint8_t keylen );
   int blake2bp( uint8_t *out, const void *in, const void *key, const uint8_t outlen, const uint64_t inlen, uint8_t keylen );
 
+  //Implement by chenqi
+  int blake2b_File(const char *filename, uint8_t *out, const uint8_t outlen);
   int blake2sp_file( const char *filename, uint8_t *out, uint8_t outlen );
 
   static inline int blake2( uint8_t *out, const void *in, const void *key, const uint8_t outlen, const uint64_t inlen, uint8_t keylen )

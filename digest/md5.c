@@ -307,14 +307,15 @@ void MD5_Data(const void *data, unsigned long size, unsigned char *result)
 }
 
 static const size_t buflen = 8*1024;
-static const long minlen = 1024*1024;
 
-void MD5_File(const char *filename, unsigned char *result)
+int MD5_File(const char *filename, unsigned char *result)
 {
     memset(result, 0, MD5_OUTBYTES);
     struct stat st;
-    if(stat(filename, &st) != 0 || !S_ISREG(st.st_mode)) return; // file not exist or not regular file
-    if(st.st_size == 0) return; // empty file
+    if(stat(filename, &st)!=0 || !S_ISREG(st.st_mode) || st.st_size==0) {
+        // file not exist || not regular file || empty file
+        return -1;
+    }
     FILE *f = fopen(filename, "rb");
     if(f)
     {
@@ -327,15 +328,21 @@ void MD5_File(const char *filename, unsigned char *result)
         MD5_Final(&ctx, result);
         free(buf);
         fclose(f);
+        return 0;
     }
+    return -1;
 }
 
-void MD5_File_Parallel( const char *filename, unsigned char *result )
+static const long minlen = 1024*1024;
+
+int MD5_File_Parallel( const char *filename, unsigned char *result )
 {
     memset(result, 0, MD5_OUTBYTES);
     struct stat st;
-    if(stat(filename, &st) != 0 || !S_ISREG(st.st_mode)) return; // file not exist or not regular file
-    if(st.st_size == 0) return; // empty file
+    if(stat(filename, &st)!=0 || !S_ISREG(st.st_mode) || st.st_size==0) {
+        // file not exist || not regular file || empty file
+        return -1;
+    }
     if(st.st_size < minlen) return MD5_File(filename, result);
     const size_t parallel_size = (st.st_size + MD5_PARALLELISM_DEGREE - 1) / MD5_PARALLELISM_DEGREE;
 
@@ -385,4 +392,5 @@ void MD5_File_Parallel( const char *filename, unsigned char *result )
         MD5_Update( FS, sum[i], MD5_OUTBYTES );
 
     MD5_Final( FS, result );
+    return 0;
 }

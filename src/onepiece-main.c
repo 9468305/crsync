@@ -27,37 +27,64 @@ extern "C" {
 
 #include "log.h"
 #include "onepiecetool.h"
+#include "http.h"
 
 static const char *cmd_onepiecetool = "onepiecetool";
 static const char *cmd_onepiece = "onepiece";
 
+static const char *cmd_digest = "digest";
+static const char *cmd_diff = "diff";
+static const char *cmd_patch = "patch";
+static const char *cmd_update = "update";
+
 static void showUsage() {
-    LOGI("crsync Usage:\n");
-    LOGI("crsync [option] [parameters]\n");
-    LOGI("Options:\n");
-    LOGI("    onepiecetool : generate resource meta info (magnet, rsum, file_hash)\n");
-    LOGI("    onepiece     : perform resource rsync update\n");
+    printf("crsync Usage:\n");
+    printf("crsync [option] [parameters]\n");
+    printf("Options:\n");
+    printf("    onepiecetool : generate resource meta info (magnet, rsum, file_hash)\n");
+    printf("    onepiece     : perform resource rsync update\n");
+    printf("    digest       : generate digest file\n");
 }
 
 static void showUsage_onepiecetool() {
-    LOGI("onepiecetool Usage:\n");
-    LOGI("crsync onepiecetool [parameters]\n");
-    LOGI("    curr_id\n"
+    printf("onepiecetool Usage:\n");
+    printf("crsync onepiecetool [parameters]\n");
+    printf("    curr_id\n"
          "    next_id\n"
          "    app_fullname\n"
          "    res_name_file\n"
          "    res_dir\n"
          "    output_dir\n"
          "    blocksize\n");
-    LOGI("Note:\n"
+    printf("Note:\n"
          "    dir should end with '/'\n"
          "    res_name_file is a text file contains resname at every line\n"
          "    blocksize is better to be 8-8092, 16-16184, 32-32768\n");
 }
 
 static void showUsage_onepiece() {
-    LOGI("onepiece Usage:\n");
-    LOGI("crsync onepiece curr_id \n");
+    printf("onepiece Usage:\n");
+    printf("crsync onepiece curr_id \n");
+}
+
+static void showUsage_digest() {
+    printf("digest Usage:\n");
+    printf("crsync digest srcFilename dstFilename blockSize\n");
+}
+
+static void showUsage_diff() {
+    printf("diff Usage:\n");
+    printf("crsync diff srcFilename dstFilename url\n");
+}
+
+static void showUsage_patch() {
+    printf("patch Usage:\n");
+    printf("crsync patch srcFilename dstFilename url\n");
+}
+
+static void showUsage_update() {
+    printf("update Usage:\n");
+    printf("crsync update srcFilename dstFilename digestUrl url\n");
 }
 
 static void util_setopt_resfile(onepiecetool_option_t *option, const char *resfile) {
@@ -141,9 +168,77 @@ int main_onepiecetool(int argc, char **argv) {
     return code;
 }
 
+int main_digest(int argc, char **argv) {
+    if(argc != 5) {
+        showUsage_digest();
+        return -1;
+    }
+    int c = 0;
+    c++; //crsync.exe
+    c++; //digest
+    const char *srcFilename = argv[c++];
+    const char *dstFilename = argv[c++];
+    uint32_t blockSize = atoi(argv[c++]) * 1024;
+
+    return crs_perform_digest(srcFilename, dstFilename, blockSize);
+}
+
+int main_diff(int argc, char **argv) {
+    if(argc != 5) {
+        showUsage_diff();
+        return -1;
+    }
+    int c = 0;
+    c++; //crsync.exe
+    c++; //diff
+    const char *srcFilename = argv[c++];
+    const char *dstFilename = argv[c++];
+    const char *url = argv[c++];
+
+    CRScode code = HTTP_global_init();
+    if(code != CRS_OK) {
+        LOGE("end %d\n", CRS_INIT_ERROR);
+        return CRS_INIT_ERROR;
+    }
+
+    filedigest_t *fd = filedigest_malloc();
+    diffResult_t *dr = diffResult_malloc();
+    code = crs_perform_diff(srcFilename, dstFilename, url, fd, dr);
+    diffResult_dump(dr);
+    filedigest_free(fd);
+    diffResult_free(dr);
+    HTTP_global_cleanup();
+    return code;
+}
+
+int main_update(int argc, char **argv) {
+    if(argc != 6) {
+        showUsage_update();
+        return -1;
+    }
+    int c = 0;
+    c++; //crsync.exe
+    c++; //update
+    const char *srcFilename = argv[c++];
+    const char *dstFilename = argv[c++];
+    const char *digestUrl = argv[c++];
+    const char *url = argv[c++];
+
+    CRScode code = HTTP_global_init();
+    if(code != CRS_OK) {
+        LOGE("end %d\n", CRS_INIT_ERROR);
+        return CRS_INIT_ERROR;
+    }
+
+    code = crs_perform_update(srcFilename, dstFilename, digestUrl, url);
+
+    HTTP_global_cleanup();
+    return code;
+}
+
 int main(int argc, char **argv) {
     for(int i=0; i<argc; i++) {
-        LOGI("argv %d %s\n", i, argv[i]);
+        LOGI("argv %d\n%s\n", i, argv[i]);
     }
 
     if(argc < 2) {
@@ -155,7 +250,13 @@ int main(int argc, char **argv) {
         return main_onepiecetool(argc, argv);
     } else if(0 == strncmp(argv[1], cmd_onepiece, strlen(cmd_onepiece))) {
         return main_onepiece(argc, argv);
-    } else {
+    } else if(0 == strncmp(argv[1], cmd_digest, strlen(cmd_digest))) {
+        return main_digest(argc, argv);
+    } else if(0 == strncmp(argv[1], cmd_diff, strlen(cmd_diff))) {
+        return main_diff(argc, argv);
+    } else if(0 == strncmp(argv[1], cmd_update, strlen(cmd_update))) {
+        return main_update(argc, argv);
+    }  else {
         showUsage();
         return -1;
     }

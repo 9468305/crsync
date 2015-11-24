@@ -28,8 +28,11 @@ SOFTWARE.
 extern "C" {
 #endif
 
+#include "define.h"
 #include "crsyncver.h"         /* crsync version defines   */
-
+#include "digest.h"
+#include "diff.h"
+#include "patch.h"
 #include "uthash.h"
 #include "utlist.h"
 #include "utstring.h"
@@ -128,6 +131,11 @@ CRSYNCcode crsync_easy_perform_patch(crsync_handle_t *handle);
 void crsync_easy_cleanup(crsync_handle_t *handle);
 
 void crsync_global_cleanup();
+
+CRScode crs_perform_digest(const char *srcFilename, const char *dstFilename, uint32_t blocksize);
+CRScode crs_perform_diff(const char *srcFilename, const char *dstFilename, const char *url,
+                         filedigest_t *fd, diffResult_t *dr);
+CRScode crs_perform_update(const char *srcFilename, const char *dstFilename, const char *digestUrl, const char *url);
 
 #if defined __cplusplus
     }
