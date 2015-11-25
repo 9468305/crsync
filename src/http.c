@@ -126,66 +126,6 @@ CRScode HTTP_Range(const char *url, const char *range, void *callback, void *dat
     curl_easy_cleanup(curl);
     return code;
 }
-/*
-typedef struct datacache_t {
-    CURL *curl;
-    unsigned char *buf;
-    size_t len;
-    size_t pos;
-} datacache_t;
-
-CRScode HTTP_Data(const char *url, const char *range, unsigned char *out, unsigned int outlen, int retry) {
-    if(!url || !out) {
-        LOGE("%d\n", CRS_PARAM_ERROR);
-        return CRS_PARAM_ERROR;
-    }
-
-    CURL *curl = curl_easy_init();
-    if(!curl) {
-        LOGE("%d\n", CRS_HTTP_ERROR);
-        return CRS_HTTP_ERROR;
-    }
-
-    CRScode code = CRS_OK;
-    datacache_t cache;
-    while(retry-- >= 0) {
-        cache.curl = curl;
-        cache.buf = out;
-        cache.len = outlen;
-        cache.pos = 0;
-
-        HTTP_curl_setopt(curl);
-        curl_easy_setopt(curl, CURLOPT_URL, url);
-        curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L);
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, HTTP_writedata_func);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&cache);
-        curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 1L);
-        curl_easy_setopt(curl, CURLOPT_RANGE, range);
-
-        CURLcode curlcode = curl_easy_perform(curl);
-        curl_easy_reset(curl);
-        switch(curlcode) {
-        case CURLE_OK:
-            code = CRS_OK;
-            break;
-        case CURLE_WRITE_ERROR:
-            code = CRS_HTTP_ERROR; //write buffer error since HTTP-Response 200
-            break;
-        default:
-            code = CRS_HTTP_ERROR;
-            break;
-        }
-        if(code == CRS_OK) {
-            break;
-        } else {
-            LOGI("curlcode %d\n", curlcode);
-        }
-    }//end of while(retry)
-
-    curl_easy_cleanup(curl);
-    return code;
-}
-*/
 
 typedef struct filecache_t {
     const char *url;

@@ -85,7 +85,7 @@ void log_timestamp(char *ts);
 #endif //CRSYNC_DEBUG
 
 #if defined __cplusplus
-    }
+}
 #endif
 
 #endif // CRSYNC_LOG_H

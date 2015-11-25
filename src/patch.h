@@ -24,10 +24,18 @@ SOFTWARE.
 #ifndef CRS_PATCH_H
 #define CRS_PATCH_H
 
+#if defined __cplusplus
+extern "C" {
+#endif
+
 #include "diff.h"
 
 CRScode Patch_perform(const char *srcFilename, const char *dstFilename, const char *url,
                       const fileDigest_t *fd, diffResult_t *dr);
+
+#if defined __cplusplus
+}
+#endif
 
 #endif // CRS_PATCH_H
 

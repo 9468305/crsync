@@ -263,6 +263,7 @@ static void showUsage_bulkHelper() {
 }
 
 bulkHelper_t* load_bulkFile(const char *bulkFile) {
+
     return NULL;
 }
 
@@ -338,5 +339,5 @@ int main(int argc, char **argv) {
 }
 
 #if defined __cplusplus
-    }
+}
 #endif

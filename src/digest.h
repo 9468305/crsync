@@ -24,6 +24,10 @@ SOFTWARE.
 #ifndef CRS_DIGEST_H
 #define CRS_DIGEST_H
 
+#if defined __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 
 #include "define.h"
@@ -58,5 +62,9 @@ CRScode Digest_Perform(const char *filename, const uint32_t blockSize, fileDiges
 CRScode Digest_Load(const char *filename, fileDigest_t *fd);
 CRScode Digest_Save(const char *filename, fileDigest_t *fd);
 int     Digest_checkfile(const char *filename);
+
+#if defined __cplusplus
+}
+#endif
 
 #endif // CRS_DIGEST_H

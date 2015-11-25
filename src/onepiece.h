@@ -84,7 +84,7 @@ CRSYNCcode onepiece_perform_PatchRes();
 void onepiece_cleanup();
 
 #if defined __cplusplus
-    }
+}
 #endif
 
 #endif // CRSYNC_ONEPIECE_H

@@ -143,7 +143,7 @@ CRScode crs_perform_patch(const char *srcFilename, const char *dstFilename, cons
 CRScode crs_perform_update(const char *srcFilename, const char *dstFilename, const char *digestUrl, const char *url);
 
 #if defined __cplusplus
-    }
+}
 #endif
 
 #endif // CRSYNC_H

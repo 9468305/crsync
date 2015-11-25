@@ -53,7 +53,7 @@ void onepiecetool_option_free(onepiecetool_option_t *option);
 CRSYNCcode onepiecetool_perform(onepiecetool_option_t *option);
 
 #if defined __cplusplus
-    }
+}
 #endif
 
 #endif // ONEPIECE_TOOL_H

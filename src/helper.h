@@ -24,6 +24,10 @@ SOFTWARE.
 #ifndef CRS_HELPER_H
 #define CRS_HELPER_H
 
+#if defined __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 
 #include "define.h"
@@ -73,5 +77,9 @@ void bulkHelper_free(bulkHelper_t *bh);
 CRScode bulkHelper_perform_diff(bulkHelper_t *bh);
 
 CRScode bulkHelper_perform_patch(bulkHelper_t *bh);
+
+#if defined __cplusplus
+}
+#endif
 
 #endif // CRS_HELPER_H

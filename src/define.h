@@ -24,6 +24,10 @@ SOFTWARE.
 #ifndef CRS_DEFINE_H
 #define CRS_DEFINE_H
 
+#if defined __cplusplus
+extern "C" {
+#endif
+
 typedef enum {
     CRS_OK = 0,
     CRS_INIT_ERROR, //mostly network init error
@@ -37,5 +41,9 @@ typedef enum {
 
 //TODO: change to md5_len 16
 #define CRS_STRONG_DIGEST_SIZE 32
+
+#if defined __cplusplus
+}
+#endif
 
 #endif // CRS_DEFINE_H

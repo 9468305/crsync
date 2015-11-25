@@ -24,6 +24,10 @@ SOFTWARE.
 #ifndef CRS_DIFF_H
 #define CRS_DIFF_H
 
+#if defined __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 
 #include "define.h"
@@ -42,5 +46,9 @@ void diffResult_free(diffResult_t *dr);
 void diffResult_dump(const diffResult_t *dr);
 
 CRScode Diff_perform(const char *srcFilename, const char *dstFilename, const fileDigest_t *fd, diffResult_t *dr);
+
+#if defined __cplusplus
+}
+#endif
 
 #endif // CRS_DIFF_H
