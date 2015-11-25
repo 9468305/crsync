@@ -30,6 +30,7 @@ extern "C" {
 #include "http.h"
 #include "helper.h"
 #include "util.h"
+#include "iniparser.h"
 
 static const char *cmd_onepiecetool = "onepiecetool";
 static const char *cmd_digest = "digest";
@@ -263,12 +264,24 @@ static void showUsage_bulkHelper() {
 }
 
 bulkHelper_t* load_bulkFile(const char *bulkFile) {
+    if(!bulkFile) {
+        return NULL;
+    }
+
+    dictionary* dic = iniparser_load(bulkFile);
+    if(!dic) {
+        return NULL;
+    }
+
+    //TODO:
+
+    iniparser_freedict(dic);
 
     return NULL;
 }
 
 int main_bulkHelper(int argc, char **argv) {
-    if(argc != 7) {
+    if(argc != 3) {
         showUsage_bulkHelper();
         return -1;
     }
@@ -281,13 +294,7 @@ int main_bulkHelper(int argc, char **argv) {
         LOGE("end bulkFile format error\n");
         return -1;
     }
-    /*
-    char *fileDir = argv[c++];
-    char *baseUrl = argv[c++];
-    char *fileName = argv[c++];
-    const unsigned int fileSize = atoi(argv[c++]);
-    char *fileDigestString = argv[c++];
-*/
+
     CRScode code = HTTP_global_init();
     if(code != CRS_OK) {
         LOGE("end %d\n", CRS_INIT_ERROR);

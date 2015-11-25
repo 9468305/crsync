@@ -19,7 +19,9 @@ SOURCES += \
     onepiecetool.c \
     onepiece-main.c \
     ../extra/tpl.c \
-    ../extra/win/mmap.c
+    ../extra/win/mmap.c \
+    ../extra/dictionary.c \
+    ../extra/iniparser.c
 
 HEADERS += \
     digest.h \
@@ -38,7 +40,9 @@ HEADERS += \
     ../extra/win/mman.h \
     ../extra/uthash.h \
     ../extra/utstring.h \
-    ../extra/utlist.h
+    ../extra/utlist.h \
+    ../extra/dictionary.h \
+    ../extra/iniparser.h
 
 INCLUDEPATH += $${_PRO_FILE_PWD_}/../digest
 LIBS += -L$${_PRO_FILE_PWD_}/../digest/m32 -ldigest
