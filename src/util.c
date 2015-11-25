@@ -22,7 +22,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
+#include <sys/stat.h>
 
 #include "util.h"
 #include "tpl.h"
@@ -97,4 +99,32 @@ int Util_tplfile_check(const char *filename, const char* fmt) {
         free(f);
     }
     return cmp;
+}
+
+int Util_copyfile(const char *src, const char *dst) {
+    size_t size;
+    FILE* s = fopen(src, "rb");
+    FILE* d = fopen(dst, "wb");
+    if(s && d) {
+        static const int len = 8192;
+        unsigned char *buf = malloc(len);
+        while ((size = fread(buf, 1, len, s)) > 0) {
+            fwrite(buf, 1, size, d);
+        }
+        free(buf);
+    } else {
+        fclose(s);
+        fclose(d);
+        return -1;
+    }
+    fclose(s);
+    fclose(d);
+
+    struct stat a, b;
+    if(stat(src, &a) == 0 && stat(dst, &b) == 0) {
+        if(a.st_size == b.st_size) {
+            return 0;
+        }
+    }
+    return -1;
 }

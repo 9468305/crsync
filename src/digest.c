@@ -31,6 +31,8 @@ SOFTWARE.
 #include "util.h"
 #include "tpl.h"
 
+const char *DIGEST_EXT = ".sum";
+
 void Digest_CalcWeak_Data(const uint8_t *data, const uint32_t size, uint32_t *out) {
     uint32_t i = 0, a = 0, b = 0;
     const uint8_t *p = data;

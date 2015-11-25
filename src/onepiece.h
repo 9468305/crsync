@@ -43,18 +43,18 @@ typedef struct res_t {
 
 void res_free(res_t *res);
 
-typedef struct magnet_t {
+typedef struct oldmagnet_t {
     char    *curr_id;   /* current magnet info id */
     char    *next_id;   /* next magnet info id */
     res_t   *app;       /* android apk hash */
     res_t   *res_list;  /* resource list */
-} magnet_t;
+} oldmagnet_t;
 
-magnet_t* onepiece_magnet_malloc();
-void onepiece_magnet_free(magnet_t *m);
+oldmagnet_t* onepiece_magnet_malloc();
+void onepiece_magnet_free(oldmagnet_t *m);
 
-CRSYNCcode onepiece_magnet_load(const char *filename, magnet_t *magnet);
-CRSYNCcode onepiece_magnet_save(const char *filename, magnet_t *magnet);
+CRSYNCcode onepiece_magnet_load(const char *filename, oldmagnet_t *magnet);
+CRSYNCcode onepiece_magnet_save(const char *filename, oldmagnet_t *magnet);
 
 typedef struct onepiece_t onepiece_t;
 
@@ -73,7 +73,7 @@ typedef enum {
 
 CRSYNCcode onepiece_init();
 CRSYNCcode onepiece_setopt(ONEPIECEoption opt, void *value);
-magnet_t* onepiece_getinfo_magnet();
+oldmagnet_t* onepiece_getinfo_magnet();
 CRSYNCcode onepiece_perform_query();
 CRSYNCcode onepiece_perform_MatchApp();
 CRSYNCcode onepiece_perform_PatchApp();

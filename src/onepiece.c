@@ -44,12 +44,12 @@ void res_free(res_t *res) {
     }
 }
 
-magnet_t* onepiece_magnet_malloc() {
-    magnet_t *m=calloc(1, sizeof(magnet_t));
+oldmagnet_t* onepiece_magnet_malloc() {
+    oldmagnet_t *m=calloc(1, sizeof(oldmagnet_t));
     return m;
 }
 
-void onepiece_magnet_free(magnet_t* m) {
+void onepiece_magnet_free(oldmagnet_t* m) {
     free(m->curr_id);
     free(m->next_id);
     res_free(m->app);
@@ -57,7 +57,7 @@ void onepiece_magnet_free(magnet_t* m) {
     free(m);
 }
 
-CRSYNCcode onepiece_magnet_load(const char *filename, magnet_t *magnet) {
+CRSYNCcode onepiece_magnet_load(const char *filename, oldmagnet_t *magnet) {
     LOGI("onepiece_magnet_load\n");
     CRSYNCcode code = CRSYNCE_OK;
     char *apphash = NULL, *resname = NULL, *reshash = NULL;
@@ -86,7 +86,7 @@ CRSYNCcode onepiece_magnet_load(const char *filename, magnet_t *magnet) {
     return code;
 }
 
-CRSYNCcode onepiece_magnet_save(const char *filename, magnet_t *magnet) {
+CRSYNCcode onepiece_magnet_save(const char *filename, oldmagnet_t *magnet) {
     char *resname=NULL, *reshash=NULL;
     tpl_node *tn = tpl_map(MAGNET_TPLMAP_FORMAT,
                  &magnet->curr_id,
@@ -107,7 +107,7 @@ CRSYNCcode onepiece_magnet_save(const char *filename, magnet_t *magnet) {
 }
 
 typedef struct onepiece_t {
-    magnet_t *magnet;
+    oldmagnet_t *magnet;
     CURL *curl_handle;
     crsync_handle_t *crsync_handle;
     char *start_id;
@@ -226,7 +226,7 @@ static CRSYNCcode onepiece_checkopt() {
     return CRSYNCE_INVALID_OPT;
 }
 
-static CRSYNCcode onepiece_magnet_curl(const char *id, magnet_t *magnet) {
+static CRSYNCcode onepiece_magnet_curl(const char *id, oldmagnet_t *magnet) {
     LOGI("onepiece_magnet_curl %s\n", id);
     CRSYNCcode code = CRSYNCE_CURL_ERROR;
     UT_string *magnetUrl = get_full_string(onepiece->baseUrl, id, MAGNET_SUFFIX);
@@ -270,7 +270,7 @@ static CRSYNCcode onepiece_magnet_curl(const char *id, magnet_t *magnet) {
     return code;
 }
 
-static CRSYNCcode onepiece_magnet_query(const char *id, magnet_t *magnet) {
+static CRSYNCcode onepiece_magnet_query(const char *id, oldmagnet_t *magnet) {
     LOGI("onepiece_magnet_query id = %s\n", id);
     CRSYNCcode code;
     UT_string *magnetFilename = get_full_string(onepiece->localRes, id, MAGNET_SUFFIX);
@@ -284,7 +284,7 @@ static CRSYNCcode onepiece_magnet_query(const char *id, magnet_t *magnet) {
     return code;
 }
 
-magnet_t* onepiece_getinfo_magnet() {
+oldmagnet_t* onepiece_getinfo_magnet() {
     if(onepiece) {
         return onepiece->magnet;
     } else {
@@ -300,7 +300,7 @@ CRSYNCcode onepiece_perform_query() {
         return code;
     }
     const char *id = onepiece->start_id;
-    magnet_t *magnet = onepiece_magnet_malloc();
+    oldmagnet_t *magnet = onepiece_magnet_malloc();
     
     //temp implement from boss!
     if(isNeverUpdate == 1) {

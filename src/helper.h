@@ -44,6 +44,7 @@ typedef struct helper_t {
     char *fileName; //file name
     uint32_t fileSize; //whole file size
     uint8_t fileDigest[CRS_STRONG_DIGEST_SIZE]; //whole file digest
+    struct helper_t *next; //used by bulkhelper with utlist(single-link)
 
     //here is variable, which may change in diff and patch
 
@@ -66,8 +67,7 @@ typedef struct bulkHelper_t {
     char *baseUrl;
 
     //here is bulk file struct
-    unsigned int bulkSize; //bulk file Num
-    helper_t *bulk;
+    helper_t *bulk; //used with utlist(signle-link)
 
 } bulkHelper_t;
 

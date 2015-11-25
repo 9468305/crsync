@@ -21,25 +21,36 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-#ifndef CRS_UTIL_H
-#define CRS_UTIL_H
+#ifndef CRS_MAGNET_H
+#define CRS_MAGNET_H
 
-#if defined __cplusplus
-extern "C" {
-#endif
+#include "define.h"
 
-char* Util_hex_string(const unsigned char *in, const unsigned int inlen);
+extern const char *MAGNET_EXT;
 
-unsigned char* Util_string_hex(const char *in);
+typedef struct sum_t {
+    char *name;
+    unsigned int size;
+    unsigned char digest[CRS_STRONG_DIGEST_SIZE];
+    struct sum_t *next; //used by magnet_t with utlist(single-link)
+} sum_t;
 
-char* Util_strcat(const char* s1, const char *s2);
+sum_t* sum_malloc();
+void sum_free(sum_t *s);
 
-int   Util_tplfile_check(const char *filename, const char* fmt);
+typedef struct magnet_t {
+    char *currVersion;
+    char *nextVersion;
+    sum_t *file; //used with utlist(single-link)
+} magnet_t;
 
-int Util_copyfile(const char *src, const char *dst);
+magnet_t* magnet_malloc();
+void magnet_free(magnet_t *m);
 
-#if defined __cplusplus
-}
-#endif
 
-#endif // CRS_UTIL_H
+
+CRScode Magnet_Load(magnet_t *m, const char *file);
+CRScode Magnet_Save(magnet_t *m, const char *file);
+
+#endif // CRS_MAGNET_H
+

@@ -35,11 +35,13 @@ helper_t* helper_malloc() {
     return calloc(1, sizeof(helper_t));
 }
 void helper_free(helper_t *h) {
-    if(h) {
-        free(h->fileName);
-        fileDigest_free(h->fd);
-        diffResult_free(h->dr);
-        free(h);
+    helper_t *elt, *tmp;
+    LL_FOREACH_SAFE(h,elt,tmp) {
+        LL_DELETE(h,elt);
+        free(elt->fileName);
+        fileDigest_free(elt->fd);
+        diffResult_free(elt->dr);
+        free(elt);
     }
 }
 
@@ -308,9 +310,7 @@ void bulkHelper_free(bulkHelper_t *bh) {
     if(bh) {
         free(bh->fileDir);
         free(bh->baseUrl);
-        for(unsigned int i=0; i<bh->bulkSize; ++i) {
-            helper_free(&bh->bulk[i]);
-        }
+        helper_free(bh->bulk);
         free(bh);
     }
 }
@@ -323,8 +323,9 @@ CRScode bulkHelper_perform_diff(bulkHelper_t *bh) {
     }
     CRScode code = CRS_OK;
 
-    for(unsigned int i=0; i< bh->bulkSize; ++i) {
-        code = helper_perform_diff(&bh->bulk[i]);
+    helper_t *elt=NULL;
+    LL_FOREACH(bh->bulk,elt) {
+        code = helper_perform_diff(elt);
         if(code != CRS_OK) break;
     }
 
@@ -340,8 +341,9 @@ CRScode bulkHelper_perform_patch(bulkHelper_t *bh) {
     }
     CRScode code = CRS_OK;
 
-    for(unsigned int i=0; i< bh->bulkSize; ++i) {
-        code = helper_perform_patch(&bh->bulk[i]);
+    helper_t *elt=NULL;
+    LL_FOREACH(bh->bulk,elt) {
+        code = helper_perform_patch(elt);
         if(code != CRS_OK) break;
     }
 

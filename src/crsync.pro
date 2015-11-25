@@ -12,6 +12,7 @@ SOURCES += \
     patch.c \
     http.c \
     crsync.c \
+    magnet.c \
     helper.c \
     util.c \
     log.c \
@@ -29,6 +30,7 @@ HEADERS += \
     patch.h \
     http.h \
     crsync.h \
+    magnet.h \
     helper.h \
     util.h \
     log.h \

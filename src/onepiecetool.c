@@ -129,7 +129,7 @@ CRSYNCcode onepiecetool_perform(onepiecetool_option_t *option) {
 #endif
     }
 
-    magnet_t *magnet = onepiece_magnet_malloc();
+    oldmagnet_t *magnet = onepiece_magnet_malloc();
     magnet->curr_id = strdup(option->curr_id);
     magnet->next_id = strdup(option->next_id);
 

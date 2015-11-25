@@ -32,7 +32,7 @@ extern "C" {
 
 #include "define.h"
 
-#define DIGEST_EXT ".rsum"
+extern const char *DIGEST_EXT;
 
 void Digest_CalcWeak_Data(const uint8_t *data, const uint32_t len, uint32_t *out);
 void Digest_CalcWeak_Roll(const uint8_t out, const uint8_t in, const uint32_t blockSize, uint32_t *weak);

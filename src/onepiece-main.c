@@ -25,15 +25,19 @@ SOFTWARE.
 extern "C" {
 #endif
 
+#include <sys/stat.h>
+
 #include "log.h"
 #include "onepiecetool.h"
 #include "http.h"
 #include "helper.h"
+#include "magnet.h"
 #include "util.h"
 #include "iniparser.h"
 
 static const char *cmd_onepiecetool = "onepiecetool";
 static const char *cmd_digest = "digest";
+static const char *cmd_bulkDigest = "bulkDigest";
 static const char *cmd_diff = "diff";
 static const char *cmd_patch = "patch";
 static const char *cmd_update = "update";
@@ -46,6 +50,7 @@ static void showUsage() {
             "Operation:\n"
             "    onepiecetool : generate resource meta info (magnet, rsum, file_hash)\n"
             "    digest       : generate digest file\n"
+            "    bulkDigest   : easy way to generate bulk-Files' digest and fdi(fileDigestIndex)\n"
             "    diff         : diff src-File with target-File to dst-File\n"
             "    patch        : not implement\n"
             "    update       : update src-File with target-File to dst-File\n"
@@ -132,6 +137,99 @@ int main_digest(int argc, char **argv) {
     CRScode code = crs_perform_digest(srcFilename, dstFilename, blockSize);
     log_dump();
     return code;
+}
+
+static void showUsage_bulkDigest() {
+    printf("bulkDigest Usage:\n"
+           "crsync bulkDigest iniFile\n");
+}
+
+int main_bulkDigest(int argc, char **argv) {
+    if(argc != 3) {
+        showUsage_bulkDigest();
+        return -1;
+    }
+    int c = 0;
+    c++; //crsync.exe
+    c++; //bulkDigest
+    const char *iniFilename = argv[c++];
+
+    dictionary* dic = iniparser_load(iniFilename);
+    if(!dic) {
+        printf("%s load fail\n", iniFilename);
+        return -1;
+    }
+
+    unsigned char hash[CRS_STRONG_DIGEST_SIZE];
+    magnet_t* m = magnet_malloc();
+
+    do {
+        int sectionNum = iniparser_getnsec(dic);
+        if(sectionNum <= 0) break;
+        const char *outputDir = iniparser_getstring(dic, "global:outputDir", NULL);
+        if(!outputDir) break;
+        const char *currVersion = iniparser_getstring(dic, "global:currVersion", NULL);
+        if(!currVersion) break;
+        const char *nextVersion = iniparser_getstring(dic, "global:nextVersion", NULL);
+        if(!nextVersion) break;
+        unsigned int blockSize = iniparser_getint(dic, "global:blockSize", 16);
+        blockSize *= 1024;
+
+        m->currVersion = strdup(currVersion);
+        m->nextVersion = strdup(nextVersion);
+
+        for(int i=1; i<sectionNum; ++i) {
+            sum_t *sum = sum_malloc();
+            const char *secname = iniparser_getsecname(dic, i);
+
+            char *dirKey = Util_strcat(secname, ":dir");
+            const char *dirValue = iniparser_getstring(dic, dirKey, NULL);
+            free(dirKey);
+
+            char *nameKey = Util_strcat(secname, ":name");
+            const char *nameValue = iniparser_getstring(dic, nameKey, NULL);
+            free(nameKey);
+
+            sum->name = strdup(nameValue);
+
+            char *srcFilename = Util_strcat(dirValue, nameValue);
+            struct stat st;
+            if(stat(srcFilename, &st) == 0) {
+                sum->size = st.st_size;
+            } else {
+                LOGE("%s not exist\n", srcFilename);
+                sum_free(sum);
+                break;
+            }
+
+            Digest_CalcStrong_File(srcFilename, hash);
+            memcpy(sum->digest, hash, CRS_STRONG_DIGEST_SIZE);
+            LL_APPEND(m->file, sum);
+            char *hashString = Util_hex_string(hash, CRS_STRONG_DIGEST_SIZE);
+            char *dstFilename = Util_strcat(outputDir, hashString);
+            char *digestFilename = Util_strcat(dstFilename, DIGEST_EXT);
+
+            if(CRS_OK != crs_perform_digest(srcFilename, digestFilename, blockSize)) {
+                LOGE("crs_perform_digest fail\n");
+            }
+            if(0 != Util_copyfile(srcFilename, dstFilename)) {
+                LOGE("copy file fail\n");
+            }
+
+            free(srcFilename);
+            free(dstFilename);
+            free(digestFilename);
+            free(hashString);
+        }//end of for()
+
+        char mfile[512];
+        snprintf(mfile, 512, "%s%s%s", outputDir, currVersion, MAGNET_EXT);
+        Magnet_Save(m, mfile);
+    } while(0);
+
+    iniparser_freedict(dic);
+    magnet_free(m);
+    return 0;
 }
 
 static void showUsage_diff() {
@@ -329,6 +427,8 @@ int main(int argc, char **argv) {
         return main_onepiecetool(argc, argv);
     } else if(0 == strncmp(argv[1], cmd_digest, strlen(cmd_digest))) {
         return main_digest(argc, argv);
+    } else if(0 == strncmp(argv[1], cmd_bulkDigest, strlen(cmd_bulkDigest))) {
+        return main_bulkDigest(argc, argv);
     } else if(0 == strncmp(argv[1], cmd_diff, strlen(cmd_diff))) {
         return main_diff(argc, argv);
     } else if(0 == strncmp(argv[1], cmd_patch, strlen(cmd_patch))) {
