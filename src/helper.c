@@ -171,7 +171,7 @@ CRScode helper_perform_patch(helper_t *h) {
             if(stat(dstFullName, &stDst) != 0) {
                 LOGI("dst-File not exist\n");
                 LOGI("both-File not exist, new download\n");
-                code = HTTP_File(url, dstFullName, 5, NULL);
+                code = HTTP_File(url, dstFullName, 5);
                 if(code == CRS_OK) {
                     LOGI("dst-File new download OK, let's rename it\n");
                     if( 0 == rename(dstFullName, srcFullName) ) {
@@ -189,7 +189,7 @@ CRScode helper_perform_patch(helper_t *h) {
                 LOGI("dst-File exist\n");
                 if((size_t)stDst.st_size < h->fileSize) {
                     LOGI("dst-File size < target-File size, resume download\n");
-                    code = HTTP_File(url, dstFullName, 5, NULL);
+                    code = HTTP_File(url, dstFullName, 5);
                     if(code == CRS_OK) {
                         LOGI("dst-File resume download OK, let's rename it\n");
                         if( 0 != rename(dstFullName, srcFullName) ) {

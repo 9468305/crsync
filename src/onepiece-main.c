@@ -445,6 +445,11 @@ int main(int argc, char **argv) {
     }
 }
 
+int crsync_progress(const char *basename, const unsigned int bytes) {
+    printf("kiss %s %d\n", basename, bytes);
+    return 0;
+}
+
 #if defined __cplusplus
 }
 #endif

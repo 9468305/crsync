@@ -26,7 +26,7 @@ SOFTWARE.
 #include <stdio.h>
 #include <errno.h>
 #include <omp.h>
-
+#include <libgen.h>
 
 #include "patch.h"
 #include "util.h"
@@ -121,8 +121,10 @@ static uint32_t Patch_missCombine(const diffResult_t *dr, combineblock_t *cb, ui
 }
 
 typedef struct rangedata_t {
-    combineblock_t *cb;
-    FILE *file;
+    combineblock_t *cb; //parallel ref to one Patch_miss()
+    FILE *file; //parallel ref to one Patch_miss()
+    char *basename; //parallel ref to one Patch_miss()
+    size_t *cacheBytes; //parallel ref to one Patch_miss()
 } rangedata_t;
 
 static size_t Range_callback(void *data, size_t size, size_t nmemb, void *userp) {
@@ -133,9 +135,10 @@ static size_t Range_callback(void *data, size_t size, size_t nmemb, void *userp)
     fseek(rd->file, rd->cb->pos + rd->cb->got, SEEK_SET);
     fwrite(data, size, nmemb, rd->file);
     rd->cb->got += realSize;
+    rd->cacheBytes += realSize;
 }
-    //TODO callback to user for isCancel
-    return realSize;
+    int isCancel = crsync_progress(rd->basename, *(rd->cacheBytes));
+    return (isCancel == 0) ? realSize : 0;
 }
 
 static CRScode Patch_miss(const char *filename, const char *url,
@@ -159,6 +162,11 @@ static CRScode Patch_miss(const char *filename, const char *url,
         return CRS_FILE_ERROR;
     }
 
+    //some compiler will change basename() parameter
+    char *tempname = strdup(filename);
+    char *name = basename(tempname);
+    size_t cacheBytes = fd->fileSize - (missNum * fd->blockSize);
+
     //combine continuous blocks, no more than missNum
     combineblock_t *cb = calloc(1, sizeof(combineblock_t) * missNum );
     uint32_t cbNum = Patch_missCombine(dr, cb, fd->blockSize);
@@ -169,6 +177,8 @@ static CRScode Patch_miss(const char *filename, const char *url,
         rangedata_t rd;
         rd.cb = &cb[i];
         rd.file = f;
+        rd.basename = name;
+        rd.cacheBytes = &cacheBytes;
         int retry = 3;
         char range[32];
         long rangeFrom;
@@ -187,6 +197,8 @@ static CRScode Patch_miss(const char *filename, const char *url,
         }
     }//end of (omp parallel for)
 
+    free(name);
+    free(tempname);
     free(cb);
     fclose(f);
     LOGI("end %d\n", code);

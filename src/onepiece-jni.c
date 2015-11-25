@@ -42,6 +42,11 @@ static JavaVM* gJavaVM = NULL;
 static jclass gJavaClass = NULL;
 static clock_t gClock = 0;
 
+int crsync_progress(const char *basename, const unsigned int bytes) {
+    printf("kiss %s %d\n", basename, bytes);
+    return 0;
+}
+
 int onepiece_xfer(const char *hash, int percent, double speed) {
     clock_t now = clock();
     long diff = (long)(now - gClock);
@@ -77,7 +82,7 @@ jstring JNI_onepiece_getinfo_magnet(JNIEnv *env, jclass clazz) {
     UT_string *result = NULL;
     utstring_new(result);
 
-    magnet_t *m = onepiece_getinfo_magnet();
+    oldmagnet_t *m = onepiece_getinfo_magnet();
     if(NULL != m) {
         utstring_printf(result, "%s;", m->curr_id);
         utstring_printf(result, "%s;", m->next_id);
