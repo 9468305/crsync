@@ -7,38 +7,38 @@ TARGET = crsync
 DESTDIR = m32
 
 SOURCES += \
+    digest.c \
+    diff.c \
+    patch.c \
+    http.c \
     crsync.c \
+    helper.c \
+    util.c \
+    log.c \
     onepiece.c \
     onepiecetool.c \
     onepiece-main.c \
     ../extra/tpl.c \
-    ../extra/win/mmap.c \
-    log.c \
-    digest.c \
-    util.c \
-    helper.c \
-    diff.c \
-    http.c \
-    patch.c
+    ../extra/win/mmap.c
 
 HEADERS += \
+    digest.h \
+    diff.h \
+    patch.h \
+    http.h \
     crsync.h \
+    helper.h \
+    util.h \
+    log.h \
+    define.h \
     crsyncver.h \
     onepiece.h \
     onepiecetool.h \
-    log.h \
     ../extra/tpl.h \
     ../extra/win/mman.h \
     ../extra/uthash.h \
     ../extra/utstring.h \
-    ../extra/utlist.h \
-    digest.h \
-    define.h \
-    util.h \
-    helper.h \
-    diff.h \
-    http.h \
-    patch.h
+    ../extra/utlist.h
 
 INCLUDEPATH += $${_PRO_FILE_PWD_}/../digest
 LIBS += -L$${_PRO_FILE_PWD_}/../digest/m32 -ldigest

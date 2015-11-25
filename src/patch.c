@@ -240,9 +240,6 @@ CRScode Patch_perform(const char *srcFilename, const char *dstFilename, const ch
         code = Patch_match(srcFilename, dstFilename, fd, dr);
         if(code != CRS_OK) break;
 
-        //code = Patch_cache(dstFilename, fd, dr);
-        //if(code != CRS_OK) break;
-
         //Patch_miss Blocks
         code = Patch_miss(dstFilename, url, fd, dr);
         if(code != CRS_OK) break;
