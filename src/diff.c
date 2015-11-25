@@ -22,6 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 #include <sys/stat.h>
+#include <unistd.h>
 #include <omp.h>
 
 #include "diff.h"
@@ -65,7 +66,7 @@ void diffResult_free(diffResult_t *dr) {
     }
 }
 
-void diffResult_dump(diffResult_t *dr) {
+void diffResult_dump(const diffResult_t *dr) {
     if(dr){
         LOGI("totalNum = %d\n", dr->totalNum);
         LOGI("matchNum = %d\n", dr->matchNum);
@@ -76,7 +77,7 @@ void diffResult_dump(diffResult_t *dr) {
     }
 }
 
-static diffHash_t* Diff_hash(const filedigest_t *fd) {
+static diffHash_t* Diff_hash(const fileDigest_t *fd) {
     diffHash_t *dh = NULL;
     diffHash_t *item = NULL, *temp = NULL;
     uint32_t blockNum = fd->fileSize / fd->blockSize;
@@ -101,7 +102,7 @@ static diffHash_t* Diff_hash(const filedigest_t *fd) {
 
 #define DIFF_PARALLELISM_DEGREE 4
 
-static void Diff_match(const char *filename, const filedigest_t *fd, const diffHash_t **dh, diffResult_t *dr) {
+static void Diff_match(const char *filename, const fileDigest_t *fd, const diffHash_t **dh, diffResult_t *dr) {
     dr->totalNum = fd->fileSize / fd->blockSize;
     dr->matchNum = 0;
     dr->cacheNum = 0;
@@ -239,9 +240,63 @@ static void Diff_match(const char *filename, const filedigest_t *fd, const diffH
     }
 }
 
-CRScode Diff_perform(const char *filename, const filedigest_t *fd, diffResult_t *dr) {
+static CRScode Diff_cache(const char *dstFilename, const fileDigest_t *fd, diffResult_t *dr) {
+    if(!dstFilename || !fd || !dr) {
+        LOGE("end %d\n", CRS_PARAM_ERROR);
+        return CRS_PARAM_ERROR;
+    }
+
+    if(0 != access(dstFilename, F_OK)) {
+        LOGI("end file not exist\n");
+        return CRS_OK;
+    }
+
+    struct stat st;
+    if(stat(dstFilename, &st) != 0) {
+        LOGE("dstFile stat fail %s\n", strerror(errno));
+        LOGE("%s\n", dstFilename);
+        //should return CRS_FILE_ERROR, but I do not want break workflow;
+        return CRS_OK;
+    }
+
+    if((size_t)st.st_size != fd->fileSize) {
+        if(0 != truncate(dstFilename, fd->fileSize)) {
+            LOGE("dest file truncate %dBytes error %s\n", fd->fileSize, strerror(errno));
+            //should return CRS_FILE_ERROR, but I do not want break workflow;
+            return CRS_OK;
+        }
+    }
+
+    FILE *f = fopen(dstFilename, "rb");
+    if(!f){
+        LOGE("dest file fopen rb error %s\n", strerror(errno));
+        //should return CRS_FILE_ERROR, but I do not want break workflow;
+        return CRS_OK;
+    }
+
+    uint8_t *buf = malloc(fd->blockSize);
+    uint8_t hash[CRS_STRONG_DIGEST_SIZE];
+
+    for(int i=0; i<dr->totalNum; ++i) {
+        if(dr->offsets[i] == -1) {
+            fseek(f, i*fd->blockSize, SEEK_SET);
+            fread(buf, 1, fd->blockSize, f);
+
+            Digest_CalcStrong_Data(buf, fd->blockSize, hash);
+            if(0 == memcmp(hash, fd->blockDigest[i].strong, CRS_STRONG_DIGEST_SIZE)) {
+                dr->offsets[i] = -2;
+                dr->cacheNum++;
+            }
+        }
+    }
+    free(buf);
+    fclose(f);
+    return CRS_OK;
+}
+
+CRScode Diff_perform(const char *srcFilename, const char *dstFilename, const fileDigest_t *fd, diffResult_t *dr) {
     LOGI("begin\n");
-    if(!filename || !fd || !dr) {
+    if(!srcFilename || !dstFilename || !fd || !dr) {
         LOGE("end %d\n", CRS_PARAM_ERROR);
         return CRS_PARAM_ERROR;
     }
@@ -249,7 +304,9 @@ CRScode Diff_perform(const char *filename, const filedigest_t *fd, diffResult_t 
     CRScode code = CRS_OK;
     diffHash_t *dh = Diff_hash(fd);
 
-    Diff_match(filename, fd, (const diffHash_t **)&dh, dr);
+    Diff_match(srcFilename, fd, (const diffHash_t **)&dh, dr);
+
+    Diff_cache(dstFilename, fd, dr);
 
     diffHash_free(&dh);
 

@@ -31,7 +31,7 @@ SOFTWARE.
 #include "util.h"
 #include "tpl.h"
 
-void Digest_CalcWeak_Data(const uint8_t *data, uint32_t size, uint32_t *out) {
+void Digest_CalcWeak_Data(const uint8_t *data, const uint32_t size, uint32_t *out) {
     uint32_t i = 0, a = 0, b = 0;
     const uint8_t *p = data;
     for ( ; i < size - 4; i += 4) {
@@ -45,7 +45,7 @@ void Digest_CalcWeak_Data(const uint8_t *data, uint32_t size, uint32_t *out) {
     *out = (a & 0xffff) | (b << 16);
 }
 
-void Digest_CalcWeak_Roll(const uint8_t out, const uint8_t in, uint32_t blockSize, uint32_t *weak) {
+void Digest_CalcWeak_Roll(const uint8_t out, const uint8_t in, const uint32_t blockSize, uint32_t *weak) {
     uint32_t a = *weak & 0xffff;
     uint32_t b = *weak >> 16;
 
@@ -55,14 +55,14 @@ void Digest_CalcWeak_Roll(const uint8_t out, const uint8_t in, uint32_t blockSiz
     *weak = (a & 0xffff) | (b << 16);
 }
 
-void Digest_CalcStrong_Data(const uint8_t *data, uint32_t size, uint8_t *out) {
+void Digest_CalcStrong_Data(const uint8_t *data, const uint32_t size, uint8_t *out) {
     blake2b_state ctx;
     blake2b_init(&ctx, CRS_STRONG_DIGEST_SIZE);
     blake2b_update(&ctx, data, size);
     blake2b_final(&ctx, (uint8_t *)out, CRS_STRONG_DIGEST_SIZE);
 }
 
-void Digest_CalcStrong_Data2(const uint8_t *buf1, const uint8_t *buf2, uint32_t size, uint32_t offset, uint8_t *out) {
+void Digest_CalcStrong_Data2(const uint8_t *buf1, const uint8_t *buf2, const uint32_t size, const uint32_t offset, uint8_t *out) {
     blake2b_state ctx;
     blake2b_init(&ctx, CRS_STRONG_DIGEST_SIZE);
     blake2b_update(&ctx, buf1+offset, size-offset);
@@ -74,11 +74,11 @@ int Digest_CalcStrong_File(const char *filename, uint8_t *out) {
     return blake2b_File(filename, out, CRS_STRONG_DIGEST_SIZE);
 }
 
-filedigest_t* filedigest_malloc() {
-    return calloc(1, sizeof(filedigest_t));
+fileDigest_t* fileDigest_malloc() {
+    return calloc(1, sizeof(fileDigest_t));
 }
 
-void filedigest_free(filedigest_t* fd) {
+void fileDigest_free(fileDigest_t* fd) {
     if(fd) {
         free(fd->blockDigest);
         free(fd->restData);
@@ -86,36 +86,37 @@ void filedigest_free(filedigest_t* fd) {
     }
 }
 
-void filedigest_dump(const filedigest_t* fd) {
+void fileDigest_dump(const fileDigest_t* fd) {
     if(fd) {
         LOGI("fileSize = %d\n", fd->fileSize);
         LOGI("blockSize = %d KiB\n", fd->blockSize/1024);
-        char *hashString = Util_HexToString(fd->fileDigest, CRS_STRONG_DIGEST_SIZE);
+        char *hashString = Util_hex_string(fd->fileDigest, CRS_STRONG_DIGEST_SIZE);
         LOGI("fileDigest = %s\n", hashString);
         free(hashString);
-        LOGI("restSize = %d Bytes\n", fd->fileSize % fd->blockSize);
+        size_t restSize = (fd->blockSize == 0) ? 0 : (fd->fileSize % fd->blockSize);
+        LOGI("restSize = %d Bytes\n", restSize);
     } else {
         LOGI("none\n");
     }
 }
 
-CRScode Digest_Perform(const char *filename, uint32_t blockSize, filedigest_t *fd) {
+CRScode Digest_Perform(const char *filename, const uint32_t blockSize, fileDigest_t *fd) {
     LOGI("begin\n");
 
-    if(!filename || !fd) {
+    if(!filename || blockSize == 0 || !fd) {
         LOGE("end %d\n", CRS_PARAM_ERROR);
         return CRS_PARAM_ERROR;
     }
 
     struct stat st;
     if(stat(filename, &st)!=0 || st.st_size==0){
-        // file not exist | file size is zero
+        // file not exist || file size is zero
         LOGE("end %s stat\n", filename);
         return CRS_FILE_ERROR;
     }
 
-    FILE *srcFile = fopen(filename, "rb");
-    if(!srcFile) {
+    FILE *f = fopen(filename, "rb");
+    if(!f) {
         LOGE("end %s fopen\n", filename);
         return CRS_FILE_ERROR;
     }
@@ -128,7 +129,7 @@ CRScode Digest_Perform(const char *filename, uint32_t blockSize, filedigest_t *f
     digest_t *digests = (blockNum > 0) ? malloc(sizeof(digest_t) * blockNum) : NULL;
 
     for(uint32_t i=0; i< blockNum; ++i) {
-        if(fread(buf, 1, blockSize, srcFile) == blockSize) {
+        if(fread(buf, 1, blockSize, f) == blockSize) {
             Digest_CalcWeak_Data(buf, blockSize, &digests[i].weak);
             Digest_CalcStrong_Data(buf, blockSize, digests[i].strong);
         } else {
@@ -139,7 +140,7 @@ CRScode Digest_Perform(const char *filename, uint32_t blockSize, filedigest_t *f
     }
 
     if(code == CRS_OK && restSize > 0) {
-        if(fread(buf, 1, restSize, srcFile) == restSize) {
+        if(fread(buf, 1, restSize, f) == restSize) {
             memcpy(restData, buf, restSize);
         } else {
             code = CRS_FILE_ERROR;
@@ -147,7 +148,7 @@ CRScode Digest_Perform(const char *filename, uint32_t blockSize, filedigest_t *f
         }
     }
     free(buf);
-    fclose(srcFile);
+    fclose(f);
 
     if(code != CRS_OK) {
         LOGE("end %d\n", code);
@@ -172,7 +173,7 @@ CRScode Digest_Perform(const char *filename, uint32_t blockSize, filedigest_t *f
 
 static const char *DIGEST_TPLMAP_FORMAT = "uuc#BA(uc#)";
 
-CRScode Digest_Load(const char *filename, filedigest_t *fd) {
+CRScode Digest_Load(const char *filename, fileDigest_t *fd) {
     LOGI("begin\n");
 
     if(!filename || !fd) {
@@ -220,7 +221,7 @@ CRScode Digest_Load(const char *filename, filedigest_t *fd) {
     return code;
 }
 
-CRScode Digest_Save(const char *filename, filedigest_t *fd) {
+CRScode Digest_Save(const char *filename, fileDigest_t *fd) {
     LOGI("begin\n");
 
     if(!filename || !fd) {

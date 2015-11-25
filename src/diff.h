@@ -30,8 +30,8 @@ SOFTWARE.
 #include "digest.h"
 
 typedef struct diffResult_t {
-    int32_t totalNum; //should be filedigest_t.fileSize / filedigest_t.blockSize;
-    int32_t matchNum; //calc from filedigest_t.offsets, compare to source file
+    int32_t totalNum; //should be fileDigest_t.fileSize / fileDigest_t.blockSize;
+    int32_t matchNum; //calc from fileDigest_t.offsets, compare to source file
     int32_t cacheNum; //dst file already got
     int32_t *offsets; //performed result, -1(default) miss, -2 cache, >=0 offset at source file;
 } diffResult_t;
@@ -39,10 +39,8 @@ typedef struct diffResult_t {
 diffResult_t* diffResult_malloc();
 void diffResult_free(diffResult_t *dr);
 
-void diffResult_dump(diffResult_t *dr);
+void diffResult_dump(const diffResult_t *dr);
 
-CRScode Diff_perform(const char *filename, const filedigest_t *fd, diffResult_t *dr);
-
+CRScode Diff_perform(const char *srcFilename, const char *dstFilename, const fileDigest_t *fd, diffResult_t *dr);
 
 #endif // CRS_DIFF_H
-

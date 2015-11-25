@@ -28,14 +28,17 @@ extern "C" {
 #include "log.h"
 #include "onepiecetool.h"
 #include "http.h"
+#include "helper.h"
+#include "util.h"
 
 static const char *cmd_onepiecetool = "onepiecetool";
-static const char *cmd_onepiece = "onepiece";
 
 static const char *cmd_digest = "digest";
 static const char *cmd_diff = "diff";
 static const char *cmd_patch = "patch";
 static const char *cmd_update = "update";
+static const char *cmd_helper = "helper";
+static const char *cmd_bulkHelper = "bulkHelper";
 
 static void showUsage() {
     printf("crsync Usage:\n");
@@ -44,6 +47,11 @@ static void showUsage() {
     printf("    onepiecetool : generate resource meta info (magnet, rsum, file_hash)\n");
     printf("    onepiece     : perform resource rsync update\n");
     printf("    digest       : generate digest file\n");
+    printf("    diff         : diff src-File with target-File to dst-File\n");
+    printf("    patch        : not implement\n");
+    printf("    update       : update src-File with target-File to dst-File\n");
+    printf("    helper       : easy way to update src-File itself(download/diff/patch)\n");
+    printf("    bulkHelper   : easy way to update bulk-Files(download/diff/patch)\n");
 }
 
 static void showUsage_onepiecetool() {
@@ -60,11 +68,6 @@ static void showUsage_onepiecetool() {
          "    dir should end with '/'\n"
          "    res_name_file is a text file contains resname at every line\n"
          "    blocksize is better to be 8-8092, 16-16184, 32-32768\n");
-}
-
-static void showUsage_onepiece() {
-    printf("onepiece Usage:\n");
-    printf("crsync onepiece curr_id \n");
 }
 
 static void showUsage_digest() {
@@ -87,6 +90,16 @@ static void showUsage_update() {
     printf("crsync update srcFilename dstFilename digestUrl url\n");
 }
 
+static void showUsage_helper() {
+    printf("helper Usage:\n");
+    printf("crsync helper FileDir baseUrl filename fileSize fileDigestString\n");
+}
+
+static void showUsage_bulkHelper() {
+    printf("bulkHelper Usage:\n");
+    printf("crsync bulkHelper bulkFile\n");
+}
+
 static void util_setopt_resfile(onepiecetool_option_t *option, const char *resfile) {
     FILE *f = NULL;
     const uint32_t size = 512;
@@ -106,44 +119,6 @@ static void util_setopt_resfile(onepiecetool_option_t *option, const char *resfi
         }
         fclose(f);
     }
-}
-
-int main_onepiece(int argc, char **argv) {
-    if(argc != 6) {
-        showUsage_onepiece();
-        return -1;
-    }/*
-    int c = 0;
-    c++;//crsync_exe
-    c++;//operation is onepiece
-    const char *curr_id = argv[c++];
-    const char *baseUrl = argv[c++];
-    const char *localApp = argv[c++];
-    const char *localRes = argv[c++];
-    CRSYNCcode code = onepiece_init();
-    if(CRSYNCE_OK != code) {
-        return code;
-    }
-    do {
-        code = onepiece_setopt(ONEPIECEOPT_STARTID, (void*)curr_id);
-        if(CRSYNCE_OK != code) break;
-        code = onepiece_setopt(ONEPIECEOPT_BASEURL, (void*)baseUrl);
-        if(CRSYNCE_OK != code) break;
-        code = onepiece_setopt(ONEPIECEOPT_LOCALAPP, (void*)localApp);
-        if(CRSYNCE_OK != code) break;
-        code = onepiece_setopt(ONEPIECEOPT_LOCALRES, (void*)localRes);
-        if(CRSYNCE_OK != code) break;
-
-        code = onepiece_perform_query();
-        if(CRSYNCE_OK != code) break;
-        magnet_t *magnet = NULL;
-        code = onepiece_getinfo(ONEPIECEINFO_MAGNET, (void**)&magnet);
-        //TODO: parse query result
-        //TODO: updateApp
-        //TODO: updateRes
-    } while(0);
-    onepiece_cleanup();*/
-    return -1;
 }
 
 int main_onepiecetool(int argc, char **argv) {
@@ -195,7 +170,7 @@ int main_diff(int argc, char **argv) {
     c++; //diff
     const char *srcFilename = argv[c++];
     const char *dstFilename = argv[c++];
-    const char *url = argv[c++];
+    const char *digestUrl = argv[c++];
 
     CRScode code = HTTP_global_init();
     if(code != CRS_OK) {
@@ -203,15 +178,22 @@ int main_diff(int argc, char **argv) {
         return CRS_INIT_ERROR;
     }
 
-    filedigest_t *fd = filedigest_malloc();
+    fileDigest_t *fd = fileDigest_malloc();
     diffResult_t *dr = diffResult_malloc();
-    code = crs_perform_diff(srcFilename, dstFilename, url, fd, dr);
+    code = crs_perform_diff(srcFilename, dstFilename, digestUrl, fd, dr);
     diffResult_dump(dr);
-    filedigest_free(fd);
+    fileDigest_free(fd);
     diffResult_free(dr);
     HTTP_global_cleanup();
     log_dump();
     return code;
+}
+
+int main_patch(int argc, char **argv) {
+    (void)argc;
+    (void)argv;
+    showUsage_patch();
+    return -1;
 }
 
 int main_update(int argc, char **argv) {
@@ -240,6 +222,93 @@ int main_update(int argc, char **argv) {
     return code;
 }
 
+int main_helper(int argc, char **argv) {
+    if(argc != 7) {
+        showUsage_helper();
+        return -1;
+    }
+    int c = 0;
+    c++; //crsync.exe
+    c++; //helper
+    char *fileDir = argv[c++];
+    char *baseUrl = argv[c++];
+    char *fileName = argv[c++];
+    const unsigned int fileSize = atoi(argv[c++]);
+    char *fileDigestString = argv[c++];
+
+    CRScode code = HTTP_global_init();
+    if(code != CRS_OK) {
+        LOGE("end %d\n", CRS_INIT_ERROR);
+        return CRS_INIT_ERROR;
+    }
+
+    helper_t *h = helper_malloc();
+    h->fileDir = fileDir;
+    h->baseUrl = baseUrl;
+    h->fileName = strdup(fileName);
+    h->fileSize = fileSize;
+    unsigned char *fileDigest = Util_string_hex(fileDigestString);
+    memcpy( h->fileDigest, fileDigest, CRS_STRONG_DIGEST_SIZE);
+    free(fileDigest);
+
+    code = helper_perform_diff(h);
+    if(code == CRS_OK) {
+        code = helper_perform_patch(h);
+    }
+
+    helper_free(h);
+
+    HTTP_global_cleanup();
+    log_dump();
+
+    return code;
+}
+
+bulkHelper_t* load_bulkFile(const char *bulkFile) {
+    return NULL;
+}
+
+int main_bulkHelper(int argc, char **argv) {
+    if(argc != 7) {
+        showUsage_bulkHelper();
+        return -1;
+    }
+    int c = 0;
+    c++; //crsync.exe
+    c++; //bulkHelper
+    char *bulkFile = argv[c++];
+    bulkHelper_t *bh = load_bulkFile(bulkFile);
+    if(!bh) {
+        LOGE("end bulkFile format error\n");
+        return -1;
+    }
+    /*
+    char *fileDir = argv[c++];
+    char *baseUrl = argv[c++];
+    char *fileName = argv[c++];
+    const unsigned int fileSize = atoi(argv[c++]);
+    char *fileDigestString = argv[c++];
+*/
+    CRScode code = HTTP_global_init();
+    if(code != CRS_OK) {
+        LOGE("end %d\n", CRS_INIT_ERROR);
+        return CRS_INIT_ERROR;
+    }
+
+    code = bulkHelper_perform_diff(bh);
+
+    if(code == CRS_OK) {
+        code = bulkHelper_perform_patch(bh);
+    }
+
+    bulkHelper_free(bh);
+
+    HTTP_global_cleanup();
+    log_dump();
+
+    return code;
+}
+
 int main(int argc, char **argv) {
     for(int i=0; i<argc; i++) {
         LOGI("argv %d %s\n", i, argv[i]);
@@ -252,15 +321,19 @@ int main(int argc, char **argv) {
 
     if(0 == strncmp(argv[1], cmd_onepiecetool, strlen(cmd_onepiecetool))) {
         return main_onepiecetool(argc, argv);
-    } else if(0 == strncmp(argv[1], cmd_onepiece, strlen(cmd_onepiece))) {
-        return main_onepiece(argc, argv);
     } else if(0 == strncmp(argv[1], cmd_digest, strlen(cmd_digest))) {
         return main_digest(argc, argv);
     } else if(0 == strncmp(argv[1], cmd_diff, strlen(cmd_diff))) {
         return main_diff(argc, argv);
+    } else if(0 == strncmp(argv[1], cmd_patch, strlen(cmd_patch))) {
+        return main_patch(argc, argv);
     } else if(0 == strncmp(argv[1], cmd_update, strlen(cmd_update))) {
         return main_update(argc, argv);
-    }  else {
+    } else if(0 == strncmp(argv[1], cmd_helper, strlen(cmd_helper))) {
+        return main_helper(argc, argv);
+    } else if(0 == strncmp(argv[1], cmd_bulkHelper, strlen(cmd_bulkHelper))) {
+        return main_bulkHelper(argc, argv);
+    } else {
         showUsage();
         return -1;
     }

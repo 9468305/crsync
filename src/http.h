@@ -26,6 +26,8 @@ SOFTWARE.
 
 #include "define.h"
 
+#define HTTP_TEMP_EXT ".curl"
+
 CRScode HTTP_global_init();
 void HTTP_global_cleanup();
 

@@ -186,7 +186,6 @@ CRScode HTTP_Data(const char *url, const char *range, unsigned char *out, unsign
     return code;
 }
 */
-static const char *TEMP_FILE_EXT = ".curl";
 
 typedef struct filecache_t {
     const char *url;
@@ -219,8 +218,6 @@ CRScode HTTP_File(const char *url, const char *filename, int retry, HTTP_callbac
     }
 
     CRScode code = CRS_OK;
-
-    char *tf = Util_strcat(filename, TEMP_FILE_EXT);
     filecache_t cache;
 
     while(retry-- >= 0) {
@@ -229,13 +226,13 @@ CRScode HTTP_File(const char *url, const char *filename, int retry, HTTP_callbac
         cache.cancel = 0;
 
         struct stat st;
-        if(!stat(tf, &st)) {
+        if(!stat(filename, &st)) {
             cache.bytes = st.st_size;
         } else {
             cache.bytes = 0L;
         }
 
-        FILE *f = fopen(tf, "ab+");
+        FILE *f = fopen(filename, "ab+");
         if(!f) {
             code = CRS_FILE_ERROR;
             break;
@@ -267,12 +264,6 @@ CRScode HTTP_File(const char *url, const char *filename, int retry, HTTP_callbac
         }
 
         if(code == CRS_OK) {
-            if(0 != rename(tf, filename)) {
-                LOGE("error rename\n");
-                LOGE("from %s\n", tf);
-                LOGE("to %s\n", filename);
-                code = CRS_FILE_ERROR;
-            }
             break;
         }
         if(code == CRS_USER_CANCEL) {
@@ -282,6 +273,5 @@ CRScode HTTP_File(const char *url, const char *filename, int retry, HTTP_callbac
     }//end of while(retry)
     curl_easy_cleanup(curl);
 
-    free(tf);
     return code;
 }

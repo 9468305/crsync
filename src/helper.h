@@ -24,8 +24,54 @@ SOFTWARE.
 #ifndef CRS_HELPER_H
 #define CRS_HELPER_H
 
-#include "define.h"
+#include <stdint.h>
 
-CRScode helper_perform_digest();
+#include "define.h"
+#include "diff.h"
+
+CRScode helper_perform_version();
+
+typedef struct helper_t {
+    //here is constant ref pointer, never change
+    char *fileDir; //file directory, end with '/', ref to bulkhelper_t.fileDir
+    char *baseUrl; //base url, end with '/', ref to bulkhelper_t.baseUrl
+
+    //here is constant, never change
+    char *fileName; //file name
+    uint32_t fileSize; //whole file size
+    uint8_t fileDigest[CRS_STRONG_DIGEST_SIZE]; //whole file digest
+
+    //here is variable, which may change in diff and patch
+
+    uint32_t cacheSize; //local, cache, same file size
+    int isComplete; //0 not; 1 complete
+    fileDigest_t *fd;
+    diffResult_t *dr;
+} helper_t;
+
+helper_t* helper_malloc();
+void helper_free(helper_t *h);
+
+CRScode helper_perform_diff(helper_t *h);
+
+CRScode helper_perform_patch(helper_t *h);
+
+typedef struct bulkHelper_t {
+    //here is constant, never change
+    char *fileDir;
+    char *baseUrl;
+
+    //here is bulk file struct
+    unsigned int bulkSize; //bulk file Num
+    helper_t *bulk;
+
+} bulkHelper_t;
+
+bulkHelper_t * bulkHelper_malloc();
+void bulkHelper_free(bulkHelper_t *bh);
+
+CRScode bulkHelper_perform_diff(bulkHelper_t *bh);
+
+CRScode bulkHelper_perform_patch(bulkHelper_t *bh);
 
 #endif // CRS_HELPER_H

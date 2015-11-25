@@ -28,11 +28,13 @@ SOFTWARE.
 
 #include "define.h"
 
-void Digest_CalcWeak_Data(const uint8_t *data, uint32_t len, uint32_t *out);
-void Digest_CalcWeak_Roll(const uint8_t out, const uint8_t in, uint32_t blockSize, uint32_t *weak);
+#define DIGEST_EXT ".rsum"
 
-void Digest_CalcStrong_Data(const uint8_t *data, uint32_t len, uint8_t *out);
-void Digest_CalcStrong_Data2(const uint8_t *buf1, const uint8_t *buf2, uint32_t size, uint32_t offset, uint8_t *out);
+void Digest_CalcWeak_Data(const uint8_t *data, const uint32_t len, uint32_t *out);
+void Digest_CalcWeak_Roll(const uint8_t out, const uint8_t in, const uint32_t blockSize, uint32_t *weak);
+
+void Digest_CalcStrong_Data(const uint8_t *data, const uint32_t len, uint8_t *out);
+void Digest_CalcStrong_Data2(const uint8_t *buf1, const uint8_t *buf2, const uint32_t size, const uint32_t offset, uint8_t *out);
 int  Digest_CalcStrong_File(const char *filename, uint8_t *out);
 
 typedef struct digest_t {
@@ -40,21 +42,21 @@ typedef struct digest_t {
     uint32_t    weak; // Adler32, used for Rolling calc
 } digest_t;
 
-typedef struct filedigest_t {
+typedef struct fileDigest_t {
     uint32_t    fileSize; //file size
     uint32_t    blockSize; //block size
     uint8_t     fileDigest[CRS_STRONG_DIGEST_SIZE]; //file strong sum
     digest_t    *blockDigest; //every block's rsum_t data
     uint8_t     *restData; //rest binary data, size = fileSize % blockSize
-} filedigest_t;
+} fileDigest_t;
 
-filedigest_t* filedigest_malloc();
-void          filedigest_free(filedigest_t* fd);
-void          filedigest_dump(const filedigest_t* fd);
+fileDigest_t* fileDigest_malloc();
+void          fileDigest_free(fileDigest_t* fd);
+void          fileDigest_dump(const fileDigest_t* fd);
 
-CRScode Digest_Perform(const char *filename, uint32_t blockSize, filedigest_t *fd);
-CRScode Digest_Load(const char *filename, filedigest_t *fd);
-CRScode Digest_Save(const char *filename, filedigest_t *fd);
+CRScode Digest_Perform(const char *filename, const uint32_t blockSize, fileDigest_t *fd);
+CRScode Digest_Load(const char *filename, fileDigest_t *fd);
+CRScode Digest_Save(const char *filename, fileDigest_t *fd);
 int     Digest_checkfile(const char *filename);
 
 #endif // CRS_DIGEST_H

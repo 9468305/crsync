@@ -24,7 +24,8 @@ SOFTWARE.
 #ifndef CRS_UTIL_H
 #define CRS_UTIL_H
 
-char* Util_HexToString(const unsigned char *in, const unsigned int inlen);
+char* Util_hex_string(const unsigned char *in, const unsigned int inlen);
+unsigned char* Util_string_hex(const char *in);
 
 char* Util_strcat(const char* s1, const char *s2);
 int   Util_tplfile_check(const char *filename, const char* fmt);

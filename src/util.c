@@ -47,7 +47,7 @@ static const char* s_hexTable[256] = {
     "f0", "f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "fa", "fb", "fc", "fd", "fe", "ff"
 };
 
-char* Util_HexToString(const unsigned char *in, const unsigned int inlen) {
+char* Util_hex_string(const unsigned char *in, const unsigned int inlen) {
     unsigned int outlen = inlen * 2;
     char *out = malloc(outlen+1);
     for(unsigned int i=0; i<inlen; ++i) {
@@ -56,6 +56,28 @@ char* Util_HexToString(const unsigned char *in, const unsigned int inlen) {
     }
     out[outlen] = '\0';
     return out;
+}
+
+static unsigned char nibbleFromChar(char c) {
+    if(c >= '0' && c <= '9') return c - '0';
+    if(c >= 'a' && c <= 'f') return c - 'a' + 10;
+    if(c >= 'A' && c <= 'F') return c - 'A' + 10;
+    return 255;
+}
+
+unsigned char* Util_string_hex(const char *in) {
+    unsigned char *retval;
+    unsigned char *p;
+    int len, i;
+
+    len = strlen(in) / 2;
+    retval = malloc(len+1);
+    for(i=0, p = (unsigned char *) in; i<len; ++i) {
+        retval[i] = (nibbleFromChar(*p) << 4) | nibbleFromChar(*(p+1));
+        p += 2;
+    }
+    retval[len] = 0;
+    return retval;
 }
 
 char* Util_strcat(const char* s1, const char *s2) {
