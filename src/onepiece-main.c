@@ -32,7 +32,6 @@ extern "C" {
 #include "util.h"
 
 static const char *cmd_onepiecetool = "onepiecetool";
-
 static const char *cmd_digest = "digest";
 static const char *cmd_diff = "diff";
 static const char *cmd_patch = "patch";
@@ -41,63 +40,32 @@ static const char *cmd_helper = "helper";
 static const char *cmd_bulkHelper = "bulkHelper";
 
 static void showUsage() {
-    printf("crsync Usage:\n");
-    printf("crsync [option] [parameters]\n");
-    printf("Options:\n");
-    printf("    onepiecetool : generate resource meta info (magnet, rsum, file_hash)\n");
-    printf("    onepiece     : perform resource rsync update\n");
-    printf("    digest       : generate digest file\n");
-    printf("    diff         : diff src-File with target-File to dst-File\n");
-    printf("    patch        : not implement\n");
-    printf("    update       : update src-File with target-File to dst-File\n");
-    printf("    helper       : easy way to update src-File itself(download/diff/patch)\n");
-    printf("    bulkHelper   : easy way to update bulk-Files(download/diff/patch)\n");
+    printf( "crsync Usage:\n"
+            "crsync [Operation] [Parameters]\n"
+            "Operation:\n"
+            "    onepiecetool : generate resource meta info (magnet, rsum, file_hash)\n"
+            "    digest       : generate digest file\n"
+            "    diff         : diff src-File with target-File to dst-File\n"
+            "    patch        : not implement\n"
+            "    update       : update src-File with target-File to dst-File\n"
+            "    helper       : easy way to update src-File itself(download/diff/patch)\n"
+            "    bulkHelper   : easy way to update bulk-Files(download/diff/patch)\n");
 }
 
 static void showUsage_onepiecetool() {
     printf("onepiecetool Usage:\n");
     printf("crsync onepiecetool [parameters]\n");
     printf("    curr_id\n"
-         "    next_id\n"
-         "    app_fullname\n"
-         "    res_name_file\n"
-         "    res_dir\n"
-         "    output_dir\n"
-         "    blocksize\n");
+          "    next_id\n"
+          "    app_fullname\n"
+          "    res_name_file\n"
+          "    res_dir\n"
+          "    output_dir\n"
+          "    blocksize\n");
     printf("Note:\n"
          "    dir should end with '/'\n"
          "    res_name_file is a text file contains resname at every line\n"
          "    blocksize is better to be 8-8092, 16-16184, 32-32768\n");
-}
-
-static void showUsage_digest() {
-    printf("digest Usage:\n");
-    printf("crsync digest srcFilename dstFilename blockSize\n");
-}
-
-static void showUsage_diff() {
-    printf("diff Usage:\n");
-    printf("crsync diff srcFilename dstFilename url\n");
-}
-
-static void showUsage_patch() {
-    printf("patch Usage:\n");
-    printf("crsync patch srcFilename dstFilename url\n");
-}
-
-static void showUsage_update() {
-    printf("update Usage:\n");
-    printf("crsync update srcFilename dstFilename digestUrl url\n");
-}
-
-static void showUsage_helper() {
-    printf("helper Usage:\n");
-    printf("crsync helper FileDir baseUrl filename fileSize fileDigestString\n");
-}
-
-static void showUsage_bulkHelper() {
-    printf("bulkHelper Usage:\n");
-    printf("crsync bulkHelper bulkFile\n");
 }
 
 static void util_setopt_resfile(onepiecetool_option_t *option, const char *resfile) {
@@ -143,6 +111,11 @@ int main_onepiecetool(int argc, char **argv) {
     return code;
 }
 
+static void showUsage_digest() {
+    printf( "digest Usage:\n"
+            "crsync digest srcFilename dstFilename blockSize\n");
+}
+
 int main_digest(int argc, char **argv) {
     if(argc != 5) {
         showUsage_digest();
@@ -158,6 +131,11 @@ int main_digest(int argc, char **argv) {
     CRScode code = crs_perform_digest(srcFilename, dstFilename, blockSize);
     log_dump();
     return code;
+}
+
+static void showUsage_diff() {
+    printf( "diff Usage:\n"
+            "crsync diff srcFilename dstFilename url\n");
 }
 
 int main_diff(int argc, char **argv) {
@@ -189,11 +167,21 @@ int main_diff(int argc, char **argv) {
     return code;
 }
 
+static void showUsage_patch() {
+    printf( "patch Usage:\n"
+            "crsync patch srcFilename dstFilename url\n");
+}
+
 int main_patch(int argc, char **argv) {
     (void)argc;
     (void)argv;
     showUsage_patch();
     return -1;
+}
+
+static void showUsage_update() {
+    printf( "update Usage:\n"
+            "crsync update srcFilename dstFilename digestUrl url\n");
 }
 
 int main_update(int argc, char **argv) {
@@ -220,6 +208,11 @@ int main_update(int argc, char **argv) {
     HTTP_global_cleanup();
     log_dump();
     return code;
+}
+
+static void showUsage_helper() {
+    printf( "helper Usage:\n"
+            "crsync helper FileDir baseUrl filename fileSize fileDigestString\n");
 }
 
 int main_helper(int argc, char **argv) {
@@ -262,6 +255,11 @@ int main_helper(int argc, char **argv) {
     log_dump();
 
     return code;
+}
+
+static void showUsage_bulkHelper() {
+    printf( "bulkHelper Usage:\n"
+            "crsync bulkHelper bulkFile\n");
 }
 
 bulkHelper_t* load_bulkFile(const char *bulkFile) {
@@ -311,10 +309,10 @@ int main_bulkHelper(int argc, char **argv) {
 
 int main(int argc, char **argv) {
     for(int i=0; i<argc; i++) {
-        LOGI("argv %d %s\n", i, argv[i]);
+        printf("argv %d %s\n", i, argv[i]);
     }
 
-    if(argc < 2) {
+    if(argc <= 2) {
         showUsage();
         return -1;
     }
