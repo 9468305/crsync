@@ -174,7 +174,7 @@ static CRScode Patch_miss(const char *srcFilename, const char *dstFilename, cons
 
     for(uint32_t i=0; i< cbNum; ++i) {
         rd.cb = &cb[i];
-        int retry = 3;
+        int retry = 10;
         char range[32];
         long rangeFrom;
         long rangeTo;

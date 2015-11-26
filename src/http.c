@@ -69,8 +69,8 @@ static void HTTP_curl_setopt(CURL *curl) {
     curl_easy_setopt(curl, CURLOPT_AUTOREFERER, 1L); /* allow auto referer */
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L); /* allow follow location */
     curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 5L); /* allow redir 5 times */
-    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 20L); /* connection timeout 20s */
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 20L);
+    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10L); /* connection timeout 20s */
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 15L);
 }
 
 static const char *response200 = "HTTP/1.0 200 OK";
@@ -114,7 +114,6 @@ CRScode HTTP_Range(const char *url, const char *range, void *callback, void *dat
     curl_easy_setopt(curl, CURLOPT_RANGE, range);
 
     CURLcode curlcode = curl_easy_perform(curl);
-    curl_easy_reset(curl);
     switch(curlcode) {
     case CURLE_OK:
         code = CRS_OK;

@@ -19,6 +19,7 @@ SOURCES += \
     onepiece.c \
     onepiecetool.c \
     onepiece-main.c \
+    md5.c \
     ../extra/tpl.c \
     ../extra/win/mmap.c \
     ../extra/dictionary.c \
@@ -38,6 +39,7 @@ HEADERS += \
     crsyncver.h \
     onepiece.h \
     onepiecetool.h \
+    md5.h \
     ../extra/tpl.h \
     ../extra/win/mman.h \
     ../extra/uthash.h \
@@ -45,9 +47,6 @@ HEADERS += \
     ../extra/utlist.h \
     ../extra/dictionary.h \
     ../extra/iniparser.h
-
-INCLUDEPATH += $${_PRO_FILE_PWD_}/../digest
-LIBS += -L$${_PRO_FILE_PWD_}/../digest/m32 -ldigest
 
 DEFINES += CURL_STATICLIB
 INCLUDEPATH += $${_PRO_FILE_PWD_}/../libcurl/include

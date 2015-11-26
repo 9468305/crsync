@@ -35,7 +35,6 @@ SOFTWARE.
 
 #include "crsync.h"
 #include "http.h"
-#include "blake2.h"
 #include "log.h"
 #include "util.h"
 
@@ -80,23 +79,10 @@ void rsum_weak_rolling(const uint8_t *data, uint32_t start, uint32_t block_sz, u
 }
 
 void rsum_strong_block(const uint8_t *p, uint32_t start, uint32_t block_sz, uint8_t *strong) {
-    blake2b_state ctx;
-    blake2b_init(&ctx, STRONG_SUM_SIZE);
-    blake2b_update(&ctx, p+start, block_sz);
-    blake2b_final(&ctx, (uint8_t *)strong, STRONG_SUM_SIZE);
 }
 
 int rsum_strong_file(const char *file, uint8_t *strong) {
     int result = -1;
-    memset(strong, 0, STRONG_SUM_SIZE);
-    tpl_mmap_rec rec = {-1, NULL, 0};
-    if(0 == tpl_mmap_file(file, &rec)) {
-        if(rec.text_sz > 0) {
-            rsum_strong_block(rec.text, 0, rec.text_sz, strong);
-            result = 0;
-        }
-        tpl_unmap_file(&rec);
-    }
     return result;
 }
 
@@ -114,29 +100,8 @@ UT_string* get_full_string(const char *base, const char *value, const char *suff
     }
     return name;
 }
-#if 0
-static const char s_infotype[CURLINFO_END][3] = {"* ", "< ", "> ", "{ ", "} ", "{ ", "} " };
-static int crsync_curl_debug(CURL *handle, curl_infotype type, char *data, size_t size, void *userptr) {
-    (void)handle;
-    (void)size;
-    (void)userptr;
-    switch (type) {
-    case CURLINFO_TEXT:
-    case CURLINFO_HEADER_IN:
-    case CURLINFO_HEADER_OUT:
-        LOGD("%s: %s\n", s_infotype[type], data);
-        break;
-    default:
-        break;
-    }
-    return 0;
-}
-#endif
+
 void crsync_curl_setopt(CURL *curlhandle) {
-#if 0
-    curl_easy_setopt(curlhandle, CURLOPT_VERBOSE, 1L);
-    curl_easy_setopt(curlhandle, CURLOPT_DEBUGFUNCTION, crsync_curl_debug);
-#endif
     curl_easy_setopt(curlhandle, CURLOPT_NOSIGNAL, 1L);
     curl_easy_setopt(curlhandle, CURLOPT_PROTOCOLS, CURLPROTO_HTTP); /* http protocol only */
     curl_easy_setopt(curlhandle, CURLOPT_FAILONERROR, 1L); /* request failure on HTTP response >= 400 */
