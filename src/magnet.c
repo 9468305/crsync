@@ -27,6 +27,7 @@ SOFTWARE.
 #include "magnet.h"
 #include "utlist.h"
 #include "tpl.h"
+#include "util.h"
 #include "log.h"
 
 const char *MAGNET_EXT = ".fdi";
@@ -113,4 +114,8 @@ CRScode Magnet_Save(magnet_t *m, const char *file) {
     CRScode code = (-1 == result) ? CRS_FILE_ERROR : CRS_OK;
     LOGI("end %d\n", code);
     return code;
+}
+
+int Magnet_checkfile(const char *filename) {
+    return Util_tplfile_check(filename, MAGNET_TPL_FORMAT);
 }

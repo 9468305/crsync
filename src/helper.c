@@ -45,10 +45,6 @@ void helper_free(helper_t *h) {
     }
 }
 
-CRScode helper_perform_version() {
-    return CRS_BUG;
-}
-
 CRScode helper_perform_diff(helper_t *h) {
     LOGI("begin\n");
     if(!h) {
@@ -139,7 +135,10 @@ CRScode helper_perform_diff(helper_t *h) {
     free(url);
     free(digestUrl);
 
+    crsync_progress(h->fileName, h->cacheSize, h->isComplete, 1);
+
     LOGI("end %d\n", code);
+    log_dump();
     return code;
 }
 
@@ -297,7 +296,10 @@ CRScode helper_perform_patch(helper_t *h) {
     diffResult_free(h->dr);
     h->dr = NULL;
 
+    crsync_progress(h->fileName, h->cacheSize, h->isComplete, 1);
+
     LOGI("end %d\n", code);
+    log_dump();
     return code;
 }
 
@@ -310,9 +312,77 @@ void bulkHelper_free(bulkHelper_t *bh) {
     if(bh) {
         free(bh->fileDir);
         free(bh->baseUrl);
+        free(bh->currVersion);
+        magnet_free(bh->magnet);
+        magnet_free(bh->latestMagnet);
         helper_free(bh->bulk);
         free(bh);
     }
+}
+
+static CRScode perform_magnet(bulkHelper_t *bh, const char *version, magnet_t *m) {
+    LOGI("begin\n");
+    CRScode code = CRS_OK;
+    char *file = Util_strcat(bh->fileDir, version);
+    char *url = Util_strcat(bh->baseUrl, version);
+    do {
+        if(0 != Magnet_checkfile(file)) {
+            code = HTTP_File(url, file, 2);
+            if(code != CRS_OK) break;
+        }
+        code = Magnet_Load(m, file);
+    } while(0);
+
+    free(file);
+    free(url);
+    LOGI("end %d\n", code);
+    return code;
+}
+
+CRScode bulkHelper_perform_magnet(bulkHelper_t *bh) {
+    LOGI("begin\n");
+    if(!bh) {
+        LOGE("end %d\n", CRS_PARAM_ERROR);
+        return CRS_PARAM_ERROR;
+    }
+    CRScode code = CRS_OK;
+    const char *version = bh->currVersion;
+    //reset magent
+    free(bh->magnet);
+    bh->magnet = NULL;
+    free(bh->latestMagnet);
+    bh->latestMagnet = NULL;
+
+    magnet_t *m = magnet_malloc();
+    if(CRS_OK == perform_magnet(bh, bh->currVersion, m)) {
+        bh->magnet = m;
+        m = NULL;
+        version = bh->magnet->nextVersion;
+    } else {
+        magnet_free(m);
+        LOGE("end %d currentVersion magnet miss\n", CRS_HTTP_ERROR);
+        return CRS_HTTP_ERROR;
+    }
+
+    while(1) {
+        m = magnet_malloc();
+        if(CRS_OK == perform_magnet(bh, version, m)) {
+            magnet_free(bh->latestMagnet);
+            bh->latestMagnet = m;
+            m = NULL;
+            version = bh->latestMagnet->nextVersion;
+        } else {
+            magnet_free(m);
+            m = NULL;
+            break;
+        }
+    }
+
+    code = (bh->magnet) ? CRS_OK : CRS_HTTP_ERROR;
+
+    LOGI("end %d\n", code);
+    log_dump();
+    return code;
 }
 
 CRScode bulkHelper_perform_diff(bulkHelper_t *bh) {

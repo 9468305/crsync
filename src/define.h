@@ -42,7 +42,7 @@ typedef enum {
 //TODO: change to md5_len 16
 #define CRS_STRONG_DIGEST_SIZE 32
 
-extern int crsync_progress(const char *basename, const unsigned int bytes);
+extern int crsync_progress(const char *basename, const unsigned int bytes, const int isComplete, const int immediate);
 
 #if defined __cplusplus
 }

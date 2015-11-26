@@ -31,6 +31,7 @@ extern "C" {
 #include <stdint.h>
 
 #include "define.h"
+#include "magnet.h"
 #include "diff.h"
 
 CRScode helper_perform_version();
@@ -65,14 +66,19 @@ typedef struct bulkHelper_t {
     //here is constant, never change
     char *fileDir;
     char *baseUrl;
+    char *currVersion;
 
     //here is bulk file struct
+    magnet_t *magnet; //currVersion 's magnet
+    magnet_t *latestMagnet; //latestVersion (request from server)
     helper_t *bulk; //used with utlist(signle-link)
 
 } bulkHelper_t;
 
 bulkHelper_t * bulkHelper_malloc();
 void bulkHelper_free(bulkHelper_t *bh);
+
+CRScode bulkHelper_perform_magnet(bulkHelper_t *bh);
 
 CRScode bulkHelper_perform_diff(bulkHelper_t *bh);
 

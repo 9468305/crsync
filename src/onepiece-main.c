@@ -445,8 +445,9 @@ int main(int argc, char **argv) {
     }
 }
 
-int crsync_progress(const char *basename, const unsigned int bytes) {
-    printf("kiss %s %d\n", basename, bytes);
+int crsync_progress(const char *basename, const unsigned int bytes, const int isComplete, const int immediate) {
+    (void)immediate;
+    printf("kiss %s %d %d\n", basename, bytes, isComplete);
     return 0;
 }
 

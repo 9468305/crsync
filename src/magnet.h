@@ -47,10 +47,10 @@ typedef struct magnet_t {
 magnet_t* magnet_malloc();
 void magnet_free(magnet_t *m);
 
-
-
 CRScode Magnet_Load(magnet_t *m, const char *file);
 CRScode Magnet_Save(magnet_t *m, const char *file);
+
+int Magnet_checkfile(const char *filename);
 
 #endif // CRS_MAGNET_H
 

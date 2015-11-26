@@ -137,7 +137,7 @@ static size_t Range_callback(void *data, size_t size, size_t nmemb, void *userp)
     rd->cb->got += realSize;
     rd->cacheBytes += realSize;
 }
-    int isCancel = crsync_progress(rd->basename, *(rd->cacheBytes));
+    int isCancel = crsync_progress(rd->basename, *(rd->cacheBytes), 0, 0);
     return (isCancel == 0) ? realSize : 0;
 }
 
