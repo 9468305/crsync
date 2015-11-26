@@ -110,7 +110,7 @@ CRScode helper_perform_diff(helper_t *h) {
             uint8_t srcDigest[CRS_STRONG_DIGEST_SIZE];
             Digest_CalcStrong_File(srcFullName, srcDigest);
             if(0 == memcmp(srcDigest, h->fileDigest, CRS_STRONG_DIGEST_SIZE)) {
-                LOGI("Yeah: src-File digest == target-File digest");
+                LOGI("Yeah: src-File digest == target-File digest\n");
                 h->cacheSize = h->fileSize;
                 h->isComplete = 1;
                 break;
@@ -170,7 +170,7 @@ CRScode helper_perform_patch(helper_t *h) {
             if(stat(dstFullName, &stDst) != 0) {
                 LOGI("dst-File not exist\n");
                 LOGI("both-File not exist, new download\n");
-                code = HTTP_File(url, dstFullName, 5);
+                code = HTTP_File(url, dstFullName, 5, h->fileName);
                 if(code == CRS_OK) {
                     LOGI("dst-File new download OK, let's rename it\n");
                     if( 0 == rename(dstFullName, srcFullName) ) {
@@ -188,12 +188,14 @@ CRScode helper_perform_patch(helper_t *h) {
                 LOGI("dst-File exist\n");
                 if((size_t)stDst.st_size < h->fileSize) {
                     LOGI("dst-File size < target-File size, resume download\n");
-                    code = HTTP_File(url, dstFullName, 5);
+                    code = HTTP_File(url, dstFullName, 5, h->fileName);
                     if(code == CRS_OK) {
                         LOGI("dst-File resume download OK, let's rename it\n");
                         if( 0 != rename(dstFullName, srcFullName) ) {
                             LOGI("rename OK, let's check digest\n");
                         } else {
+                            LOGE("%s\n", srcFullName);
+                            LOGE("%s\n", dstFullName);
                             LOGE("WTF: rename error %s\n", strerror(errno));
                             code = CRS_FILE_ERROR;
                             break;
@@ -270,6 +272,8 @@ CRScode helper_perform_patch(helper_t *h) {
             if(0 == remove(srcFullName)) {
                 LOGI("remove(delete) src-File OK\n");
             } else {
+                LOGE("%s\n", srcFullName);
+                LOGE("%s\n", dstFullName);
                 LOGE("WTF: remove(delete) src-File error %s", strerror(errno));
             }
             LOGI("let's rename dst-File to src-File\n");
@@ -278,6 +282,8 @@ CRScode helper_perform_patch(helper_t *h) {
                 h->isComplete = 1;
                 h->cacheSize = h->fileSize;
             } else {
+                LOGE("%s\n", srcFullName);
+                LOGE("%s\n", dstFullName);
                 LOGE("WTF: rename error %s\n", strerror(errno));
                 code = CRS_FILE_ERROR;
             }
@@ -324,17 +330,21 @@ static CRScode perform_magnet(bulkHelper_t *bh, const char *version, magnet_t *m
     LOGI("begin\n");
     CRScode code = CRS_OK;
     char *file = Util_strcat(bh->fileDir, version);
+    char *fileExt = Util_strcat(file, MAGNET_EXT);
     char *url = Util_strcat(bh->baseUrl, version);
+    char *urlExt = Util_strcat(url, MAGNET_EXT);
     do {
-        if(0 != Magnet_checkfile(file)) {
-            code = HTTP_File(url, file, 2);
+        if(0 != Magnet_checkfile(fileExt)) {
+            code = HTTP_File(urlExt, fileExt, 2, NULL);
             if(code != CRS_OK) break;
         }
-        code = Magnet_Load(m, file);
+        code = Magnet_Load(m, fileExt);
     } while(0);
 
     free(file);
+    free(fileExt);
     free(url);
+    free(urlExt);
     LOGI("end %d\n", code);
     return code;
 }
@@ -393,10 +403,26 @@ CRScode bulkHelper_perform_diff(bulkHelper_t *bh) {
     }
     CRScode code = CRS_OK;
 
+    magnet_t *m = bh->latestMagnet ? bh->latestMagnet : bh->magnet;
+    if(!bh->bulk) {
+        sum_t *melt = NULL;
+        LL_FOREACH(m->file, melt) {
+            helper_t *h = helper_malloc();
+            h->fileDir = bh->fileDir;
+            h->baseUrl = bh->baseUrl;
+            h->fileName = strdup(melt->name);
+            h->fileSize = melt->size;
+            memcpy(h->fileDigest, melt->digest, CRS_STRONG_DIGEST_SIZE);
+            LL_APPEND(bh->bulk, h);
+        }
+    }
+
     helper_t *elt=NULL;
     LL_FOREACH(bh->bulk,elt) {
-        code = helper_perform_diff(elt);
-        if(code != CRS_OK) break;
+        if(elt->isComplete == 0) {
+            code = helper_perform_diff(elt);
+            if(code != CRS_OK) break;
+        }
     }
 
     LOGI("end %d\n", code);
@@ -413,8 +439,10 @@ CRScode bulkHelper_perform_patch(bulkHelper_t *bh) {
 
     helper_t *elt=NULL;
     LL_FOREACH(bh->bulk,elt) {
-        code = helper_perform_patch(elt);
-        if(code != CRS_OK) break;
+        if(elt->isComplete == 0) {
+            code = helper_perform_patch(elt);
+            if(code != CRS_OK) break;
+        }
     }
 
     LOGI("end %d\n", code);

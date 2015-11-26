@@ -25,7 +25,6 @@ SOFTWARE.
 #include <unistd.h>
 #include <stdio.h>
 #include <errno.h>
-#include <omp.h>
 #include <libgen.h>
 
 #include "patch.h"
@@ -121,30 +120,27 @@ static uint32_t Patch_missCombine(const diffResult_t *dr, combineblock_t *cb, ui
 }
 
 typedef struct rangedata_t {
-    combineblock_t *cb; //parallel ref to one Patch_miss()
-    FILE *file; //parallel ref to one Patch_miss()
-    char *basename; //parallel ref to one Patch_miss()
-    size_t *cacheBytes; //parallel ref to one Patch_miss()
+    combineblock_t *cb; //ref to one Patch_miss()
+    FILE *file; //ref to one Patch_miss()
+    char *basename; //ref to one Patch_miss()
+    size_t cacheBytes;
 } rangedata_t;
 
 static size_t Range_callback(void *data, size_t size, size_t nmemb, void *userp) {
     rangedata_t *rd = (rangedata_t*)userp;
     size_t realSize = size * nmemb;
-#pragma omp critical (fileio)
-{
     fseek(rd->file, rd->cb->pos + rd->cb->got, SEEK_SET);
     fwrite(data, size, nmemb, rd->file);
     rd->cb->got += realSize;
     rd->cacheBytes += realSize;
-}
-    int isCancel = crsync_progress(rd->basename, *(rd->cacheBytes), 0, 0);
+    int isCancel = crsync_progress(rd->basename, rd->cacheBytes, 0, 0);
     return (isCancel == 0) ? realSize : 0;
 }
 
-static CRScode Patch_miss(const char *filename, const char *url,
+static CRScode Patch_miss(const char *srcFilename, const char *dstFilename, const char *url,
                           const fileDigest_t *fd, const diffResult_t *dr) {
     LOGI("begin\n");
-    if(!filename || !fd || !dr) {
+    if(!srcFilename || !dstFilename || !fd || !dr) {
         LOGE("end %d\n", CRS_PARAM_ERROR);
         return CRS_PARAM_ERROR;
     }
@@ -155,30 +151,29 @@ static CRScode Patch_miss(const char *filename, const char *url,
         return CRS_OK;
     }
 
-    FILE *f = fopen(filename, "rb+");
+    FILE *f = fopen(dstFilename, "rb+");
     if(!f){
         LOGE("end fopen error %s\n", strerror(errno));
-        LOGE("%s\n", filename);
+        LOGE("%s\n", dstFilename);
         return CRS_FILE_ERROR;
     }
 
-    //some compiler will change basename() parameter
-    char *tempname = strdup(filename);
-    char *name = basename(tempname);
-    size_t cacheBytes = fd->fileSize - (missNum * fd->blockSize);
-
     //combine continuous blocks, no more than missNum
-    combineblock_t *cb = calloc(1, sizeof(combineblock_t) * missNum );
+    combineblock_t *cb = calloc(missNum, sizeof(combineblock_t) );
     uint32_t cbNum = Patch_missCombine(dr, cb, fd->blockSize);
 
     CRScode code = CRS_OK;
-#pragma omp parallel for
+    rangedata_t rd;
+    rd.file = f;
+    rd.cacheBytes = fd->fileSize - (missNum * fd->blockSize);
+
+    //some compiler will change basename() parameter
+    char *tempname = strdup(srcFilename);
+    //do not free() since basename is wired.
+    rd.basename = basename(tempname);
+
     for(uint32_t i=0; i< cbNum; ++i) {
-        rangedata_t rd;
         rd.cb = &cb[i];
-        rd.file = f;
-        rd.basename = name;
-        rd.cacheBytes = &cacheBytes;
         int retry = 3;
         char range[32];
         long rangeFrom;
@@ -187,17 +182,16 @@ static CRScode Patch_miss(const char *filename, const char *url,
             rangeFrom = cb[i].pos + cb[i].got;
             rangeTo = cb[i].pos + cb[i].len - 1;
             snprintf(range, 32, "%ld-%ld", rangeFrom, rangeTo);
-            CRScode reqCode = HTTP_Range(url, range, (void*)Range_callback, &rd);
-            if(reqCode == CRS_OK) {
+            code = HTTP_Range(url, range, (void*)Range_callback, &rd);
+            if(code == CRS_OK) {
                 break;
             }
             /* TODO
             if(user cancel) break;
             */
         }
-    }//end of (omp parallel for)
+    }//end of for
 
-    free(name);
     free(tempname);
     free(cb);
     fclose(f);
@@ -253,7 +247,7 @@ CRScode Patch_perform(const char *srcFilename, const char *dstFilename, const ch
         if(code != CRS_OK) break;
 
         //Patch_miss Blocks
-        code = Patch_miss(dstFilename, url, fd, dr);
+        code = Patch_miss(srcFilename, dstFilename, url, fd, dr);
         if(code != CRS_OK) break;
 
         uint8_t hash[CRS_STRONG_DIGEST_SIZE];

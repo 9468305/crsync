@@ -130,26 +130,23 @@ CRScode HTTP_Range(const char *url, const char *range, void *callback, void *dat
 }
 
 typedef struct filecache_t {
-    char *name;
+    const char *name;
     long bytes;
     FILE *file;
-    //HTTP_callback *cb;
 } filecache_t;
 
 static size_t HTTP_writefile_func(void *ptr, size_t size, size_t nmemb, void *userdata)
 {
     filecache_t * cache = (filecache_t*)userdata;
     size_t w = fwrite(ptr, size, nmemb, cache->file);
-    /*int isCancel = 0;
-
-    if(cache->cb) {
-        isCancel = cache->cb(cache->basename, cache->bytes);
-    }*/
-    int isCancel = crsync_progress(cache->name, cache->bytes, 0, 0);
+    int isCancel = 0;
+    if(cache->name) {
+        isCancel = crsync_progress(cache->name, cache->bytes, 0, 0);
+    }
     return (isCancel == 0) ? w : 0;
 }
 
-CRScode HTTP_File(const char *url, const char *filename, int retry) {//HTTP_callback *cb
+CRScode HTTP_File(const char *url, const char *filename, int retry, const char *cbname) {
     if(!url || !filename) {
         LOGE("%d\n", CRS_PARAM_ERROR);
         return CRS_PARAM_ERROR;
@@ -163,10 +160,7 @@ CRScode HTTP_File(const char *url, const char *filename, int retry) {//HTTP_call
 
     CRScode code = CRS_OK;
     filecache_t cache;
-    //some compiler will change basename() parameter
-    char *tempname = strdup(filename);
-    cache.name = basename(tempname);
-    //cache.cb = cb;
+    cache.name = cbname;
 
     while(retry-- >= 0) {
 
@@ -214,8 +208,6 @@ CRScode HTTP_File(const char *url, const char *filename, int retry) {//HTTP_call
         }
     }//end of while(retry)
     curl_easy_cleanup(curl);
-    free(cache.name);
-    free(tempname);
 
     return code;
 }

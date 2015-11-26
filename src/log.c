@@ -33,7 +33,7 @@ void log_timestamp(char *ts) {
 #if defined ANDROID
     struct tm tmv;
     localtime_r(&t, &tmv);
-    strftime(ts, sizeof ts, "%Y%m%d %H:%M:%S", &tmv);
+    strftime(ts, LOG_TIME_STRING_SIZE, "%Y%m%d %H:%M:%S", &tmv);
 #else
     struct tm *tmv = localtime(&t);
     strftime(ts, LOG_TIME_STRING_SIZE, "%Y%m%d %H:%M:%S", tmv);

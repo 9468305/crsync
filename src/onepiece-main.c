@@ -26,6 +26,7 @@ extern "C" {
 #endif
 
 #include <sys/stat.h>
+#include <dirent.h>
 
 #include "log.h"
 #include "onepiecetool.h"
@@ -139,6 +140,31 @@ int main_digest(int argc, char **argv) {
     return code;
 }
 
+static void cleanDir(const char *dir) {
+    LOGI("clean up %s\n", dir);
+    DIR *dirp = opendir(dir);
+    if(dirp) {
+        struct dirent *direntp = NULL;
+        while ((direntp = readdir(dirp)) != NULL) {
+            if(0 == strcmp(direntp->d_name, ".") ||
+               0 == strcmp(direntp->d_name, "..")) {
+                continue;
+            }
+            LOGD("remove %s\n", direntp->d_name);
+            char *f = Util_strcat(dir, direntp->d_name);
+            remove(f);
+            free(f);
+        }
+        closedir(dirp);
+    } else {
+#ifndef _WIN32
+        mkdir(dir, S_IRUSR|S_IWUSR|S_IWGRP|S_IRGRP|S_IROTH);
+#else
+        mkdir(dir);
+#endif
+    }
+}
+
 static void showUsage_bulkDigest() {
     printf("bulkDigest Usage:\n"
            "crsync bulkDigest iniFile\n");
@@ -168,6 +194,7 @@ int main_bulkDigest(int argc, char **argv) {
         if(sectionNum <= 0) break;
         const char *outputDir = iniparser_getstring(dic, "global:outputDir", NULL);
         if(!outputDir) break;
+        cleanDir(outputDir);
         const char *currVersion = iniparser_getstring(dic, "global:currVersion", NULL);
         if(!currVersion) break;
         const char *nextVersion = iniparser_getstring(dic, "global:nextVersion", NULL);

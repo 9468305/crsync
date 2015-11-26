@@ -51,16 +51,16 @@ void log_timestamp(char *ts);
 #   define LEVEL_E ANDROID_LOG_ERROR
 #   define LOG_PRINT(level, fmt, ...)  __android_log_print(level, LOG_TAG, "[%s]: " fmt, __func__, ##__VA_ARGS__)
 #else
-#   define LEVEL_D 'D'
-#   define LEVEL_I 'I'
-#   define LEVEL_W 'W'
-#   define LEVEL_E 'E'
-#   define LOG_PRINT(level, fmt, ...)  printf("%s %c [%s]: " fmt, ts, level, __func__, ##__VA_ARGS__)
+#   define LEVEL_D 1
+#   define LEVEL_I 2
+#   define LEVEL_W 3
+#   define LEVEL_E 4
+#   define LOG_PRINT(level, fmt, ...)  printf("%s %d [%s]: " fmt, ts, level, __func__, ##__VA_ARGS__)
 #endif
 
 #define LOG_FILE(level, fmt, ...) \
     char *s=malloc(256);\
-    snprintf(s, 256, "%s %c [%s]: " fmt, ts, level, __func__, ##__VA_ARGS__);\
+    snprintf(s, 256, "%s %d [%s]: " fmt, ts, level, __func__, ##__VA_ARGS__);\
     log_append(s);
 
 #define LOG_OUTPUT(level, fmt, ...) \

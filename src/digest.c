@@ -25,7 +25,8 @@ SOFTWARE.
 #include <sys/stat.h>
 
 #include "digest.h"
-#include "blake2.h"
+#include "md5.h"
+//#include "blake2.h"
 #include "md5.h"
 #include "log.h"
 #include "util.h"
@@ -58,22 +59,31 @@ void Digest_CalcWeak_Roll(const uint8_t out, const uint8_t in, const uint32_t bl
 }
 
 void Digest_CalcStrong_Data(const uint8_t *data, const uint32_t size, uint8_t *out) {
+    MD5_Data(data, size, out);
+    /*
     blake2b_state ctx;
     blake2b_init(&ctx, CRS_STRONG_DIGEST_SIZE);
     blake2b_update(&ctx, data, size);
-    blake2b_final(&ctx, (uint8_t *)out, CRS_STRONG_DIGEST_SIZE);
+    blake2b_final(&ctx, (uint8_t *)out, CRS_STRONG_DIGEST_SIZE);*/
 }
 
 void Digest_CalcStrong_Data2(const uint8_t *buf1, const uint8_t *buf2, const uint32_t size, const uint32_t offset, uint8_t *out) {
+    MD5_CTX ctx;
+    MD5_Init(&ctx);
+    MD5_Update(&ctx, buf1+offset, size-offset);
+    MD5_Update(&ctx, buf2, offset);
+    MD5_Final(&ctx, out);
+/*
     blake2b_state ctx;
     blake2b_init(&ctx, CRS_STRONG_DIGEST_SIZE);
     blake2b_update(&ctx, buf1+offset, size-offset);
     blake2b_update(&ctx, buf2, offset);
-    blake2b_final(&ctx, (uint8_t *)out, CRS_STRONG_DIGEST_SIZE);
+    blake2b_final(&ctx, (uint8_t *)out, CRS_STRONG_DIGEST_SIZE);*/
 }
 
 int Digest_CalcStrong_File(const char *filename, uint8_t *out) {
-    return blake2b_File(filename, out, CRS_STRONG_DIGEST_SIZE);
+    return MD5_File(filename, out);
+    //return blake2b_File(filename, out, CRS_STRONG_DIGEST_SIZE);
 }
 
 fileDigest_t* fileDigest_malloc() {
