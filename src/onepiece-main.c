@@ -428,8 +428,9 @@ int main_bulkHelper(int argc, char **argv) {
 
     code = bulkHelper_perform_diff(bh);
 
+    //TODO: check here logic right ?
     if(code == CRS_OK) {
-        code = bulkHelper_perform_patch(bh);
+        code = bulkHelper_perform_patch(bh, (bh->latestVersion) ? 1 : 0 );
     }
 
     bulkHelper_free(bh);

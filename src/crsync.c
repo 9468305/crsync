@@ -869,7 +869,7 @@ CRScode crs_perform_diff(const char *srcFilename, const char *dstFilename, const
 
     do {
         if(0 != Digest_checkfile(digestFilename)) {
-            code = HTTP_File(digestUrl, digestFilename, 5, NULL);
+            code = HTTP_File(digestUrl, digestFilename, 1, NULL);
             if(code != CRS_OK) break;
         }
 

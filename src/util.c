@@ -25,6 +25,7 @@ SOFTWARE.
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 #include "util.h"
 #include "tpl.h"
@@ -127,4 +128,11 @@ int Util_copyfile(const char *src, const char *dst) {
         }
     }
     return -1;
+}
+
+
+void Util_rename(const char *src, const char *dst) {
+    if(0 == Util_copyfile(src, dst)) {
+        remove(dst);
+    }
 }

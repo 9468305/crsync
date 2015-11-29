@@ -134,6 +134,7 @@ static size_t Range_callback(void *data, size_t size, size_t nmemb, void *userp)
     rd->cb->got += realSize;
     rd->cacheBytes += realSize;
     int isCancel = crsync_progress(rd->basename, rd->cacheBytes, 0, 0);
+    LOGI("isCancel = %d realSize = %d cacheBytes = %d got = %d\n", isCancel, realSize, rd->cacheBytes, rd->cb->got);
     return (isCancel == 0) ? realSize : 0;
 }
 
@@ -171,27 +172,46 @@ static CRScode Patch_miss(const char *srcFilename, const char *dstFilename, cons
     char *tempname = strdup(srcFilename);
     //do not free() since basename is wired.
     rd.basename = basename(tempname);
-
+    CURL *curl = curl_easy_init();
     for(uint32_t i=0; i< cbNum; ++i) {
         rd.cb = &cb[i];
-        int retry = 10;
         char range[32];
         long rangeFrom;
         long rangeTo;
+
+        int retry = 10;
         while(retry-- > 0) {
             rangeFrom = cb[i].pos + cb[i].got;
             rangeTo = cb[i].pos + cb[i].len - 1;
             snprintf(range, 32, "%ld-%ld", rangeFrom, rangeTo);
-            code = HTTP_Range(url, range, (void*)Range_callback, &rd);
-            if(code == CRS_OK) {
+            LOGI("range : %s\n", range);
+            CURLcode curlcode = HTTP_Range(curl, url, range, (void*)Range_callback, &rd);
+
+            switch(curlcode) {
+            case CURLE_OK:
+                code = CRS_OK;
+                break;
+            case CURLE_HTTP_RETURNED_ERROR: // server connect OK, remote file not exist
+                retry = -1;
+                code = CRS_HTTP_ERROR;
+                break;
+            case CURLE_OPERATION_TIMEDOUT: //timeout, go on
+                retry++;
+                code = CRS_HTTP_ERROR;
+                break;
+            default:
+                code = CRS_HTTP_ERROR;
                 break;
             }
-            /* TODO
-            if(user cancel) break;
-            */
-        }
+
+            if(CRS_OK == code) { //got it
+                break;
+            }
+        }//end of while
+
     }//end of for
 
+    curl_easy_cleanup(curl);
     free(tempname);
     free(cb);
     fclose(f);

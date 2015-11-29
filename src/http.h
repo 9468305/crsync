@@ -29,12 +29,13 @@ extern "C" {
 #endif
 
 #include "define.h"
+#include "curl/curl.h"
 
 CRScode HTTP_global_init();
 void HTTP_global_cleanup();
 
 //callback should be int (Range_callback)(void *data, size_t size, size_t nmemb, void *userp);
-CRScode HTTP_Range(const char *url, const char *range, void *callback, void *data);
+CURLcode HTTP_Range(CURL *curl, const char *url, const char *range, void *callback, void *data);
 
 CRScode HTTP_File(const char *url, const char *filename, int retry, const char *cbname);
 

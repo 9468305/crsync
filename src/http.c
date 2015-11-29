@@ -27,7 +27,6 @@ SOFTWARE.
 
 #include "http.h"
 #include "util.h"
-#include "curl/curl.h"
 #include "log.h"
 
 CRScode HTTP_global_init() {
@@ -69,8 +68,8 @@ static void HTTP_curl_setopt(CURL *curl) {
     curl_easy_setopt(curl, CURLOPT_AUTOREFERER, 1L); /* allow auto referer */
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L); /* allow follow location */
     curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 5L); /* allow redir 5 times */
-    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10L); /* connection timeout 20s */
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 15L);
+    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10L); /* connection timeout */
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5L);
 }
 
 static const char *response200 = "HTTP/1.0 200 OK";
@@ -90,20 +89,7 @@ static size_t header_callback(void *data, size_t size, size_t nmemb, void *userp
     return realSize;
 }
 
-CRScode HTTP_Range(const char *url, const char *range, void *callback, void *data) {
-    if(!url || !range || !callback) {
-        LOGE("%d\n", CRS_PARAM_ERROR);
-        return CRS_PARAM_ERROR;
-    }
-
-    CURL *curl = curl_easy_init();
-    if(!curl) {
-        LOGE("%d\n", CRS_HTTP_ERROR);
-        return CRS_HTTP_ERROR;
-    }
-
-    CRScode code = CRS_OK;
-
+CURLcode HTTP_Range(CURL *curl, const char *url, const char *range, void *callback, void *data) {
     HTTP_curl_setopt(curl);
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L);
@@ -114,18 +100,9 @@ CRScode HTTP_Range(const char *url, const char *range, void *callback, void *dat
     curl_easy_setopt(curl, CURLOPT_RANGE, range);
 
     CURLcode curlcode = curl_easy_perform(curl);
-    switch(curlcode) {
-    case CURLE_OK:
-        code = CRS_OK;
-        break;
-    default:
-        code = CRS_HTTP_ERROR;
-        LOGE("curlcode %d\n", curlcode);
-        break;
-    }
-
-    curl_easy_cleanup(curl);
-    return code;
+    LOGI("curlcode %d\n", curlcode);
+    curl_easy_reset(curl);
+    return curlcode;
 }
 
 typedef struct filecache_t {
@@ -138,6 +115,7 @@ static size_t HTTP_writefile_func(void *ptr, size_t size, size_t nmemb, void *us
 {
     filecache_t * cache = (filecache_t*)userdata;
     size_t w = fwrite(ptr, size, nmemb, cache->file);
+    cache->bytes += w;
     int isCancel = 0;
     if(cache->name) {
         isCancel = crsync_progress(cache->name, cache->bytes, 0, 0);
@@ -164,7 +142,7 @@ CRScode HTTP_File(const char *url, const char *filename, int retry, const char *
     while(retry-- >= 0) {
 
         struct stat st;
-        if(!stat(filename, &st)) {
+        if(0 == stat(filename, &st)) {
             cache.bytes = st.st_size;
         } else {
             cache.bytes = 0L;
@@ -186,11 +164,20 @@ CRScode HTTP_File(const char *url, const char *filename, int retry, const char *
         curl_easy_setopt(curl, CURLOPT_RESUME_FROM, cache.bytes);
 
         CURLcode curlcode = curl_easy_perform(curl);
-        curl_easy_reset(curl);
         fclose(f);
+        curl_easy_reset(curl);
+
         switch(curlcode) {
         case CURLE_OK:
             code = CRS_OK;
+            break;
+        case CURLE_HTTP_RETURNED_ERROR: // server connect OK, remote file not exist
+            retry = -1;
+            code = CRS_HTTP_ERROR;
+            break;
+        case CURLE_OPERATION_TIMEDOUT: //timeout, go on
+            retry++;
+            code = CRS_HTTP_ERROR;
             break;
         default:
             code = CRS_HTTP_ERROR;
@@ -201,10 +188,7 @@ CRScode HTTP_File(const char *url, const char *filename, int retry, const char *
         if(code == CRS_OK) {
             break;
         }
-        if(code == CRS_USER_CANCEL) {
-            LOGI("user cancel\n");
-            break;
-        }
+
     }//end of while(retry)
     curl_easy_cleanup(curl);
 

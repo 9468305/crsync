@@ -38,6 +38,8 @@ int   Util_tplfile_check(const char *filename, const char* fmt);
 
 int Util_copyfile(const char *src, const char *dst);
 
+void Util_rename(const char *src, const char *dst);
+
 #if defined __cplusplus
 }
 #endif

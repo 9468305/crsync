@@ -30,6 +30,7 @@ SOFTWARE.
 #include "helper.h"
 #include "utstring.h"
 #include "utlist.h"
+#include "util.h"
 #include "http.h"
 
 #define ARRAY_COUNT(x) ((int) (sizeof(x) / sizeof((x)[0])))
@@ -40,7 +41,7 @@ typedef struct JNIJavaMethods {
     const char  *FunctionParams;
 } JNIJavaMethods;
 
-static jmethodID gMethod_xfer = NULL;
+static jmethodID gMethod_onProgress = NULL;
 static JavaVM* gJavaVM = NULL;
 static jclass gJavaClass = NULL;
 static clock_t gClock = 0;
@@ -58,55 +59,53 @@ int crsync_progress(const char *basename, const unsigned int bytes, const int is
     int isCancel = 0;
     if ((*gJavaVM)->GetEnv(gJavaVM, (void**)&env, JNI_VERSION_1_6) == JNI_OK) {
         jstring jname = (*env)->NewStringUTF( env, basename );
-        isCancel = (*env)->CallStaticIntMethod(env, gJavaClass, gMethod_xfer, jname, (jlong)bytes, (jint)isComplete);
+        isCancel = (*env)->CallStaticIntMethod(env, gJavaClass, gMethod_onProgress, jname, (jlong)bytes, (jint)isComplete);
         (*env)->DeleteLocalRef(env, jname);
     }
     return isCancel;
 }
 
-jint JNI_bulkHelper_init(JNIEnv *env, jclass clazz) {
-    CRScode code = HTTP_global_init();
-    if(code != CRS_OK) {
-        return code;
-    }
-
-    free(gBulkHelper);
-    gBulkHelper = bulkHelper_malloc();
-    return code;
-}
-
-jint JNI_bulkHelper_setopt(JNIEnv *env, jclass clazz, jstring j_fileDir, jstring j_baseUrl, jstring j_currVersion) {
-    CRScode code = CRS_OK;
+jint JNI_crsync_init(JNIEnv *env, jclass clazz, jstring j_fileDir, jstring j_baseUrl, jstring j_currVersion) {
     const char *fileDir = (*env)->GetStringUTFChars(env, j_fileDir, NULL);
     const char *baseUrl = (*env)->GetStringUTFChars(env, j_baseUrl, NULL);
     const char *currVersion = (*env)->GetStringUTFChars(env, j_currVersion, NULL);
-    gBulkHelper->fileDir = strdup(fileDir);
-    gBulkHelper->baseUrl = strdup(baseUrl);
-    gBulkHelper->currVersion = strdup(currVersion);
+
+    CRScode code = CRS_OK;
+    do {
+        code = HTTP_global_init();
+        if(code != CRS_OK) break;
+        free(gBulkHelper);
+        gBulkHelper = bulkHelper_malloc();
+        gBulkHelper->fileDir = strdup(fileDir);
+        gBulkHelper->baseUrl = strdup(baseUrl);
+        gBulkHelper->currentVersion = strdup(currVersion);
+    } while(0);
+
     (*env)->ReleaseStringUTFChars(env, j_fileDir, fileDir);
     (*env)->ReleaseStringUTFChars(env, j_baseUrl, baseUrl);
     (*env)->ReleaseStringUTFChars(env, j_currVersion, currVersion);
     return (jint)code;
 }
 
-jint JNI_bulkHelper_perform_magnet(JNIEnv *env, jclass clazz) {
-    jint r =(jint)bulkHelper_perform_magnet(gBulkHelper);
-    log_dump();
+jint JNI_crsync_perform_magnet(JNIEnv *env, jclass clazz) {
+    jint r = (jint)bulkHelper_perform_magnet(gBulkHelper);
     return r;
 }
 
-jstring JNI_bulkHelper_getinfo_magnet(JNIEnv *env, jclass clazz) {
+jstring JNI_crsync_get_magnet(JNIEnv *env, jclass clazz, jint isLatest) {
     UT_string *result = NULL;
     utstring_new(result);
 
-    magnet_t *m = gBulkHelper->latestMagnet ? gBulkHelper->latestMagnet : gBulkHelper->magnet;
-    if(NULL != m) {
+    magnet_t *m = (isLatest == 0) ? gBulkHelper->currentMagnet : gBulkHelper->latestMagnet;
+    if(m) {
         utstring_printf(result, "%s;", m->currVersion);
-        utstring_printf(result, "%s;", m->nextVersion);
         sum_t *elt=NULL;
         LL_FOREACH(m->file, elt) {
             utstring_printf(result, "%s;", elt->name);
-            utstring_printf(result, "%d;", elt->size);
+            char * hashStr = Util_hex_string(elt->digest, CRS_STRONG_DIGEST_SIZE);
+            utstring_printf(result, "%s;", hashStr);
+            free(hashStr);
+            utstring_printf(result, "%u;", elt->size);
         }
     }
     jstring jinfo = (*env)->NewStringUTF( env, utstring_body(result) );
@@ -114,19 +113,19 @@ jstring JNI_bulkHelper_getinfo_magnet(JNIEnv *env, jclass clazz) {
     return jinfo;
 }
 
-jint JNI_bulkHelper_perform_diff(JNIEnv *env, jclass clazz) {
+jint JNI_crsync_perform_diff(JNIEnv *env, jclass clazz) {
     jint r = (jint)bulkHelper_perform_diff(gBulkHelper);
     log_dump();
     return r;
 }
 
-jint JNI_bulkHelper_perform_patch(JNIEnv *env, jclass clazz) {
-    jint r = (jint)bulkHelper_perform_patch(gBulkHelper);
+jint JNI_crsync_perform_patch(JNIEnv *env, jclass clazz, jint isLatest) {
+    jint r = (jint)bulkHelper_perform_patch(gBulkHelper, (int)isLatest);
     log_dump();
     return r;
 }
 
-void JNI_bulkHelper_cleanup(JNIEnv *env, jclass clazz) {
+void JNI_crsync_cleanup(JNIEnv *env, jclass clazz) {
     bulkHelper_free(gBulkHelper);
     gBulkHelper = NULL;
     HTTP_global_cleanup();
@@ -142,13 +141,12 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
 
     // hook up native functions to string names and params
     JNINativeMethod NativeMethods[] = {
-        { "JNI_bulkHelper_init",            "()I",                      (void*)JNI_bulkHelper_init               },
-        { "JNI_bulkHelper_setopt",          "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)I",   (void*)JNI_bulkHelper_setopt },
-        { "JNI_bulkHelper_getinfo_magnet",  "()Ljava/lang/String;",     (void*)JNI_bulkHelper_getinfo_magnet     },
-        { "JNI_bulkHelper_perform_magnet",  "()I",                      (void*)JNI_bulkHelper_perform_magnet     },
-        { "JNI_bulkHelper_perform_diff",    "()I",                      (void*)JNI_bulkHelper_perform_diff      },
-        { "JNI_bulkHelper_perform_patch",   "()I",                      (void*)JNI_bulkHelper_perform_patch      },
-        { "JNI_bulkHelper_cleanup",         "()V",                      (void*)JNI_bulkHelper_cleanup            },
+        { "JNI_crsync_init",            "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)I", (void*)JNI_crsync_init },
+        { "JNI_crsync_get_magnet",      "(I)Ljava/lang/String;",    (void*)JNI_crsync_get_magnet },
+        { "JNI_crsync_perform_magnet",  "()I",                      (void*)JNI_crsync_perform_magnet },
+        { "JNI_crsync_perform_diff",    "()I",                      (void*)JNI_crsync_perform_diff },
+        { "JNI_crsync_perform_patch",   "(I)I",                     (void*)JNI_crsync_perform_patch },
+        { "JNI_crsync_cleanup",         "()V",                      (void*)JNI_crsync_cleanup },
     };
 
     // get the java class from JNI
@@ -158,7 +156,7 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
 
     // hook up java functions to string names and param
     JNIJavaMethods JavaMethods[] = {
-        { &gMethod_xfer, "java_crsync_progress", "(Ljava/lang/String;JI)I" }, //public static int java_crsync_progress(String, long, int);
+        { &gMethod_onProgress, "java_onProgress", "(Ljava/lang/String;JI)I" }, //public static int java_onProgress(String, long, int);
     };
 
     int result = 1;
@@ -183,4 +181,5 @@ void JNI_OnUnload(JavaVM* vm, void* InReserved) {
         gJavaClass = NULL;
     }
 }
+
 #endif
