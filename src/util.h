@@ -34,11 +34,11 @@ unsigned char* Util_string_hex(const char *in);
 
 char* Util_strcat(const char* s1, const char *s2);
 
-int   Util_tplfile_check(const char *filename, const char* fmt);
+int   Util_tplcmp(const char *filename, const char* fmt);
 
-int Util_copyfile(const char *src, const char *dst);
+int Util_filecpy(const char *src, const char *dst);
 
-void Util_rename(const char *src, const char *dst);
+int Util_filemove(const char *src, const char *dst);
 
 #if defined __cplusplus
 }

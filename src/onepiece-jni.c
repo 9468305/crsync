@@ -72,6 +72,7 @@ jint JNI_crsync_init(JNIEnv *env, jclass clazz, jstring j_fileDir, jstring j_bas
 
     CRScode code = CRS_OK;
     do {
+        log_open();
         code = HTTP_global_init();
         if(code != CRS_OK) break;
         free(gBulkHelper);
@@ -115,13 +116,11 @@ jstring JNI_crsync_get_magnet(JNIEnv *env, jclass clazz, jint isLatest) {
 
 jint JNI_crsync_perform_diff(JNIEnv *env, jclass clazz) {
     jint r = (jint)bulkHelper_perform_diff(gBulkHelper);
-    log_dump();
     return r;
 }
 
 jint JNI_crsync_perform_patch(JNIEnv *env, jclass clazz, jint isLatest) {
     jint r = (jint)bulkHelper_perform_patch(gBulkHelper, (int)isLatest);
-    log_dump();
     return r;
 }
 
@@ -129,10 +128,11 @@ void JNI_crsync_cleanup(JNIEnv *env, jclass clazz) {
     bulkHelper_free(gBulkHelper);
     gBulkHelper = NULL;
     HTTP_global_cleanup();
-    log_dump();
+    log_close();
 }
 
 jint JNI_OnLoad(JavaVM* vm, void* reserved) {
+    log_open();
     LOGI("crsync JNI_OnLoad\n");
     JNIEnv *env;
     if ((*vm)->GetEnv(vm, (void**)&env, JNI_VERSION_1_6) != JNI_OK) {
@@ -172,8 +172,9 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
     return (result == 1) ? JNI_VERSION_1_6 : JNI_ERR;
 }
 
+/* At Android Platform, JNI_OnUnload() will never been called */
 void JNI_OnUnload(JavaVM* vm, void* InReserved) {
-    LOGI("crsync JNI_OnUnload\n");
+    log_close();
     gJavaVM = NULL;
     JNIEnv *env =NULL;
     if( (*vm)->GetEnv(vm, (void**)&env, JNI_VERSION_1_6) == JNI_OK ) {

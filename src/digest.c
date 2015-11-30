@@ -277,5 +277,5 @@ CRScode Digest_Save(const char *filename, fileDigest_t *fd) {
 }
 
 int Digest_checkfile(const char *filename) {
-    return Util_tplfile_check(filename, DIGEST_TPLMAP_FORMAT);
+    return Util_tplcmp(filename, DIGEST_TPLMAP_FORMAT);
 }

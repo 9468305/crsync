@@ -322,7 +322,6 @@ CRSYNCcode onepiece_perform_query() {
     code = (NULL == onepiece->magnet->curr_id) ? CRSYNCE_CURL_ERROR : CRSYNCE_OK;
     onepiece_magnet_free(magnet);
     LOGI("onepiece_perform_query code = %d\n", code);
-    log_dump();
     return code;
 }
 
@@ -349,7 +348,6 @@ CRSYNCcode onepiece_perform_MatchApp() {
     } while(0);
 
     LOGI("onepiece_perform_MatchApp code = %d", code);
-    log_dump();
     return code;
 }
 
@@ -377,7 +375,6 @@ CRSYNCcode onepiece_perform_PatchApp() {
     } while(0);
 
     LOGI("onepiece_perform_PatchApp code = %d", code);
-    log_dump();
     return code;
 }
 
@@ -444,7 +441,6 @@ CRSYNCcode onepiece_perform_MatchRes() {
     }
     utstring_free(hash);
     LOGI("onepiece_perform_MatchRes code = %d\n", code);
-    log_dump();
     return code;
 }
 /*
@@ -707,7 +703,6 @@ CRSYNCcode onepiece_perform_PatchRes() {
     }
     utstring_free(hash);
     LOGI("onepiece_perform_PatchRes code = %d\n", code);
-    log_dump();
     return code;
 }
 
@@ -727,5 +722,4 @@ void onepiece_cleanup() {
     onepiece = NULL;
 
     crsync_global_cleanup();
-    log_dump();
 }

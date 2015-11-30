@@ -26,10 +26,11 @@ SOFTWARE.
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <errno.h>
 
 #include "util.h"
 #include "tpl.h"
-
+#include "log.h"
 
 static const char* s_hexTable[256] = {
     "00", "01", "02", "03", "04", "05", "06", "07", "08", "09", "0a", "0b", "0c", "0d", "0e", "0f",
@@ -92,7 +93,7 @@ char* Util_strcat(const char* s1, const char *s2) {
     return s;
 }
 
-int Util_tplfile_check(const char *filename, const char* fmt) {
+int Util_tplcmp(const char *filename, const char* fmt) {
     char *f = tpl_peek(TPL_FILE, filename);
     int cmp = -1;
     if(f) {
@@ -102,37 +103,50 @@ int Util_tplfile_check(const char *filename, const char* fmt) {
     return cmp;
 }
 
-int Util_copyfile(const char *src, const char *dst) {
+int Util_filecpy(const char *src, const char *dst) {
     size_t size;
     FILE* s = fopen(src, "rb");
-    FILE* d = fopen(dst, "wb");
-    if(s && d) {
-        static const int len = 8192;
-        unsigned char *buf = malloc(len);
-        while ((size = fread(buf, 1, len, s)) > 0) {
-            fwrite(buf, 1, size, d);
-        }
-        free(buf);
-    } else {
-        fclose(s);
-        fclose(d);
+    if(!s) {
+        LOGE("src fopen %s\n", strerror(errno));
         return -1;
     }
+
+    FILE* d = fopen(dst, "wb");
+    if(!d) {
+        LOGE("dst fopen %s\n", strerror(errno));
+        fclose(s);
+        return -1;
+    }
+
+    static const int len = 8192;
+    unsigned char *buf = malloc(len);
+    while ((size = fread(buf, 1, len, s)) > 0) {
+        fwrite(buf, 1, size, d);
+    }
+    free(buf);
+
     fclose(s);
     fclose(d);
 
-    struct stat a, b;
-    if(stat(src, &a) == 0 && stat(dst, &b) == 0) {
-        if(a.st_size == b.st_size) {
+    struct stat stSrc, stDst;
+    if(stat(src, &stSrc) == 0 && stat(dst, &stDst) == 0) {
+        if(stSrc.st_size == stDst.st_size) {
             return 0;
         }
     }
     return -1;
 }
 
-
-void Util_rename(const char *src, const char *dst) {
-    if(0 == Util_copyfile(src, dst)) {
-        remove(dst);
+int Util_filemove(const char *src, const char *dst) {
+    if(0 == Util_filecpy(src, dst)) {
+        if(0 == remove(src)) {
+            return 0;
+        } else {
+            LOGE("remove %s\n", strerror(errno));
+            return -1;
+        }
+    } else {
+        LOGE("filecpy fail\n");
+        return -1;
     }
 }

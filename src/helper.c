@@ -96,7 +96,7 @@ CRScode helper_perform_diff(helper_t *h) {
                 } else {
                     LOGI("dst-File size > target-File size\n");
                     LOGI("let's rename dst-File to src-File and diff again\n");
-                    Util_rename(dstFullName, srcFullName);
+                    Util_filemove(dstFullName, srcFullName);
                 }
             }
         }
@@ -135,7 +135,6 @@ CRScode helper_perform_diff(helper_t *h) {
     crsync_progress(h->fileName, h->cacheSize, h->isComplete, 1);
 
     LOGI("end %d\n", code);
-    log_dump();
     return code;
 }
 
@@ -163,48 +162,52 @@ CRScode helper_perform_patch(helper_t *h) {
         struct stat stSrc;
         struct stat stDst;
         if(stat(srcFullName, &stSrc) != 0) {
-            LOGI("src-File not exist\n");
+            LOGI("src-File NotExist\n");
             if(stat(dstFullName, &stDst) != 0 || (size_t)stDst.st_size < h->fileSize) {
-                LOGI("dst-File not exist or smaller than target-File\n");
-                LOGI("new or resume download\n");
+                LOGI("dst-File NotExist or < target-File, download it\n");
                 code = HTTP_File(url, dstFullName, 5, h->fileName);
+                if(stat(dstFullName, &stDst) == 0) {
+                    h->cacheSize = stDst.st_size;
+                }
                 if(code == CRS_OK) {
-                    LOGI("dst-File new download OK, let's rename it\n");
-                    Util_rename(dstFullName, srcFullName);
+                    LOGI("dst-File download OK, filemove it\n");
+                    Util_filemove(dstFullName, srcFullName);
                 } else {
-                    LOGE("dst-File new download error, stop\n");
+                    LOGE("dst-File download error, Stop\n");
                     break;
                 }
             } else {
                 LOGE("dst-File size >= target-File size, same or wrong\n");
                 LOGI("let's rename dst-File to src-File! check it below\n");
-                Util_rename(dstFullName, srcFullName);
+                Util_filemove(dstFullName, srcFullName);
             }
         }
 
         LOGI("check src-File status\n");
         if(stat(srcFullName, &stSrc) != 0) {
-            LOGE("WTF: src-File still not exist, wired!\n");
+            LOGE("WTF: src-File still not exist!\n");
             code = CRS_BUG;
             break;
         } else {
             LOGI("Yeah: src-File exist, so far so good!\n");
         }
 
-        LOGI("check src-File digest with target-File\n");
+        LOGI("let's compare size\n");
         if((size_t)stSrc.st_size == h->fileSize) {
-            LOGI("src-File size == target-File size; let's compare digest\n");
+            LOGI("size : src-File == target-File; let's compare digest\n");
             uint8_t srcDigest[CRS_STRONG_DIGEST_SIZE];
             Digest_CalcStrong_File(srcFullName, srcDigest);
             if(0 == memcmp(srcDigest, h->fileDigest, CRS_STRONG_DIGEST_SIZE)) {
-                LOGI("Yeah: src-File digest == target-File digest");
+                LOGI("digest : src-File == target-File\n");
                 code = CRS_OK;
                 h->cacheSize = h->fileSize;
                 h->isComplete = 1;
                 break;
             } else {
-                LOGI("src-File digest != target-File digest\n");
+                LOGI("digest : src-File != target-File\n");
             }
+        } else {
+            LOGI("size: src-File != target-File\n");
         }
 
         LOGI("check fileDigest_t and diffResult_t to keep safe\n");
@@ -231,8 +234,7 @@ CRScode helper_perform_patch(helper_t *h) {
         code = crs_perform_patch(srcFullName, dstFullName, url, h->fd, h->dr);
         if(code == CRS_OK) {
             LOGI("Patch OK, crs_perform_patch make sure fileDigest right\n");
-            LOGI("since src maybe used by app/game, do not relay on rename()\n");
-            Util_rename(dstFullName, srcFullName);
+            Util_filemove(dstFullName, srcFullName);
             h->isComplete = 1;
             h->cacheSize = h->fileSize;
         }
@@ -252,7 +254,6 @@ CRScode helper_perform_patch(helper_t *h) {
     crsync_progress(h->fileName, h->cacheSize, h->isComplete, 1);
 
     LOGI("end %d\n", code);
-    log_dump();
     return code;
 }
 
@@ -342,7 +343,7 @@ CRScode bulkHelper_perform_magnet(bulkHelper_t *bh) {
         bh->latestVersion = strdup( bh->latestMagnet->currVersion );
     }
     LOGI("end %d\n", code);
-    log_dump();
+    log_flush();
     return code;
 }
 
@@ -400,6 +401,7 @@ CRScode bulkHelper_perform_diff(bulkHelper_t *bh) {
     } while(0);
 
     LOGI("end %d\n", code);
+    log_flush();
     return code;
 }
 
@@ -426,5 +428,6 @@ CRScode bulkHelper_perform_patch(bulkHelper_t *bh, int isLatest) {
     }
 
     LOGI("end %d\n", code);
+    log_flush();
     return code;
 }

@@ -69,7 +69,8 @@ static void HTTP_curl_setopt(CURL *curl) {
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L); /* allow follow location */
     curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 5L); /* allow redir 5 times */
     curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10L); /* connection timeout */
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5L);
+    /*Do not setup CURLOPT_TIMEOUT, since range and file download may cost lots of time*/
+    /*curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5L);*/
 }
 
 static const char *response200 = "HTTP/1.0 200 OK";
@@ -100,7 +101,10 @@ CURLcode HTTP_Range(CURL *curl, const char *url, const char *range, void *callba
     curl_easy_setopt(curl, CURLOPT_RANGE, range);
 
     CURLcode curlcode = curl_easy_perform(curl);
-    LOGI("curlcode %d\n", curlcode);
+    if(CURLE_OK != curlcode) {
+        LOGI("curlcode %d\n", curlcode);
+    }
+
     curl_easy_reset(curl);
     return curlcode;
 }
@@ -139,9 +143,8 @@ CRScode HTTP_File(const char *url, const char *filename, int retry, const char *
     filecache_t cache;
     cache.name = cbname;
 
+    struct stat st;
     while(retry-- >= 0) {
-
-        struct stat st;
         if(0 == stat(filename, &st)) {
             cache.bytes = st.st_size;
         } else {
@@ -181,13 +184,13 @@ CRScode HTTP_File(const char *url, const char *filename, int retry, const char *
             break;
         default:
             code = CRS_HTTP_ERROR;
-            LOGI("curlcode %d\n", curlcode);
             break;
         }
 
         if(code == CRS_OK) {
             break;
         }
+        LOGI("curlcode %d\n", curlcode);
 
     }//end of while(retry)
     curl_easy_cleanup(curl);

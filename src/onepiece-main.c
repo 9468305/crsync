@@ -136,7 +136,6 @@ int main_digest(int argc, char **argv) {
     uint32_t blockSize = atoi(argv[c++]) * 1024;
 
     CRScode code = crs_perform_digest(srcFilename, dstFilename, blockSize);
-    log_dump();
     return code;
 }
 
@@ -239,7 +238,7 @@ int main_bulkDigest(int argc, char **argv) {
             if(CRS_OK != crs_perform_digest(srcFilename, digestFilename, blockSize)) {
                 LOGE("crs_perform_digest fail\n");
             }
-            if(0 != Util_copyfile(srcFilename, dstFilename)) {
+            if(0 != Util_filecpy(srcFilename, dstFilename)) {
                 LOGE("copy file fail\n");
             }
 
@@ -289,7 +288,6 @@ int main_diff(int argc, char **argv) {
     fileDigest_free(fd);
     diffResult_free(dr);
     HTTP_global_cleanup();
-    log_dump();
     return code;
 }
 
@@ -332,7 +330,6 @@ int main_update(int argc, char **argv) {
     code = crs_perform_update(srcFilename, dstFilename, digestUrl, url);
 
     HTTP_global_cleanup();
-    log_dump();
     return code;
 }
 
@@ -378,7 +375,6 @@ int main_helper(int argc, char **argv) {
     helper_free(h);
 
     HTTP_global_cleanup();
-    log_dump();
 
     return code;
 }
@@ -436,18 +432,19 @@ int main_bulkHelper(int argc, char **argv) {
     bulkHelper_free(bh);
 
     HTTP_global_cleanup();
-    log_dump();
 
     return code;
 }
 
 int main(int argc, char **argv) {
+    log_open();
     for(int i=0; i<argc; i++) {
-        printf("argv %d %s\n", i, argv[i]);
+        LOGI("argv %d %s\n", i, argv[i]);
     }
 
     if(argc <= 2) {
         showUsage();
+        log_close();
         return -1;
     }
 
@@ -469,8 +466,9 @@ int main(int argc, char **argv) {
         return main_bulkHelper(argc, argv);
     } else {
         showUsage();
-        return -1;
     }
+    log_close();
+    return -1;
 }
 
 int crsync_progress(const char *basename, const unsigned int bytes, const int isComplete, const int immediate) {

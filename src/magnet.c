@@ -117,5 +117,5 @@ CRScode Magnet_Save(magnet_t *m, const char *file) {
 }
 
 int Magnet_checkfile(const char *filename) {
-    return Util_tplfile_check(filename, MAGNET_TPL_FORMAT);
+    return Util_tplcmp(filename, MAGNET_TPL_FORMAT);
 }

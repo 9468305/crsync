@@ -26,6 +26,32 @@ SOFTWARE.
 #include "log.h"
 #include "utlist.h"
 
+#if defined ANDROID
+#   define LOG_FILENAME "/sdcard/crsync_core.log"
+#else
+#   define LOG_FILENAME "crsync_core.log"
+#endif
+
+FILE *logfile = NULL;
+
+void log_open() {
+    if(!logfile) {
+        fopen(LOG_FILENAME, "a");
+    }
+}
+
+void log_flush() {
+    if(logfile) {
+        fflush(logfile);
+    }
+}
+
+void log_close() {
+    if(logfile) {
+        fclose(logfile);
+        logfile = NULL;
+    }
+}
 
 void log_timestamp(char *ts) {
     time_t t;
@@ -41,7 +67,7 @@ void log_timestamp(char *ts) {
 }
 
 #if CRSYNC_DEBUG
-
+/*
 typedef struct log_t {
     char *str;
     struct log_t *next;
@@ -65,13 +91,6 @@ void log_append(char *s) {
 }
 
 void log_dump() {
-
-#if defined ANDROID
-#   define LOG_FILENAME "/sdcard/crsync_core.log"
-#else
-#   define LOG_FILENAME "crsync_core.log"
-#endif
-
     FILE *f = fopen(LOG_FILENAME, "a");
     if(f) {
         log_t *elt, *tmp;
@@ -87,9 +106,16 @@ void log_dump() {
 }
 
 #else
+
 void log_append(char *s){
     free(s);
 }
 
 void log_dump(){}
+
+//    char *s=malloc(256);
+//    snprintf(s, 256, "%s %d [%s]: " fmt, ts, level, __func__, ##__VA_ARGS__);
+//    log_append(s);
+
+*/
 #endif //CRSYNC_DEBUG

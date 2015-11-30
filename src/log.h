@@ -31,16 +31,17 @@ extern "C" {
 #include <stdio.h>
 #include <stdlib.h>
 
-void log_append(char *s);
-void log_dump();
+extern FILE *logfile;
 
+void log_open();
+void log_flush();
+void log_close();
+
+//void log_append(char *s);
+//void log_dump();
 void log_timestamp(char *ts);
 
 #define LOG_TIME_STRING_SIZE 20
-
-#define LOG_TIME \
-    char ts[LOG_TIME_STRING_SIZE];\
-    log_timestamp(ts);
 
 #if defined ANDROID
 #include <android/log.h>
@@ -59,13 +60,13 @@ void log_timestamp(char *ts);
 #endif
 
 #define LOG_FILE(level, fmt, ...) \
-    char *s=malloc(256);\
-    snprintf(s, 256, "%s %d [%s]: " fmt, ts, level, __func__, ##__VA_ARGS__);\
-    log_append(s);
+    if(logfile) fprintf(logfile, "%s %d [%s]: " fmt, ts, level, __func__, ##__VA_ARGS__)
+
 
 #define LOG_OUTPUT(level, fmt, ...) \
     do{\
-        LOG_TIME\
+        char ts[LOG_TIME_STRING_SIZE];\
+        log_timestamp(ts);\
         LOG_PRINT(level, fmt, ##__VA_ARGS__);\
         LOG_FILE(level, fmt, ##__VA_ARGS__);\
     } while(0)
