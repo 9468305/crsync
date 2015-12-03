@@ -43,6 +43,7 @@ typedef enum {
 #define CRS_STRONG_DIGEST_SIZE 16
 
 extern int crsync_progress(const char *basename, const unsigned int bytes, const int isComplete, const int immediate);
+extern void crsync_diff(const char *basename, const unsigned int bytes, const int isComplete, const int isNew);
 
 #if defined __cplusplus
 }

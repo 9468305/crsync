@@ -41,10 +41,13 @@ typedef struct JNIJavaMethods {
     const char  *FunctionParams;
 } JNIJavaMethods;
 
-static jmethodID gMethod_onProgress = NULL;
 static JavaVM* gJavaVM = NULL;
 static jclass gJavaClass = NULL;
+static jmethodID gMethod_onProgress = NULL;
+static jmethodID gMethod_onDiff = NULL;
+
 static clock_t gClock = 0;
+
 static bulkHelper_t *gBulkHelper = NULL;
 
 int crsync_progress(const char *basename, const unsigned int bytes, const int isComplete, const int immediate) {
@@ -63,6 +66,15 @@ int crsync_progress(const char *basename, const unsigned int bytes, const int is
         (*env)->DeleteLocalRef(env, jname);
     }
     return isCancel;
+}
+
+void crsync_diff(const char *basename, const unsigned int bytes, const int isComplete, const int isNew) {
+    JNIEnv *env = NULL;
+    if ((*gJavaVM)->GetEnv(gJavaVM, (void**)&env, JNI_VERSION_1_6) == JNI_OK) {
+        jstring jname = (*env)->NewStringUTF( env, basename );
+        (*env)->CallStaticIntMethod(env, gJavaClass, gMethod_onDiff, jname, (jlong)bytes, (jint)isComplete, (jint)isNew);
+        (*env)->DeleteLocalRef(env, jname);
+    }
 }
 
 jint JNI_crsync_init(JNIEnv *env, jclass clazz, jstring j_fileDir, jstring j_baseUrl, jstring j_currVersion) {
@@ -156,7 +168,8 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
 
     // hook up java functions to string names and param
     JNIJavaMethods JavaMethods[] = {
-        { &gMethod_onProgress, "java_onProgress", "(Ljava/lang/String;JI)I" }, //public static int java_onProgress(String, long, int);
+        { &gMethod_onProgress,  "java_onProgress",  "(Ljava/lang/String;JI)I" }, //public static int java_onProgress(String, long, int);
+        { &gMethod_onDiff,      "java_onDiff",      "(Ljava/lang/String;JII)V" },//public static void java_onDiff(String, long, int, int);
     };
 
     int result = 1;

@@ -132,8 +132,6 @@ CRScode helper_perform_diff(helper_t *h) {
     free(url);
     free(digestUrl);
 
-    crsync_progress(h->fileName, h->cacheSize, h->isComplete, 1);
-
     LOGI("end %d\n", code);
     return code;
 }
@@ -380,6 +378,7 @@ CRScode perform_diffloop(bulkHelper_t *bh, int isLatest) {
         if(elt->isComplete == 0) {
             code = helper_perform_diff(elt);
             if(code != CRS_OK) break;
+            crsync_diff(elt->fileName, elt->cacheSize, elt->isComplete, isLatest);
         }
     }
 

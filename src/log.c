@@ -36,7 +36,7 @@ FILE *logfile = NULL;
 
 void log_open() {
     if(!logfile) {
-        fopen(LOG_FILENAME, "a");
+        fopen(LOG_FILENAME, "ab+");
     }
 }
 
