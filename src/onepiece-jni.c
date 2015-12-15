@@ -53,7 +53,7 @@ static bulkHelper_t *gBulkHelper = NULL;
 int crsync_progress(const char *basename, const unsigned int bytes, const int isComplete, const int immediate) {
     clock_t now = clock();
     long diff = (long)(now - gClock);
-    if( diff < 2*CLOCKS_PER_SEC && immediate == 0 ) {
+    if( diff < CLOCKS_PER_SEC && immediate == 0 ) {
         return 0;
     }
     gClock = now;
@@ -72,7 +72,7 @@ void crsync_diff(const char *basename, const unsigned int bytes, const int isCom
     JNIEnv *env = NULL;
     if ((*gJavaVM)->GetEnv(gJavaVM, (void**)&env, JNI_VERSION_1_6) == JNI_OK) {
         jstring jname = (*env)->NewStringUTF( env, basename );
-        (*env)->CallStaticIntMethod(env, gJavaClass, gMethod_onDiff, jname, (jlong)bytes, (jint)isComplete, (jint)isNew);
+        (*env)->CallStaticVoidMethod(env, gJavaClass, gMethod_onDiff, jname, (jlong)bytes, (jint)isComplete, (jint)isNew);
         (*env)->DeleteLocalRef(env, jname);
     }
 }
