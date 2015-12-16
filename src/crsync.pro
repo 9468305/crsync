@@ -44,7 +44,7 @@ HEADERS += \
     ../extra/dictionary.h \
     ../extra/iniparser.h
 
-DEFINES += CURL_STATICLIB
+DEFINES += HASH_BLOOM=20 CURL_STATICLIB
 INCLUDEPATH += $${_PRO_FILE_PWD_}/../libcurl/include
 LIBS += -L$${_PRO_FILE_PWD_}/../libcurl/lib/m32 -lcurl -lws2_32
 
