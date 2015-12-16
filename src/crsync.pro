@@ -11,12 +11,12 @@ SOURCES += \
     diff.c \
     patch.c \
     http.c \
-    crsync.c \
     magnet.c \
     helper.c \
     util.c \
     log.c \
-    onepiece-main.c \
+    crsync.c \
+    crsync-console.c \
     ../extra/md5.c \
     ../extra/tpl.c \
     ../extra/win/mmap.c \
@@ -29,11 +29,11 @@ HEADERS += \
     diff.h \
     patch.h \
     http.h \
-    crsync.h \
     magnet.h \
     helper.h \
     util.h \
     log.h \
+    crsync.h \
     crsyncver.h \
     ../extra/md5.h \
     ../extra/tpl.h \
@@ -44,7 +44,7 @@ HEADERS += \
     ../extra/dictionary.h \
     ../extra/iniparser.h
 
-DEFINES += HASH_BLOOM=20 CURL_STATICLIB
+DEFINES += HASH_BLOOM=21 CURL_STATICLIB
 INCLUDEPATH += $${_PRO_FILE_PWD_}/../libcurl/include
 LIBS += -L$${_PRO_FILE_PWD_}/../libcurl/lib/m32 -lcurl -lws2_32
 
