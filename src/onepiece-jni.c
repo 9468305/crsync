@@ -50,7 +50,7 @@ static clock_t gClock = 0;
 
 static bulkHelper_t *gBulkHelper = NULL;
 
-int crsync_progress(const char *basename, const unsigned int bytes, const int isComplete, const int immediate) {
+int crs_callback_patch(const char *basename, const unsigned int bytes, const int isComplete, const int immediate) {
     clock_t now = clock();
     long diff = (long)(now - gClock);
     if( diff < CLOCKS_PER_SEC && immediate == 0 ) {
@@ -68,7 +68,7 @@ int crsync_progress(const char *basename, const unsigned int bytes, const int is
     return isCancel;
 }
 
-void crsync_diff(const char *basename, const unsigned int bytes, const int isComplete, const int isNew) {
+void crs_callback_diff(const char *basename, const unsigned int bytes, const int isComplete, const int isNew) {
     JNIEnv *env = NULL;
     if ((*gJavaVM)->GetEnv(gJavaVM, (void**)&env, JNI_VERSION_1_6) == JNI_OK) {
         jstring jname = (*env)->NewStringUTF( env, basename );

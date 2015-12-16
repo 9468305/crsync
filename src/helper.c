@@ -249,7 +249,7 @@ CRScode helper_perform_patch(helper_t *h) {
     diffResult_free(h->dr);
     h->dr = NULL;
 
-    crsync_progress(h->fileName, h->cacheSize, h->isComplete, 1);
+    crs_callback_patch(h->fileName, h->cacheSize, h->isComplete, 1);
 
     LOGI("end %d\n", code);
     return code;
@@ -378,7 +378,7 @@ CRScode perform_diffloop(bulkHelper_t *bh, int isLatest) {
         if(elt->isComplete == 0) {
             code = helper_perform_diff(elt);
             if(code != CRS_OK) break;
-            crsync_diff(elt->fileName, elt->cacheSize, elt->isComplete, isLatest);
+            crs_callback_diff(elt->fileName, elt->cacheSize, elt->isComplete, isLatest);
         }
     }
 

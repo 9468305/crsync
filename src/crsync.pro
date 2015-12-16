@@ -16,8 +16,6 @@ SOURCES += \
     helper.c \
     util.c \
     log.c \
-    onepiece.c \
-    onepiecetool.c \
     onepiece-main.c \
     md5.c \
     ../extra/tpl.c \
@@ -37,8 +35,6 @@ HEADERS += \
     util.h \
     log.h \
     crsyncver.h \
-    onepiece.h \
-    onepiecetool.h \
     md5.h \
     ../extra/tpl.h \
     ../extra/win/mman.h \

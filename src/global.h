@@ -30,7 +30,7 @@ extern "C" {
 
 typedef enum {
     CRS_OK = 0,
-    CRS_INIT_ERROR, //mostly network init error
+    CRS_INIT_ERROR, //mostly curl init error
     CRS_PARAM_ERROR, //input parameters wrong
     CRS_FILE_ERROR, //file io error
     CRS_HTTP_ERROR, //http io error
@@ -41,8 +41,8 @@ typedef enum {
 
 #define CRS_STRONG_DIGEST_SIZE 16
 
-extern int crsync_progress(const char *basename, const unsigned int bytes, const int isComplete, const int immediate);
-extern void crsync_diff(const char *basename, const unsigned int bytes, const int isComplete, const int isNew);
+extern void crs_callback_diff   (const char *basename, const unsigned int bytes, const int isComplete, const int isNew);
+extern int  crs_callback_patch  (const char *basename, const unsigned int bytes, const int isComplete, const int immediate);
 
 #if defined __cplusplus
 }

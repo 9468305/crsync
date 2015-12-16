@@ -29,14 +29,14 @@ extern "C" {
 #include <dirent.h>
 
 #include "log.h"
-#include "onepiecetool.h"
+#include "crsync.h"
 #include "http.h"
 #include "helper.h"
 #include "magnet.h"
 #include "util.h"
 #include "iniparser.h"
+#include "utlist.h"
 
-static const char *cmd_onepiecetool = "onepiecetool";
 static const char *cmd_digest = "digest";
 static const char *cmd_bulkDigest = "bulkDigest";
 static const char *cmd_diff = "diff";
@@ -49,7 +49,6 @@ static void showUsage() {
     printf( "crsync Usage:\n"
             "crsync [Operation] [Parameters]\n"
             "Operation:\n"
-            "    onepiecetool : generate resource meta info (magnet, rsum, file_hash)\n"
             "    digest       : generate digest file\n"
             "    bulkDigest   : easy way to generate bulk-Files' digest and fdi(fileDigestIndex)\n"
             "    diff         : diff src-File with target-File to dst-File\n"
@@ -57,65 +56,6 @@ static void showUsage() {
             "    update       : update src-File with target-File to dst-File\n"
             "    helper       : easy way to update src-File itself(download/diff/patch)\n"
             "    bulkHelper   : easy way to update bulk-Files(download/diff/patch)\n");
-}
-
-static void showUsage_onepiecetool() {
-    printf("onepiecetool Usage:\n");
-    printf("crsync onepiecetool [parameters]\n");
-    printf("    curr_id\n"
-          "    next_id\n"
-          "    app_fullname\n"
-          "    res_name_file\n"
-          "    res_dir\n"
-          "    output_dir\n"
-          "    blocksize\n");
-    printf("Note:\n"
-         "    dir should end with '/'\n"
-         "    res_name_file is a text file contains resname at every line\n"
-         "    blocksize is better to be 8-8092, 16-16184, 32-32768\n");
-}
-
-static void util_setopt_resfile(onepiecetool_option_t *option, const char *resfile) {
-    FILE *f = NULL;
-    const uint32_t size = 512;
-    char line[size];
-    f = fopen(resfile, "rt");
-    if(f) {
-        while(NULL != fgets(line, size, f)) {
-            size_t len = strlen(line);
-            if(len > 0) {
-                if(line[len-1] == '\n') {
-                    line[len-1] = '\0';
-                }
-                resname_t *res = calloc(1, sizeof(resname_t));
-                res->name = strdup(line);
-                LL_APPEND(option->res_list, res);
-            }
-        }
-        fclose(f);
-    }
-}
-
-int main_onepiecetool(int argc, char **argv) {
-    if(argc != 9) {
-        showUsage_onepiecetool();
-        return -1;
-    }
-    onepiecetool_option_t *option = onepiecetool_option_malloc();
-    int c = 0;
-    c++;//crsync_exe
-    c++;//operation is onepiecetool
-    option->curr_id = strdup(argv[c++]);
-    option->next_id = strdup(argv[c++]);
-    option->app_name = strdup(argv[c++]);
-    util_setopt_resfile(option, argv[c++]);
-    option->res_dir = strdup(argv[c++]);
-    option->output_dir = strdup(argv[c++]);
-    option->block_size = atoi(argv[c++]) * 1024;
-
-    int code = onepiecetool_perform(option);
-    onepiecetool_option_free(option);
-    return code;
 }
 
 static void showUsage_digest() {
@@ -448,9 +388,7 @@ int main(int argc, char **argv) {
         return -1;
     }
 
-    if(0 == strncmp(argv[1], cmd_onepiecetool, strlen(cmd_onepiecetool))) {
-        return main_onepiecetool(argc, argv);
-    } else if(0 == strncmp(argv[1], cmd_digest, strlen(cmd_digest))) {
+    if(0 == strncmp(argv[1], cmd_digest, strlen(cmd_digest))) {
         return main_digest(argc, argv);
     } else if(0 == strncmp(argv[1], cmd_bulkDigest, strlen(cmd_bulkDigest))) {
         return main_bulkDigest(argc, argv);
@@ -471,13 +409,13 @@ int main(int argc, char **argv) {
     return -1;
 }
 
-int crsync_progress(const char *basename, const unsigned int bytes, const int isComplete, const int immediate) {
+int crs_callback_patch(const char *basename, const unsigned int bytes, const int isComplete, const int immediate) {
     (void)immediate;
     fprintf(stdout, "crsync_progress %s %d %d\n", basename, bytes, isComplete);
     return 0;
 }
 
-void crsync_diff(const char *basename, const unsigned int bytes, const int isComplete, const int isNew) {
+void crs_callback_diff(const char *basename, const unsigned int bytes, const int isComplete, const int isNew) {
     fprintf(stdout, "crs_onDiff %s %d %d %d\n", basename, bytes, isComplete, isNew);
 }
 

@@ -53,12 +53,13 @@ typedef struct helper_t {
     int isComplete; //0 not; 1 complete
     fileDigest_t *fd;
     diffResult_t *dr;
+
 } helper_t;
 
-helper_t* helper_malloc();
-void helper_free(helper_t *h);
+helper_t*   helper_malloc   ();
+void        helper_free     (helper_t *h);
 
-CRScode helper_perform_diff(helper_t *h);
+CRScode helper_perform_diff (helper_t *h);
 
 CRScode helper_perform_patch(helper_t *h);
 
@@ -77,14 +78,14 @@ typedef struct bulkHelper_t {
 
 } bulkHelper_t;
 
-bulkHelper_t * bulkHelper_malloc();
-void bulkHelper_free(bulkHelper_t *bh);
+bulkHelper_t *  bulkHelper_malloc   ();
+void            bulkHelper_free     (bulkHelper_t *bh);
 
-CRScode bulkHelper_perform_magnet(bulkHelper_t *bh);
+CRScode bulkHelper_perform_magnet   (bulkHelper_t *bh);
 
-CRScode bulkHelper_perform_diff(bulkHelper_t *bh);
+CRScode bulkHelper_perform_diff     (bulkHelper_t *bh);
 
-CRScode bulkHelper_perform_patch(bulkHelper_t *bh, int isLatest);
+CRScode bulkHelper_perform_patch    (bulkHelper_t *bh, int isLatest);
 
 #if defined __cplusplus
 }

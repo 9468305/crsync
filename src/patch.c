@@ -133,7 +133,7 @@ static size_t Range_callback(void *data, size_t size, size_t nmemb, void *userp)
     fwrite(data, size, nmemb, rd->file);
     rd->cb->got += realSize;
     rd->cacheBytes += realSize;
-    int isCancel = crsync_progress(rd->basename, rd->cacheBytes, 0, 0);
+    int isCancel = crs_callback_patch(rd->basename, rd->cacheBytes, 0, 0);
     return (isCancel == 0) ? realSize : 0;
 }
 
@@ -229,7 +229,7 @@ static CRScode Patch_miss(const char *srcFilename, const char *dstFilename, cons
 }
 
 CRScode Patch_perform(const char *srcFilename, const char *dstFilename, const char *url,
-                      const fileDigest_t *fd, diffResult_t *dr) {
+                      const fileDigest_t *fd, const diffResult_t *dr) {
     LOGI("begin\n");
 
     if(!srcFilename || !dstFilename || !url || !fd || !dr) {

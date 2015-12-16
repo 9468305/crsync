@@ -122,7 +122,7 @@ static size_t HTTP_writefile_func(void *ptr, size_t size, size_t nmemb, void *us
     cache->bytes += w;
     int isCancel = 0;
     if(cache->name) {
-        isCancel = crsync_progress(cache->name, cache->bytes, 0, 0);
+        isCancel = crs_callback_patch(cache->name, cache->bytes, 0, 0);
     }
     return (isCancel == 0) ? w : 0;
 }

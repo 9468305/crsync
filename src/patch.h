@@ -31,7 +31,7 @@ extern "C" {
 #include "diff.h"
 
 CRScode Patch_perform(const char *srcFilename, const char *dstFilename, const char *url,
-                      const fileDigest_t *fd, diffResult_t *dr);
+                      const fileDigest_t *fd, const diffResult_t *dr);
 
 #if defined __cplusplus
 }
