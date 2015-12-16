@@ -341,7 +341,6 @@ CRScode bulkHelper_perform_magnet(bulkHelper_t *bh) {
         bh->latestVersion = strdup( bh->latestMagnet->currVersion );
     }
     LOGI("end %d\n", code);
-    log_flush();
     return code;
 }
 
@@ -400,7 +399,6 @@ CRScode bulkHelper_perform_diff(bulkHelper_t *bh) {
     } while(0);
 
     LOGI("end %d\n", code);
-    log_flush();
     return code;
 }
 
@@ -427,6 +425,5 @@ CRScode bulkHelper_perform_patch(bulkHelper_t *bh, int isLatest) {
     }
 
     LOGI("end %d\n", code);
-    log_flush();
     return code;
 }

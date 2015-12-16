@@ -35,22 +35,19 @@ SOFTWARE.
 FILE *logfile = NULL;
 
 void log_open() {
-    if(!logfile) {
-        fopen(LOG_FILENAME, "ab+");
-    }
-}
-
-void log_flush() {
-    if(logfile) {
-        fflush(logfile);
-    }
+#if CRSYNC_DEBUG
+    if(!logfile) logfile = fopen(LOG_FILENAME, "at+");
+#endif
 }
 
 void log_close() {
+#if CRSYNC_DEBUG
     if(logfile) {
+        fflush(logfile);
         fclose(logfile);
         logfile = NULL;
     }
+#endif
 }
 
 void log_timestamp(char *ts) {
@@ -65,57 +62,3 @@ void log_timestamp(char *ts) {
     strftime(ts, LOG_TIME_STRING_SIZE, "%Y%m%d %H:%M:%S", tmv);
 #endif
 }
-
-#if CRSYNC_DEBUG
-/*
-typedef struct log_t {
-    char *str;
-    struct log_t *next;
-} log_t;
-
-static log_t *log_head = NULL;
-
-static const unsigned int LOG_MAX_SIZE = 256;
-
-void log_append(char *s) {
-    log_t *log = malloc(sizeof(log_t));
-    log->str = s;
-    log->next = NULL;
-    LL_APPEND(log_head, log);
-    unsigned int count = 0;
-    log_t *elt=NULL;
-    LL_COUNT(log_head, elt, count);
-    if( count >= LOG_MAX_SIZE ) {
-        log_dump();
-    }
-}
-
-void log_dump() {
-    FILE *f = fopen(LOG_FILENAME, "a");
-    if(f) {
-        log_t *elt, *tmp;
-        LL_FOREACH_SAFE(log_head,elt,tmp) {
-            LL_DELETE(log_head,elt);
-            fputs(elt->str, f);
-            free(elt->str);
-            free(elt);
-        }
-        log_head = NULL;
-        fclose(f);
-    }
-}
-
-#else
-
-void log_append(char *s){
-    free(s);
-}
-
-void log_dump(){}
-
-//    char *s=malloc(256);
-//    snprintf(s, 256, "%s %d [%s]: " fmt, ts, level, __func__, ##__VA_ARGS__);
-//    log_append(s);
-
-*/
-#endif //CRSYNC_DEBUG

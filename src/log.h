@@ -31,17 +31,15 @@ extern "C" {
 #include <stdio.h>
 #include <stdlib.h>
 
+#define CRSYNC_DEBUG 1
+
 extern FILE *logfile;
 
 void log_open();
-void log_flush();
 void log_close();
 
-//void log_append(char *s);
-//void log_dump();
-void log_timestamp(char *ts);
-
 #define LOG_TIME_STRING_SIZE 20
+void log_timestamp(char *ts);
 
 #if defined ANDROID
 #include <android/log.h>
@@ -62,7 +60,6 @@ void log_timestamp(char *ts);
 #define LOG_FILE(level, fmt, ...) \
     if(logfile) fprintf(logfile, "%s %d [%s]: " fmt, ts, level, __func__, ##__VA_ARGS__)
 
-
 #define LOG_OUTPUT(level, fmt, ...) \
     do{\
         char ts[LOG_TIME_STRING_SIZE];\
@@ -70,8 +67,6 @@ void log_timestamp(char *ts);
         LOG_PRINT(level, fmt, ##__VA_ARGS__);\
         LOG_FILE(level, fmt, ##__VA_ARGS__);\
     } while(0)
-
-#define CRSYNC_DEBUG 1
 
 #if CRSYNC_DEBUG
 #   define LOGD(fmt, ...)  LOG_OUTPUT(LEVEL_D, fmt, ##__VA_ARGS__)

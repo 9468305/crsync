@@ -117,7 +117,7 @@ int main_bulkDigest(int argc, char **argv) {
     int c = 0;
     c++; //crsync.exe
     c++; //bulkDigest
-    const char *iniFilename = argv[c++];
+    const char *iniFilename = argv[c++]; //ini config file
 
     dictionary* dic = iniparser_load(iniFilename);
     if(!dic) {
@@ -125,15 +125,15 @@ int main_bulkDigest(int argc, char **argv) {
         return -1;
     }
 
+    int result = -1;
     unsigned char hash[CRS_STRONG_DIGEST_SIZE];
     magnet_t* m = magnet_malloc();
 
     do {
         int sectionNum = iniparser_getnsec(dic);
-        if(sectionNum <= 0) break;
+        if(sectionNum < 2) break;//global, fileN
         const char *outputDir = iniparser_getstring(dic, "global:outputDir", NULL);
         if(!outputDir) break;
-        cleanDir(outputDir);
         const char *currVersion = iniparser_getstring(dic, "global:currVersion", NULL);
         if(!currVersion) break;
         const char *nextVersion = iniparser_getstring(dic, "global:nextVersion", NULL);
@@ -141,10 +141,22 @@ int main_bulkDigest(int argc, char **argv) {
         unsigned int blockSize = iniparser_getint(dic, "global:blockSize", 16);
         blockSize *= 1024;
 
+        cleanDir(outputDir);
         m->currVersion = strdup(currVersion);
         m->nextVersion = strdup(nextVersion);
 
+        char *hashString = NULL;
+        char *srcFilename = NULL;
+        char *dstFilename = NULL;
+        char *digestFilename = NULL;
+
+        result = 0;
         for(int i=1; i<sectionNum; ++i) {
+            free(hashString);
+            free(srcFilename);
+            free(dstFilename);
+            free(digestFilename);
+
             sum_t *sum = sum_malloc();
             const char *secname = iniparser_getsecname(dic, i);
 
@@ -158,49 +170,52 @@ int main_bulkDigest(int argc, char **argv) {
 
             sum->name = strdup(nameValue);
 
-            char *srcFilename = Util_strcat(dirValue, nameValue);
+            srcFilename = Util_strcat(dirValue, nameValue);
             struct stat st;
             if(stat(srcFilename, &st) == 0) {
                 sum->size = st.st_size;
             } else {
-                LOGE("%s not exist\n", srcFilename);
+                LOGE("stat error %s\n", srcFilename);
                 sum_free(sum);
+                result = -1;
                 break;
             }
 
             Digest_CalcStrong_File(srcFilename, hash);
             memcpy(sum->digest, hash, CRS_STRONG_DIGEST_SIZE);
             LL_APPEND(m->file, sum);
-            char *hashString = Util_hex_string(hash, CRS_STRONG_DIGEST_SIZE);
-            char *dstFilename = Util_strcat(outputDir, hashString);
-            char *digestFilename = Util_strcat(dstFilename, DIGEST_EXT);
+
+            hashString = Util_hex_string(hash, CRS_STRONG_DIGEST_SIZE);
+            dstFilename = Util_strcat(outputDir, hashString);
+            digestFilename = Util_strcat(dstFilename, DIGEST_EXT);
 
             if(CRS_OK != crs_perform_digest(srcFilename, digestFilename, blockSize)) {
-                LOGE("crs_perform_digest fail\n");
+                result = -1;
             }
             if(0 != Util_filecpy(srcFilename, dstFilename)) {
-                LOGE("copy file fail\n");
+                result = -1;
             }
 
-            free(srcFilename);
-            free(dstFilename);
-            free(digestFilename);
-            free(hashString);
         }//end of for()
 
-        char mfile[512];
-        snprintf(mfile, 512, "%s%s%s", outputDir, currVersion, MAGNET_EXT);
-        Magnet_Save(m, mfile);
+        free(srcFilename);
+        free(hashString);
+        free(dstFilename);
+        free(digestFilename);
+
+        char magnetFilename[512];
+        snprintf(magnetFilename, 512, "%s%s%s", outputDir, currVersion, MAGNET_EXT);
+        Magnet_Save(m, magnetFilename);
     } while(0);
 
     iniparser_freedict(dic);
     magnet_free(m);
-    return 0;
+    return result;
 }
 
 static void showUsage_diff() {
     printf( "diff Usage:\n"
-            "crsync diff srcFilename dstFilename url\n");
+            "crsync diff srcFilename dstFilename digestUrl\n");
 }
 
 int main_diff(int argc, char **argv) {

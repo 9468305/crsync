@@ -107,13 +107,13 @@ int Util_filecpy(const char *src, const char *dst) {
     size_t size;
     FILE* s = fopen(src, "rb");
     if(!s) {
-        LOGE("src fopen %s\n", strerror(errno));
+        LOGE("%s fopen %s\n", src, strerror(errno));
         return -1;
     }
 
     FILE* d = fopen(dst, "wb");
     if(!d) {
-        LOGE("dst fopen %s\n", strerror(errno));
+        LOGE("%s fopen %s\n", dst, strerror(errno));
         fclose(s);
         return -1;
     }
@@ -134,6 +134,7 @@ int Util_filecpy(const char *src, const char *dst) {
             return 0;
         }
     }
+    LOGE("stat error %s, %s", src, dst);
     return -1;
 }
 

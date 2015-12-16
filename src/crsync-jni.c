@@ -41,12 +41,12 @@ typedef struct JNIJavaMethods {
     const char  *FunctionParams;
 } JNIJavaMethods;
 
-static JavaVM* gJavaVM = NULL;
-static jclass gJavaClass = NULL;
-static jmethodID gMethod_onProgress = NULL;
-static jmethodID gMethod_onDiff = NULL;
+static JavaVM       *gJavaVM = NULL;
+static jclass       gJavaClass = NULL;
+static jmethodID    gMethod_onProgress = NULL;
+static jmethodID    gMethod_onDiff = NULL;
 
-static clock_t gClock = 0;
+static clock_t      gClock = 0;
 
 static bulkHelper_t *gBulkHelper = NULL;
 
