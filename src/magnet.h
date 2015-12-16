@@ -24,7 +24,7 @@ SOFTWARE.
 #ifndef CRS_MAGNET_H
 #define CRS_MAGNET_H
 
-#include "define.h"
+#include "global.h"
 
 extern const char *MAGNET_EXT;
 

@@ -21,8 +21,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-#ifndef CRS_DEFINE_H
-#define CRS_DEFINE_H
+#ifndef CRS_GLOBAL_H
+#define CRS_GLOBAL_H
 
 #if defined __cplusplus
 extern "C" {
@@ -39,7 +39,6 @@ typedef enum {
     CRS_BUG = 100, //Internal error
 } CRScode;
 
-//TODO: change to md5_len 16
 #define CRS_STRONG_DIGEST_SIZE 16
 
 extern int crsync_progress(const char *basename, const unsigned int bytes, const int isComplete, const int immediate);
@@ -49,4 +48,4 @@ extern void crsync_diff(const char *basename, const unsigned int bytes, const in
 }
 #endif
 
-#endif // CRS_DEFINE_H
+#endif // CRS_GLOBAL_H

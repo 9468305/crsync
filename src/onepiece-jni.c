@@ -25,7 +25,7 @@ SOFTWARE.
 #include <jni.h>
 #include <time.h>
 
-#include "define.h"
+#include "global.h"
 #include "log.h"
 #include "helper.h"
 #include "utstring.h"

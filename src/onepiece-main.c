@@ -473,8 +473,12 @@ int main(int argc, char **argv) {
 
 int crsync_progress(const char *basename, const unsigned int bytes, const int isComplete, const int immediate) {
     (void)immediate;
-    printf("kiss %s %d %d\n", basename, bytes, isComplete);
+    fprintf(stdout, "crsync_progress %s %d %d\n", basename, bytes, isComplete);
     return 0;
+}
+
+void crsync_diff(const char *basename, const unsigned int bytes, const int isComplete, const int isNew) {
+    fprintf(stdout, "crs_onDiff %s %d %d %d\n", basename, bytes, isComplete, isNew);
 }
 
 #if defined __cplusplus

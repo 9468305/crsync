@@ -836,17 +836,14 @@ CRScode crs_perform_digest(const char *srcFilename, const char *dstFilename, con
         LOGE("end %d\n", CRS_PARAM_ERROR);
         return CRS_PARAM_ERROR;
     }
-    CRScode code = CRS_OK;
+
     fileDigest_t *fd = fileDigest_malloc();
-
-    code = Digest_Perform(srcFilename, blockSize, fd);
-    if(code != CRS_OK) {
-        LOGE("end %d\n", code);
-        fileDigest_free(fd);
-        return code;
-    }
-
-    code = Digest_Save(dstFilename, fd);
+    CRScode code = CRS_OK;
+    do {
+        code = Digest_Perform(srcFilename, blockSize, fd);
+        if(code != CRS_OK) break;
+        code = Digest_Save(dstFilename, fd);
+    } while(0);
 
     fileDigest_free(fd);
 

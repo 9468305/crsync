@@ -30,7 +30,7 @@ extern "C" {
 
 #include <stdint.h>
 
-#include "define.h"
+#include "global.h"
 #include "magnet.h"
 #include "diff.h"
 

@@ -26,6 +26,7 @@ SOURCES += \
     ../extra/iniparser.c
 
 HEADERS += \
+    global.h \
     digest.h \
     diff.h \
     patch.h \
@@ -35,7 +36,6 @@ HEADERS += \
     helper.h \
     util.h \
     log.h \
-    define.h \
     crsyncver.h \
     onepiece.h \
     onepiecetool.h \

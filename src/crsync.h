@@ -28,7 +28,7 @@ SOFTWARE.
 extern "C" {
 #endif
 
-#include "define.h"
+#include "global.h"
 #include "crsyncver.h"         /* crsync version defines   */
 #include "digest.h"
 #include "diff.h"

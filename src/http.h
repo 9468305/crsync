@@ -28,7 +28,7 @@ SOFTWARE.
 extern "C" {
 #endif
 
-#include "define.h"
+#include "global.h"
 #include "curl/curl.h"
 
 CRScode HTTP_global_init();
