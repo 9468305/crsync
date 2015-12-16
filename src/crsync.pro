@@ -17,7 +17,7 @@ SOURCES += \
     util.c \
     log.c \
     onepiece-main.c \
-    md5.c \
+    ../extra/md5.c \
     ../extra/tpl.c \
     ../extra/win/mmap.c \
     ../extra/dictionary.c \
@@ -35,7 +35,7 @@ HEADERS += \
     util.h \
     log.h \
     crsyncver.h \
-    md5.h \
+    ../extra/md5.h \
     ../extra/tpl.h \
     ../extra/win/mman.h \
     ../extra/uthash.h \

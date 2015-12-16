@@ -8,7 +8,7 @@ include $(PREBUILT_STATIC_LIBRARY)
 
 include $(CLEAR_VARS)
 LOCAL_MODULE := crsync
-LOCAL_SRC_FILES := digest.c diff.c patch.c http.c crsync.c helper.c magnet.c util.c log.c onepiece-jni.c md5.c ../extra/tpl.c
+LOCAL_SRC_FILES := digest.c diff.c patch.c http.c crsync.c helper.c magnet.c util.c log.c onepiece-jni.c ../extra/md5.c ../extra/tpl.c
 LOCAL_C_INCLUDES += ../extra
 LOCAL_STATIC_LIBRARIES := curl
 LOCAL_CFLAGS += -DCURL_STATICLIB -std=c99 -fopenmp
