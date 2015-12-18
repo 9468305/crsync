@@ -67,25 +67,22 @@ typedef struct bulkHelper_t {
     //here is constant, never change
     char *fileDir;
     char *baseUrl;
-    char *currentVersion;
-    char *latestVersion;
 
     //here is bulk file struct
     magnet_t *currentMagnet; //currVersion's magnet
-    magnet_t *latestMagnet; //latestVersion's magnet
     helper_t *currentBulk; //used with utlist(signle-link)
-    helper_t *latestBulk; //used with utlist(signle-link)
 
 } bulkHelper_t;
 
 bulkHelper_t *  bulkHelper_malloc   ();
 void            bulkHelper_free     (bulkHelper_t *bh);
 
-CRScode bulkHelper_perform_magnet   (bulkHelper_t *bh);
+//CRScode bulkHelper_perform_magnet   (bulkHelper_t *bh);
+CRScode bulkHelper_set_magnet       (bulkHelper_t *bh, const char *magnetString);
 
 CRScode bulkHelper_perform_diff     (bulkHelper_t *bh);
 
-CRScode bulkHelper_perform_patch    (bulkHelper_t *bh, int isLatest);
+CRScode bulkHelper_perform_patch    (bulkHelper_t *bh);
 
 #if defined __cplusplus
 }

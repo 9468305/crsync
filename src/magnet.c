@@ -58,7 +58,68 @@ void magnet_free(magnet_t *m) {
     }
 }
 
-CRScode Magnet_Load(magnet_t *m, const char *file) {
+void magnet_toString(magnet_t *m, UT_string **str) {
+    if(!m || !str || !*str)
+        return;
+    UT_string *s = *str;
+    utstring_clear(s);
+    utstring_printf(s, "currentVersion = %s\n", m->currVersion);
+    utstring_printf(s, "nextVersion = %s\n", m->nextVersion);
+    utstring_printf(s, "files = ");
+
+    sum_t *elt;
+    LL_FOREACH(m->file, elt) {
+        char *hash = Util_hex_string(elt->digest, CRS_STRONG_DIGEST_SIZE);
+        utstring_printf(s, "%s;%s;%u;", elt->name, hash, elt->size);
+        free(hash);
+    }
+}
+
+magnet_t* magnet_fromString(UT_string **str) {
+    if(!str || !*str) {
+        return NULL;
+    }
+    magnet_t *m = magnet_malloc();
+    UT_string *s = *str;
+    int findPos = -1;
+    int startPos = 0;
+    int order = 0;
+
+    sum_t *sum = NULL;
+    char findStr[128];//should enough mostly
+
+    while(-1 != (findPos = utstring_find(s, startPos, ";", 1))) {
+        if(!sum)
+            sum = sum_malloc();
+        strncpy(findStr, utstring_body(s) + startPos, findPos - startPos);
+        findStr[findPos - startPos] = '\0';
+
+        switch(order) {
+        case 0: {
+            sum->name = strdup(findStr);
+            break;
+        }
+        case 1: {
+            unsigned char *digest = Util_string_hex(findStr);
+            memcpy(sum->digest, digest, CRS_STRONG_DIGEST_SIZE);
+            free(digest);
+            break;
+        }
+        case 2: {
+            sum->size = (unsigned int)atoi(findStr);
+            LL_APPEND(m->file, sum);
+            sum = NULL;
+            break;
+        }
+        }
+        order = (order >= 2) ? 0 : order+1;
+        startPos = findPos + 1;
+    }
+
+    return m;
+}
+
+CRScode magnet_load(magnet_t *m, const char *file) {
     LOGI("begin\n");
     CRScode code = CRS_OK;
     char *name = NULL;
@@ -88,7 +149,7 @@ CRScode Magnet_Load(magnet_t *m, const char *file) {
     return code;
 }
 
-CRScode Magnet_Save(magnet_t *m, const char *file) {
+CRScode magnet_save(magnet_t *m, const char *file) {
     LOGI("begin\n");
     char *name = NULL;
     unsigned int size = 0;

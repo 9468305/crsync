@@ -25,30 +25,34 @@ SOFTWARE.
 #define CRS_MAGNET_H
 
 #include "global.h"
+#include "utstring.h"
 
 extern const char *MAGNET_EXT;
 
 typedef struct sum_t {
-    char *name;
-    unsigned int size;
-    unsigned char digest[CRS_STRONG_DIGEST_SIZE];
-    struct sum_t *next; //used by magnet_t with utlist(single-link)
+    char            *name;
+    unsigned int    size;
+    unsigned char   digest[CRS_STRONG_DIGEST_SIZE];
+    struct sum_t    *next; //utlist(single-link)
 } sum_t;
 
-sum_t* sum_malloc();
-void sum_free(sum_t *s);
+sum_t*  sum_malloc();
+void    sum_free(sum_t *s);
 
 typedef struct magnet_t {
-    char *currVersion;
-    char *nextVersion;
-    sum_t *file; //used with utlist(single-link)
+    char    *currVersion;
+    char    *nextVersion;
+    sum_t   *file; //utlist(single-link)
 } magnet_t;
 
-magnet_t* magnet_malloc();
-void magnet_free(magnet_t *m);
+magnet_t*   magnet_malloc();
+void        magnet_free(magnet_t *m);
 
-CRScode Magnet_Load(magnet_t *m, const char *file);
-CRScode Magnet_Save(magnet_t *m, const char *file);
+void        magnet_toString(magnet_t *m, UT_string **str);
+magnet_t*   magnet_fromString(UT_string **str);
+
+CRScode     magnet_load(magnet_t *m, const char *file);
+CRScode     magnet_save(magnet_t *m, const char *file);
 
 int Magnet_checkfile(const char *filename);
 

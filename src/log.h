@@ -58,7 +58,10 @@ void log_timestamp(char *ts);
 #endif
 
 #define LOG_FILE(level, fmt, ...) \
-    if(logfile) fprintf(logfile, "%s %d [%s]: " fmt, ts, level, __func__, ##__VA_ARGS__)
+    if(logfile) { \
+        fprintf(logfile, "%s %d [%s]: " fmt, ts, level, __func__, ##__VA_ARGS__); \
+        fflush(logfile); \
+    }
 
 #define LOG_OUTPUT(level, fmt, ...) \
     do{\

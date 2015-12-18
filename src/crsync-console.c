@@ -205,7 +205,18 @@ int main_bulkDigest(int argc, char **argv) {
 
         char magnetFilename[512];
         snprintf(magnetFilename, 512, "%s%s%s", outputDir, currVersion, MAGNET_EXT);
-        Magnet_Save(m, magnetFilename);
+        magnet_save(m, magnetFilename);
+
+        UT_string *str = NULL;
+        utstring_new(str);
+        magnet_toString(m, &str);
+        FILE *f = fopen("tversion.txt", "wt");
+        if(f) {
+            fprintf(f, "%s", utstring_body(str));
+            fflush(f);
+            fclose(f);
+            f = NULL;
+        }
     } while(0);
 
     iniparser_freedict(dic);
@@ -381,7 +392,7 @@ int main_bulkHelper(int argc, char **argv) {
 
     //TODO: check here logic right ?
     if(code == CRS_OK) {
-        code = bulkHelper_perform_patch(bh, (bh->latestVersion) ? 1 : 0 );
+        code = bulkHelper_perform_patch(bh);
     }
 
     bulkHelper_free(bh);
@@ -430,8 +441,8 @@ int crs_callback_patch(const char *basename, const unsigned int bytes, const int
     return 0;
 }
 
-void crs_callback_diff(const char *basename, const unsigned int bytes, const int isComplete, const int isNew) {
-    fprintf(stdout, "crs_onDiff %s %d %d %d\n", basename, bytes, isComplete, isNew);
+void crs_callback_diff(const char *basename, const unsigned int bytes, const int isComplete) {
+    fprintf(stdout, "crs_onDiff %s %d %d\n", basename, bytes, isComplete);
 }
 
 #if defined __cplusplus

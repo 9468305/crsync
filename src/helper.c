@@ -264,16 +264,12 @@ void bulkHelper_free(bulkHelper_t *bh) {
     if(bh) {
         free(bh->fileDir);
         free(bh->baseUrl);
-        free(bh->currentVersion);
-        free(bh->latestVersion);
         magnet_free(bh->currentMagnet);
-        magnet_free(bh->latestMagnet);
         helper_free(bh->currentBulk);
-        helper_free(bh->latestBulk);
         free(bh);
     }
 }
-
+/*
 static CRScode perform_magnet(bulkHelper_t *bh, const char *version, magnet_t *m) {
     LOGI("begin\n");
     CRScode code = CRS_OK;
@@ -286,7 +282,7 @@ static CRScode perform_magnet(bulkHelper_t *bh, const char *version, magnet_t *m
             code = HTTP_File(urlExt, fileExt, 1, NULL);
             if(code != CRS_OK) break;
         }
-        code = Magnet_Load(m, fileExt);
+        code = magnet_load(m, fileExt);
     } while(0);
 
     free(file);
@@ -307,8 +303,6 @@ CRScode bulkHelper_perform_magnet(bulkHelper_t *bh) {
     //reset magent
     free(bh->currentMagnet);
     bh->currentMagnet = NULL;
-    free(bh->latestMagnet);
-    bh->latestMagnet = NULL;
 
     magnet_t *m = magnet_malloc();
     if(CRS_OK == perform_magnet(bh, bh->currentVersion, m)) {
@@ -343,21 +337,40 @@ CRScode bulkHelper_perform_magnet(bulkHelper_t *bh) {
     LOGI("end %d\n", code);
     return code;
 }
+*/
 
-CRScode perform_diffloop(bulkHelper_t *bh, int isLatest) {
+CRScode bulkHelper_set_magnet(bulkHelper_t *bh, const char *magnetString) {
+    LOGI("begin\n");
+    if(!bh || !magnetString) {
+        LOGE("end %d\n", CRS_PARAM_ERROR);
+        return CRS_PARAM_ERROR;
+    }
+    CRScode code = CRS_OK;
+    UT_string *str = NULL;
+    utstring_new(str);
+    utstring_printf(str, "%s", magnetString);
+    magnet_t *m = magnet_fromString(&str);
+    utstring_free(str);
+    free(bh->currentMagnet);
+    bh->currentMagnet = m;
+    LOGI("end %d\n", code);
+    return code;
+}
+
+static CRScode perform_diffloop(bulkHelper_t *bh) {
     LOGI("begin\n");
     if(!bh) {
         LOGE("end %d\n", CRS_PARAM_ERROR);
         return CRS_PARAM_ERROR;
     }
     CRScode code = CRS_OK;
-    magnet_t *m = (0 == isLatest) ? bh->currentMagnet : bh->latestMagnet;
+    magnet_t *m = bh->currentMagnet;
     if(!m) {
         LOGI("magnet miss, skip this loop\n");
         return code;
     }
 
-    helper_t **bulk = (0 == isLatest) ? &bh->currentBulk : &bh->latestBulk;
+    helper_t **bulk = &bh->currentBulk;
     if(!*bulk) {
         sum_t *melt = NULL;
         LL_FOREACH(m->file, melt) {
@@ -377,7 +390,7 @@ CRScode perform_diffloop(bulkHelper_t *bh, int isLatest) {
         if(elt->isComplete == 0) {
             code = helper_perform_diff(elt);
             if(code != CRS_OK) break;
-            crs_callback_diff(elt->fileName, elt->cacheSize, elt->isComplete, isLatest);
+            crs_callback_diff(elt->fileName, elt->cacheSize, elt->isComplete);
         }
     }
 
@@ -392,27 +405,23 @@ CRScode bulkHelper_perform_diff(bulkHelper_t *bh) {
         return CRS_PARAM_ERROR;
     }
     CRScode code = CRS_OK;
-    do {
-        code = perform_diffloop(bh, 0);
-        if(code != CRS_OK) break;
-        code = perform_diffloop(bh, 1);
-    } while(0);
+    code = perform_diffloop(bh);
 
     LOGI("end %d\n", code);
     return code;
 }
 
-CRScode bulkHelper_perform_patch(bulkHelper_t *bh, int isLatest) {
-    LOGI("begin isLatest = %d\n", isLatest);
+CRScode bulkHelper_perform_patch(bulkHelper_t *bh) {
+    LOGI("begin\n");
     if(!bh) {
         LOGE("end %d\n", CRS_PARAM_ERROR);
         return CRS_PARAM_ERROR;
     }
     CRScode code = CRS_OK;
 
-    helper_t *bulk = (0 == isLatest) ? bh->currentBulk : bh->latestBulk;
+    helper_t *bulk = bh->currentBulk;
     if(!bulk) {
-        LOGE("isLatest %d, bulk is NULL\n", isLatest);
+        LOGE("end bulk is NULL\n");
         return CRS_PARAM_ERROR;
     }
 
