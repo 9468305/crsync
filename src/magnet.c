@@ -63,10 +63,6 @@ void magnet_toString(magnet_t *m, UT_string **str) {
         return;
     UT_string *s = *str;
     utstring_clear(s);
-    utstring_printf(s, "currentVersion = %s\n", m->currVersion);
-    utstring_printf(s, "nextVersion = %s\n", m->nextVersion);
-    utstring_printf(s, "files = ");
-
     sum_t *elt;
     LL_FOREACH(m->file, elt) {
         char *hash = Util_hex_string(elt->digest, CRS_STRONG_DIGEST_SIZE);

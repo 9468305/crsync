@@ -210,7 +210,7 @@ int main_bulkDigest(int argc, char **argv) {
         UT_string *str = NULL;
         utstring_new(str);
         magnet_toString(m, &str);
-        FILE *f = fopen("tversion.txt", "wt");
+        FILE *f = fopen("magnet.txt", "wt");
         if(f) {
             fprintf(f, "%s", utstring_body(str));
             fflush(f);
