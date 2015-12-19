@@ -46,17 +46,18 @@ static jclass       gJavaClass = NULL;
 static jmethodID    gMethod_onProgress = NULL;
 static jmethodID    gMethod_onDiff = NULL;
 
-static clock_t      gClock = 0;
+static time_t      gTime = 0;
 
 static bulkHelper_t *gBulkHelper = NULL;
 
 int crs_callback_patch(const char *basename, const unsigned int bytes, const int isComplete, const int immediate) {
-    clock_t now = clock();
-    long diff = (long)(now - gClock);
-    if( diff < CLOCKS_PER_SEC && immediate == 0 ) {
+    time_t nowTime;
+    time(&nowTime);
+    double diff = difftime(nowTime, gTime);
+    if( diff < 1 && immediate == 0 ) {
         return 0;
     }
-    gClock = now;
+    gTime = nowTime;
 
     JNIEnv *env = NULL;
     int isCancel = 0;
