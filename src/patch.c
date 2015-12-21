@@ -279,6 +279,11 @@ CRScode Patch_perform(const char *srcFilename, const char *dstFilename, const ch
         code = Patch_miss(srcFilename, dstFilename, url, fd, dr);
         if(code != CRS_OK) break;
 
+        char *tempname = strdup(srcFilename);
+        char *name = basename(tempname);
+        crs_callback_patch(name, fd->fileSize, 0, 1);
+        free(tempname);
+
         uint8_t hash[CRS_STRONG_DIGEST_SIZE];
         Digest_CalcStrong_File(dstFilename, hash);
         char * hashString = Util_hex_string(hash, CRS_STRONG_DIGEST_SIZE);

@@ -190,6 +190,8 @@ CRScode helper_perform_patch(helper_t *h) {
             LOGI("Yeah: src-File exist, so far so good!\n");
         }
 
+        crs_callback_patch(h->fileName, h->cacheSize, h->isComplete, 1);
+
         LOGI("let's compare size\n");
         if((size_t)stSrc.st_size == h->fileSize) {
             LOGI("size : src-File == target-File; let's compare digest\n");
