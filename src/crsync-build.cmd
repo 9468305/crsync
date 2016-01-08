@@ -10,5 +10,5 @@ rem clean
 rem -B force rebuild
 rem V=1 show NDK log
 
-call %NDKROOT%/ndk-build -B NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=./crsync.mk APP_ABI=armeabi-v7a,x86 APP_PLATFORM=android-15
+call %NDKROOT%/ndk-build -B NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=./crsync.mk APP_ABI=armeabi-v7a APP_PLATFORM=android-15
 pause

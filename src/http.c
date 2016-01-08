@@ -69,6 +69,7 @@ static void HTTP_curl_setopt(CURL *curl) {
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L); /* allow follow location */
     curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 5L); /* allow redir 5 times */
     curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10L); /* connection timeout */
+    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, 10240L); /* used for check bad network timeout */
     /*Do not setup CURLOPT_TIMEOUT, since range and file download may cost lots of time*/
     /*curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5L);*/
 }
