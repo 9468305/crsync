@@ -1,0 +1,30 @@
+set(SOURCES
+    ${SOURCES}
+    ${CMAKE_CURRENT_SOURCE_DIR}/digest.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/diff.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/patch.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/http.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/magnet.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/helper.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/util.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/log.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/crsync.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/crsync-console.c
+    PARENT_SCOPE
+)
+
+set(HEADERS
+    ${HEADERS}
+    ${CMAKE_CURRENT_SOURCE_DIR}/global.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/digest.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/diff.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/patch.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/http.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/magnet.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/helper.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/util.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/log.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/crsync.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/crsyncver.h
+    PARENT_SCOPE
+)

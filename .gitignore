@@ -37,3 +37,6 @@ android/.classpath
 android/.settings/
 android/bin/
 android/gen/
+
+# IDE Project Files
+build/

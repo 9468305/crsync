@@ -1,0 +1,27 @@
+set(CURL_HEADER_PATH
+    ${CMAKE_CURRENT_SOURCE_DIR}/curl/include/win32/curl
+    PARENT_SCOPE
+)
+
+FILE(GLOB CURL_HEADER_FILES "${CURL_HEADER_PATH}/*.h")
+set(CURL_HEADERS
+    ${CURL_HEADER_FILES}
+    PARENT_SCOPE
+)
+
+message(STATUS ${CURL_HEADER_PATH})
+
+set(CURL_LIB
+    ${CMAKE_CURRENT_SOURCE_DIR}/curl/prebuilt/win32/libcurl.lib
+    PARENT_SCOPE
+)
+
+set(OPENSSL_HEADERS
+    ${CMAKE_CURRENT_SOURCE_DIR}/openssl/include/win32/openssl
+    PARENT_SCOPE
+)
+
+set(OPENSSL_LIB
+    ${CMAKE_CURRENT_SOURCE_DIR}/openssl/prebuilt/win32/libssl.lib
+    PARENT_SCOPE
+)
