@@ -25,9 +25,9 @@ SOFTWARE.
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <unistd.h>
 #include <errno.h>
 
+#include "unistd-cross.h"
 #include "util.h"
 #include "tpl.h"
 #include "log.h"

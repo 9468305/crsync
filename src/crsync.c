@@ -27,12 +27,13 @@ SOFTWARE.
 #else
 #   include <sys/mman.h>   /* mmap */
 #endif
-#include <unistd.h>
+
 #include <sys/stat.h>
 #include <errno.h>
 #include <time.h>
 #include <omp.h>
 
+#include "unistd-cross.h"
 #include "crsync.h"
 #include "http.h"
 #include "log.h"

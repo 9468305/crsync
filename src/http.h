@@ -29,7 +29,7 @@ extern "C" {
 #endif
 
 #include "global.h"
-#include "curl/curl.h"
+#include "curl.h"
 
 CRScode HTTP_global_init();
 void HTTP_global_cleanup();

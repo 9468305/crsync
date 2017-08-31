@@ -23,9 +23,9 @@ SOFTWARE.
 */
 #include <sys/stat.h>
 #include <errno.h>
-#include <unistd.h>
 #include <omp.h>
 
+#include "unistd-cross.h"
 #include "diff.h"
 #include "uthash.h"
 #include "log.h"
@@ -247,7 +247,7 @@ static CRScode Diff_cache(const char *dstFilename, const fileDigest_t *fd, diffR
         return CRS_PARAM_ERROR;
     }
 
-    if(0 != access(dstFilename, F_OK)) {
+    if(0 != access(dstFilename, 0)) { //F_OK is 0
         LOGI("end file not exist\n");
         return CRS_OK;
     }

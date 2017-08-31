@@ -37,7 +37,7 @@ extern "C" {
 #include "utlist.h"
 #include "utstring.h"
 #include "tpl.h"
-#include "curl/curl.h"
+#include "curl.h"
 
 CRScode crs_perform_digest  (const char *srcFilename, const char *dstFilename, const uint32_t blocksize);
 

@@ -22,11 +22,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 #include <sys/stat.h>
-#include <unistd.h>
 #include <stdio.h>
 #include <errno.h>
 #include <libgen.h>
 
+#include "unistd-cross.h"
 #include "patch.h"
 #include "util.h"
 #include "log.h"

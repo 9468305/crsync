@@ -23,10 +23,9 @@ SOFTWARE.
 */
 #include <stdlib.h>
 #include <sys/stat.h>
+#include <string.h>
 
 #include "digest.h"
-#include "md5.h"
-//#include "blake2.h"
 #include "md5.h"
 #include "log.h"
 #include "util.h"

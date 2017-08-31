@@ -18,7 +18,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
+
+#ifdef _MSC_VER
+#   include <io.h>
+#   include <process.h>
+#else
+#   include <unistd.h>
+#endif
 
 /** Maximum value size for integers and doubles. */
 #define MAXVALSZ    1024

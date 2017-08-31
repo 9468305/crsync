@@ -24,6 +24,7 @@ set(HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/helper.h
     ${CMAKE_CURRENT_SOURCE_DIR}/util.h
     ${CMAKE_CURRENT_SOURCE_DIR}/log.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/unistd-cross.h
     ${CMAKE_CURRENT_SOURCE_DIR}/crsync.h
     ${CMAKE_CURRENT_SOURCE_DIR}/crsyncver.h
     PARENT_SCOPE
