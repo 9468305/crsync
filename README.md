@@ -21,5 +21,5 @@ a C library of Client-side rsync over HTTP via curl
 ## Qt MinGW Build
 + build `src/crsync.pro`, output `src/m32/crsync.exe`
 
-## 专利  
+## patent  
 [一种数据文件的增量更新方法和服务器、客户端以及系统](https://www.google.com.pg/patents/CN106528125A)，由原团队成员撰写并申请。
