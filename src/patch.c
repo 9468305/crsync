@@ -24,9 +24,16 @@ SOFTWARE.
 #include <sys/stat.h>
 #include <stdio.h>
 #include <errno.h>
-#include <libgen.h>
+
+#ifdef _MSC_VER
+#   include "win/libgen.h"
+#	define F_OK 0
+#else
+#	include <libgen.h>
+#endif
 
 #include "unistd-cross.h"
+#include "win/dirent.h"
 #include "patch.h"
 #include "util.h"
 #include "log.h"
@@ -263,6 +270,7 @@ CRScode Patch_perform(const char *srcFilename, const char *dstFilename, const ch
             code = CRS_FILE_ERROR;
             break;
         }
+#ifndef _MSC_VER
         if((size_t)st.st_size != fd->fileSize) {
             if(0 != truncate(dstFilename, fd->fileSize)) {
                 LOGE("dest file truncate %dBytes error %s\n", fd->fileSize, strerror(errno));
@@ -270,7 +278,7 @@ CRScode Patch_perform(const char *srcFilename, const char *dstFilename, const ch
                 break;
             }
         }
-
+#endif
         //Patch_match Blocks
         code = Patch_match(srcFilename, dstFilename, fd, dr);
         if(code != CRS_OK) break;

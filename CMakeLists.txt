@@ -10,9 +10,9 @@ set(crsync_VERSION_PATCH 0)
 set_property(GLOBAL PROPERTY USE_FOLDERS TRUE)
 
 #Put all binaries in same location
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY bin)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY bin)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY bin)
+#set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY bin)
+#set(CMAKE_LIBRARY_OUTPUT_DIRECTORY bin)
+#set(CMAKE_RUNTIME_OUTPUT_DIRECTORY bin)
 
 add_subdirectory(libs)
 add_subdirectory(extra)
@@ -24,7 +24,8 @@ set(CMAKE_C_STANDARD 99)
 # set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Os")
 include_directories(${CURL_HEADER_PATH})
 include_directories(${EXTRA_HEADER_PATH})
-# link_directories(${CMAKE_SOURCE_DIR}/lib)
+#link_directories(${CURL_LIB_PATH})
+#link_directories(${OPENSSL_LIB_PATH})
 
 find_package(OpenMP)
 if(OPENMP_FOUND)

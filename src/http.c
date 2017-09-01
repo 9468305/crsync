@@ -23,7 +23,11 @@ SOFTWARE.
 */
 #include <sys/stat.h>
 #include <string.h>
-#include <libgen.h>
+#ifdef _MSC_VER
+#   include "win/libgen.h"
+#else
+#   include <libgen.h>
+#endif
 
 #include "http.h"
 #include "util.h"
@@ -77,6 +81,11 @@ static void HTTP_curl_setopt(CURL *curl) {
 static const char *response200 = "HTTP/1.0 200 OK";
 static const char *response200_1 = "HTTP/1.1 200 OK";
 static const size_t responselen = 15; //as above strlen
+
+#ifdef _MSC_VER
+#   define strcasecmp _stricmp
+#   define strncasecmp _strnicmp
+#endif
 
 static size_t header_callback(void *data, size_t size, size_t nmemb, void *userp)
 {

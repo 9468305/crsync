@@ -1,7 +1,7 @@
 #ifndef CRS_UNISTD_H
 #define CRS_UNISTD_H
 
-#ifdef _WIN32
+#ifdef _MSC_VER
 #   include <io.h>
 #   include <process.h>
 #else

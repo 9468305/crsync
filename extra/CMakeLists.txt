@@ -2,6 +2,7 @@ set(EXTRA_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/md5.c
     ${CMAKE_CURRENT_SOURCE_DIR}/tpl.c
     ${CMAKE_CURRENT_SOURCE_DIR}/win/mmap.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/win/libgen.c
     ${CMAKE_CURRENT_SOURCE_DIR}/dictionary.c
     ${CMAKE_CURRENT_SOURCE_DIR}/iniparser.c
     PARENT_SCOPE
@@ -11,6 +12,8 @@ set(EXTRA_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/md5.h
     ${CMAKE_CURRENT_SOURCE_DIR}/tpl.h
     ${CMAKE_CURRENT_SOURCE_DIR}/win/mman.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/win/dirent.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/win/libgen.h
     ${CMAKE_CURRENT_SOURCE_DIR}/uthash.h
     ${CMAKE_CURRENT_SOURCE_DIR}/utstring.h
     ${CMAKE_CURRENT_SOURCE_DIR}/utlist.h

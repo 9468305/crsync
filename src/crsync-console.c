@@ -26,7 +26,12 @@ extern "C" {
 #endif
 
 #include <sys/stat.h>
-#include <dirent.h>
+
+#ifdef _MSC_VER
+#   include "win/dirent.h"
+#else
+#   include <dirent.h>
+#endif
 
 #include "log.h"
 #include "crsync.h"

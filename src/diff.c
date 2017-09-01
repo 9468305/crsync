@@ -259,7 +259,7 @@ static CRScode Diff_cache(const char *dstFilename, const fileDigest_t *fd, diffR
         //should return CRS_FILE_ERROR, but I do not want break workflow;
         return CRS_OK;
     }
-
+#ifndef _MSC_VER
     if((size_t)st.st_size != fd->fileSize) {
         if(0 != truncate(dstFilename, fd->fileSize)) {
             LOGE("dest file truncate %dBytes error %s\n", fd->fileSize, strerror(errno));
@@ -267,7 +267,7 @@ static CRScode Diff_cache(const char *dstFilename, const fileDigest_t *fd, diffR
             return CRS_OK;
         }
     }
-
+#endif
     FILE *f = fopen(dstFilename, "rb");
     if(!f){
         LOGE("dest file fopen rb error %s\n", strerror(errno));
