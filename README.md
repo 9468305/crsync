@@ -1,3 +1,8 @@
+## TODO
+V0.1.0 可用，但性能有问题  
+V0.2.0 Commits on Jan 8, 2016。未打Tag，可用，性能优化。  
+V0.3.0 计划把整个工程从QMake切换至CMake，完善可用性。未完成。  
+
 ## crsync
 a C library of Client-side rsync over HTTP via curl
 
@@ -21,5 +26,5 @@ a C library of Client-side rsync over HTTP via curl
 ## Qt MinGW Build
 + build `src/crsync.pro`, output `src/m32/crsync.exe`
 
-## patent  
+## Patent  
 [一种数据文件的增量更新方法和服务器、客户端以及系统](https://www.google.com.pg/patents/CN106528125A)，由原团队成员撰写并申请。
