@@ -40,3 +40,4 @@ android/gen/
 
 # IDE Project Files
 build/
+.vscode
