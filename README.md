@@ -1,15 +1,18 @@
 TODO
 --------
+
 V0.1.0 可用，但性能有问题  
 V0.2.0 Commits on Jan 8, 2016。未打Tag，可用，性能优化。  
 V0.3.0 计划把整个工程从QMake切换至CMake，完善可用性。未完成。  
 
 crsync
 --------
-a C library of Client-side rsync over HTTP via curl
 
-Guide
+A library and CLI tool of Client-side rsync over HTTP via curl, implemented by pure C.
+
+[Guide](./doc/README.md)
 --------
+
 基于rsync算法的客户端二进制增量差异更新组件。
 
 1. 纯C语言实现, 使用libcurl HTTP通讯，跨平台兼容性良好。  
@@ -18,7 +21,7 @@ Guide
 4. 目前已支持Android，Windows，理论上支持所有平台。  
 5. 源码简单易懂，核心部分仅1000行，可随意扩展修改。  
 
-Workflow
+[Workflow](./doc/workflow.md)
 --------
 
 + 服务端生成新版本的摘要文件, 并部署到HTTP FileServer
