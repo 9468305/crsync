@@ -42,7 +42,7 @@ Build `src/crsync.pro`, Output `src/m32/crsync.exe`
 Patent  
 --------
 
-[一种数据文件的增量更新方法和服务器、客户端以及系统](https://www.google.com.pg/patents/CN106528125A)，由原团队成员 @nwpu053741 撰写并申请。
+[一种数据文件的增量更新方法和服务器、客户端以及系统](https://www.google.com.pg/patents/CN106528125A)，由原团队成员 [nwpu053741](https://github.com/nwpu053741) 撰写并申请。
 
 License
 --------
