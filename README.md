@@ -10,7 +10,8 @@ a C library of Client-side rsync over HTTP via curl
 
 Guide
 --------
-基于rsync算法的客户端二进制增量差异更新组件  
+基于rsync算法的客户端二进制增量差异更新组件。
+
 1. 纯C语言实现, 使用libcurl HTTP通讯，跨平台兼容性良好。  
 2. 客户端使用rsync算法计算与服务器新版本的二进制差异，并增量下载更新数据。  
 3. 服务器仅需支持HTTP File传输，普通CDN即可，无须搭建rsyncd。  
@@ -19,6 +20,7 @@ Guide
 
 Workflow
 --------
+
 + 服务端生成新版本的摘要文件, 并部署到HTTP FileServer
 + 客户端使用libcurl下载资源，断点续传。
 + 客户端计算文件版本差异，增量下载差异内容并合并到本地。
@@ -26,20 +28,24 @@ Workflow
 
 Android Build
 --------
-+ Run `src/crsync-build.cmd`, output `src/libs/TARGET_ARCH_ABI/libcrsync.so`.
+
+Run `src/crsync-build.cmd`, Output `src/libs/TARGET_ARCH_ABI/libcrsync.so`.
 
 Qt MinGW Build
 --------
-+ build `src/crsync.pro`, output `src/m32/crsync.exe`
+
+Build `src/crsync.pro`, Output `src/m32/crsync.exe`
 
 Patent  
 --------
+
 [一种数据文件的增量更新方法和服务器、客户端以及系统](https://www.google.com.pg/patents/CN106528125A)，由原团队成员撰写并申请。
 
 License
 --------
-```
-   Copyright 2019 ChenQi
+
+```txt
+   Copyright 2015 ChenQi
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
